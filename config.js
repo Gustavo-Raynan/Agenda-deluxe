@@ -14,7 +14,7 @@ window.AD = {
   esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); },
   brl(v) { return Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); },
   hora(d) { return new Date(d).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: this.TZ }); },
-  dataLonga(d) { return new Date(d).toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", timeZone: this.TZ }); },
+  dataLonga(d) { const t = new Date(d).toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", timeZone: this.TZ }); return t.charAt(0).toUpperCase() + t.slice(1); },
   dataCurta(d) { return new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: this.TZ }); },
   // data (YYYY-MM-DD) no fuso de São Paulo
   isoDia(d = new Date()) { return new Date(d).toLocaleDateString("en-CA", { timeZone: this.TZ }); },

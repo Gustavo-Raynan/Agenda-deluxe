@@ -98,7 +98,7 @@ async function carregaSlots() {
   $("slots").querySelectorAll("button").forEach((b) => (b.onclick = () => {
     st.hora = b.dataset.t;
     $("slots").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
-    $("resumo").innerHTML = `<b>${AD.esc(st.serv.nome)}</b> · ${AD.brl(st.serv.preco)}<br><span style="text-transform:capitalize">${AD.dataLonga(st.hora)}</span> às <b>${AD.hora(st.hora)}</b>`;
+    $("resumo").innerHTML = `<b>${AD.esc(st.serv.nome)}</b> · ${AD.brl(st.serv.preco)}<br><span>${AD.dataLonga(st.hora)}</span> às <b>${AD.hora(st.hora)}</b>`;
     $("box-dados").classList.remove("hide");
     $("box-dados").scrollIntoView({ behavior: "smooth", block: "start" });
   }));
@@ -118,7 +118,7 @@ $("confirmar").onclick = async () => {
   $("passos").classList.add("hide");
   $("sucesso").classList.remove("hide");
   const quando = `${AD.dataLonga(st.hora)} às ${AD.hora(st.hora)}`;
-  $("suc-txt").innerHTML = `<b>${AD.esc(st.serv.nome)}</b> com ${AD.esc(st.pag.nome)}<br><span style="text-transform:capitalize">${quando}</span>`;
+  $("suc-txt").innerHTML = `<b>${AD.esc(st.serv.nome)}</b> com ${AD.esc(st.pag.nome)}<br><span>${quando}</span>`;
   if (st.pag.whatsapp) $("suc-zap").href = `https://wa.me/${AD.zap(st.pag.whatsapp)}?text=${encodeURIComponent(`Oi! Acabei de agendar ${st.serv.nome} para ${quando} pelo seu link. Meu nome é ${nome}.`)}`;
   else $("suc-zap").classList.add("hide");
   scrollTo(0, 0);

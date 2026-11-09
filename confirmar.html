@@ -31,7 +31,7 @@ async function acao(a) {
     <div style="font-size:3rem">${ICON[data.status]}</div>
     <h2>${MSG[data.status]}</h2>
     <p><b>${AD.esc(data.servico)}</b> com ${AD.esc(data.profissional)}<br>
-    <span style="text-transform:capitalize">${AD.dataLonga(data.inicio)}</span> às <b>${AD.hora(data.inicio)}</b></p>
+    <span>${AD.dataLonga(data.inicio)}</span> às <b>${AD.hora(data.inicio)}</b></p>
     ${futuro && ["marcado", "confirmado"].includes(data.status) ? `
       <div class="stack" style="margin-top:16px">
         ${data.status === "marcado" ? `<button class="btn-gold btn-full" id="b-ok">Confirmar presença</button>` : ""}

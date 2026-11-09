@@ -39,7 +39,7 @@ nav.tabs button span { font-size: 1.25rem; line-height: 1; }
 nav.tabs button.on { color: var(--gold-d); }
 
 .daynav { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-.daynav .grow { text-align: center; font-weight: 600; text-transform: capitalize; }
+.daynav .grow { text-align: center; font-weight: 600; }
 .ag { border-left: 4px solid var(--gold); }
 .ag.confirmado { border-left-color: var(--ok); }
 .ag.concluido { border-left-color: var(--info); opacity: .85; }
@@ -71,7 +71,7 @@ nav.tabs button.on { color: var(--gold-d); }
 .serv.on { border-color: var(--gold); outline: 2px solid var(--gold); }
 .hero { text-align: center; padding: 40px 0 10px; }
 .hero h1 { font-size: 2rem; }
-.lista-check { padding-left: 0; list-style: none; }
+.lista-check { padding-left: 0; list-style: none; margin: 0; }
 .lista-check li { padding: 6px 0 6px 28px; position: relative; }
 .lista-check li::before { content: "✓"; position: absolute; left: 4px; color: var(--gold); font-weight: 700; }
 .vazio { text-align: center; padding: 30px 10px; color: var(--muted); }
