@@ -1,6 +1,6 @@
 // Service worker simples: guarda os arquivos do app para abrir rápido.
 // Dados (Supabase) sempre vêm da rede.
-const CACHE = "agenda-deluxe-v4";
+const CACHE = "agenda-deluxe-v5";
 const ARQUIVOS = ["./", "style.css", "app.js", "config.js", "icon.svg", "manifest.json"];
 
 self.addEventListener("install", (e) => {

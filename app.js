@@ -27,7 +27,12 @@ $("a-ok").onclick = async () => {
     } else {
       const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: AD.base() } });
       if (error) throw error;
-      if (!data.session) { AD.toast("Conta criada! Confirme pelo link que enviamos ao seu e-mail."); modoAuth(true); }
+      if (data.user && (data.user.identities || []).length === 0) {
+        // E-mail já cadastrado: o Supabase não manda e-mail nesse caso
+        AD.toast("Esse e-mail já tem conta. Entre com a sua senha.", 1); modoAuth(true);
+      } else if (!data.session) {
+        AD.toast("Conta criada! Confirme pelo link que enviamos ao seu e-mail (veja também o spam)."); modoAuth(true);
+      }
     }
   } catch (e) { AD.toast(AD.erro(e), 1); }
   $("a-ok").disabled = false;
@@ -57,6 +62,7 @@ async function iniciar() {
     await sincronizaAssinatura(true);
   }
   atualizaAvisos();
+  sb.rpc("ad_eh_admin").then(({ data: adm }) => $("link-admin").classList.toggle("hide", !adm));
   await carregaServicos();
   abaAtiva(liberado() ? "agenda" : "link");
 }
@@ -65,10 +71,11 @@ async function iniciar() {
 const fimTeste = () => new Date(new Date(st.perfil.criado_em).getTime() + 14 * 864e5);
 const diasTeste = () => Math.ceil((fimTeste() - Date.now()) / 864e5);
 const assinante = () => st.perfil.assinatura_status === "authorized";
-const liberado = () => !AD_CONFIG.COBRANCA_ATIVA || assinante() || fimTeste() > new Date();
+const liberado = () => !st.perfil.pausado && (!AD_CONFIG.COBRANCA_ATIVA || assinante() || fimTeste() > new Date());
 
 function atualizaAvisos() {
   $("aviso-bloqueio").classList.toggle("hide", liberado());
+  if (st.perfil.pausado) $("aviso-bloqueio").innerHTML = `<h3>⏸️ Sua conta está pausada</h3><p class="muted" style="margin:0">Fale com o suporte do Agenda Deluxe para reativar. Seus dados estão guardados.</p>`;
   const d = diasTeste();
   const mostraTeste = AD_CONFIG.COBRANCA_ATIVA && !assinante() && d > 0 && d <= 5;
   $("aviso-teste").classList.toggle("hide", !mostraTeste);
@@ -119,7 +126,7 @@ $("p-ok").onclick = async () => {
 // ---------- Abas ----------
 document.querySelectorAll("nav.tabs button").forEach((b) => (b.onclick = () => abaAtiva(b.dataset.tab)));
 function abaAtiva(t) {
-  if (st.perfil && !liberado() && t !== "link") { AD.toast("Assine para usar a agenda.", 1); t = "link"; }
+  if (st.perfil && !liberado() && t !== "link") { AD.toast(st.perfil.pausado ? "Sua conta está pausada." : "Assine para usar a agenda.", 1); t = "link"; }
   document.querySelectorAll("nav.tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === t));
   document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("hide", x.id !== "t-" + t));
   ({ agenda: renderAgenda, servicos: renderServicos, horarios: renderHorarios, resumo: renderResumo, link: renderLink })[t]();
