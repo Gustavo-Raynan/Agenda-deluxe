@@ -274,22 +274,12 @@ header .cta::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:4
   <div id="lista"><p class="note">Carregando serviços…</p></div>
 </section>
 
-<section id="catalogo" class="hide">
-  <h2>Nosso catálogo de cores</h2>
-  <p class="sub">Esses são os esmaltes que temos no salão agora. Toque no ♡ para salvar os seus favoritos e mostrar para a Nayara no dia.</p>
-  <div class="cat-busca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="catBusca" type="search" placeholder="Buscar cor, marca ou código" autocomplete="off" enterkeyhint="search"></div>
-  <div class="cat-tons" id="catTons"></div>
-  <div class="cat-sel"><select id="catMarca" aria-label="Marca"></select><select id="catAcab" aria-label="Acabamento"></select></div>
-  <div class="cores" id="cores"></div>
-  <button type="button" class="mais-cores hide" id="maisCores">Ver mais cores</button>
-</section>
-
 <section id="agendar">
   <h2>Agendamento</h2>
   <p class="etapa">Escolha o dia</p>
   <div class="dias" id="dias"></div>
   <p class="etapa" id="lbHora">Escolha o horário</p>
-  <div class="slots" id="slots" role="group" aria-labelledby="lbHora"><p class="note">Escolha um serviço para ver os horários livres.</p></div>
+  <div class="slots" id="slots" role="group" aria-labelledby="lbHora"><button type="button" class="mais-cores" onclick="vai($('servicos'))" style="margin-top:0">↑ Primeiro, escolha o serviço</button></div>
 
   <button type="button" class="mais-cores hide" id="irCatalogo" style="margin-top:18px">💅 Ver os esmaltes que temos no salão</button>
 
@@ -304,6 +294,17 @@ header .cta::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:4
   <button class="go" id="enviar" type="button">Confirmar agendamento</button>
   <p class="note" style="text-align:center">Seu horário fica reservado na hora. Depois é só enviar o resumo no WhatsApp.</p>
 </section>
+
+<section id="catalogo" class="hide">
+  <h2>Nosso catálogo de cores</h2>
+  <p class="sub">Esses são os esmaltes que temos no salão agora. Toque no ♡ para salvar os seus favoritos e mostrar para a Nayara no dia.</p>
+  <div class="cat-busca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="catBusca" type="search" placeholder="Buscar cor, marca ou código" autocomplete="off" enterkeyhint="search"></div>
+  <div class="cat-tons" id="catTons"></div>
+  <div class="cat-sel"><select id="catMarca" aria-label="Marca"></select><select id="catAcab" aria-label="Acabamento"></select></div>
+  <div class="cores" id="cores"></div>
+  <button type="button" class="mais-cores hide" id="maisCores">Ver mais cores</button>
+</section>
+
 
 <section id="confirmado" class="okbox hide" tabindex="-1">
   <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
@@ -499,7 +500,7 @@ function desenhaDias() {
 
 async function carregaSlots() {
   st.hora = null; atualiza();
-  if (!st.serv) { $("slots").innerHTML = `<p class="note">Escolha um serviço para ver os horários livres.</p>`; return; }
+  if (!st.serv) { $("slots").innerHTML = `<button type="button" class="mais-cores" onclick="vai($('servicos'))" style="margin-top:0">↑ Primeiro, escolha o serviço</button>`; return; }
   if (!st.dia) { $("slots").innerHTML = `<p class="note">Sem datas disponíveis no momento.</p>`; return; }
   $("slots").innerHTML = `<p class="note">Procurando horários livres…</p>`;
   const pedido = st.dia + st.serv.id; st._p = pedido;
