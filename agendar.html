@@ -63,6 +63,12 @@ async function carregar() {
   document.title = "Agendar com " + data.nome;
   $("nome").textContent = data.nome;
   $("prof").textContent = data.profissao || "";
+  if (data.liberado === false) {
+    $("passos").innerHTML = `<div class="card" style="text-align:center"><h3>Agenda indisponível no momento</h3>
+      <p class="muted">Os agendamentos online estão pausados.${data.whatsapp ? " Fale direto pelo WhatsApp:" : ""}</p>
+      ${data.whatsapp ? `<a class="btn btn-zap btn-full" target="_blank" rel="noopener" href="https://wa.me/${AD.zap(data.whatsapp)}">Chamar no WhatsApp</a>` : ""}</div>`;
+    return;
+  }
   $("servicos").innerHTML = data.servicos.length
     ? data.servicos.map((s) => `<button class="serv" data-id="${s.id}"><span>${AD.esc(s.nome)}<br><small class="muted">${s.duracao_min < 60 ? s.duracao_min + " min" : (s.duracao_min / 60).toString().replace(".", ",") + "h"}</small></span><b>${AD.brl(s.preco)}</b></button>`).join("")
     : `<p class="muted">Ainda não há serviços disponíveis.</p>`;

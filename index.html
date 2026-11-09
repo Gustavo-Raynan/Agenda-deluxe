@@ -69,6 +69,11 @@
   </div></header>
 
   <div class="wrap">
+    <div class="card hide" id="aviso-bloqueio" style="border-color:var(--gold);background:#fff8ec">
+      <h3>⏳ Seu teste grátis terminou</h3>
+      <p class="muted" style="margin:0">Sua agenda e seu link de agendamento estão pausados. Assine para continuar recebendo agendamentos. Seus dados estão guardados.</p>
+    </div>
+    <div class="card hide" id="aviso-teste" style="padding:10px 14px"></div>
     <!-- Agenda -->
     <div id="t-agenda" class="tab">
       <div class="card" id="lembretes-box"></div>
@@ -143,9 +148,15 @@
         <div><label>WhatsApp</label><input id="e-zap" inputmode="tel"></div>
         <button class="btn-line" id="e-ok">Salvar perfil</button>
       </div>
-      <div class="card">
+      <div class="card stack" id="card-assinatura">
         <h3>Sua assinatura</h3>
-        <p class="muted" id="assinatura-txt"></p>
+        <p class="muted" id="assinatura-txt" style="margin:0"></p>
+        <div id="assinar-box" class="stack">
+          <div><label>E-mail da sua conta no Mercado Pago</label><input id="mp-email" type="email" placeholder="voce@email.com"></div>
+          <button class="btn-gold btn-full" id="assinar">Assinar por R$ 20/mês</button>
+          <p class="muted" style="margin:0;font-size:.82rem">Pagamento seguro pelo Mercado Pago, no cartão, com renovação automática. Cancele quando quiser.</p>
+        </div>
+        <button class="btn-line btn-sm hide" id="cancelar-ass" style="color:var(--bad)">Cancelar assinatura</button>
       </div>
       <p class="muted" style="text-align:center">Dica: no celular, toque em "Adicionar à tela inicial" para usar como app.</p>
     </div>

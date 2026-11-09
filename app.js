@@ -51,8 +51,48 @@ async function iniciar() {
     return;
   }
   mostra("v-painel");
+  // Voltou do Mercado Pago? Confere o status da assinatura
+  if (new URLSearchParams(location.search).get("assinatura")) {
+    history.replaceState(null, "", location.pathname);
+    await sincronizaAssinatura(true);
+  }
+  atualizaAvisos();
   await carregaServicos();
-  abaAtiva("agenda");
+  abaAtiva(liberado() ? "agenda" : "link");
+}
+
+// ---------- Assinatura ----------
+const fimTeste = () => new Date(new Date(st.perfil.criado_em).getTime() + 14 * 864e5);
+const diasTeste = () => Math.ceil((fimTeste() - Date.now()) / 864e5);
+const assinante = () => st.perfil.assinatura_status === "authorized";
+const liberado = () => assinante() || fimTeste() > new Date();
+
+function atualizaAvisos() {
+  $("aviso-bloqueio").classList.toggle("hide", liberado());
+  const d = diasTeste();
+  const mostraTeste = !assinante() && d > 0 && d <= 5;
+  $("aviso-teste").classList.toggle("hide", !mostraTeste);
+  if (mostraTeste) $("aviso-teste").innerHTML = `<div class="row between"><span class="muted">Seu teste grátis termina em <b>${d} dia${d > 1 ? "s" : ""}</b>.</span><button class="btn-gold btn-sm" onclick="abaAtiva('link')">Assinar</button></div>`;
+}
+
+async function chamaAssinatura(acao, extra = {}) {
+  const { data, error } = await sb.functions.invoke("ad-assinar", { body: { acao, ...extra } });
+  if (error) {
+    let msg = error.message;
+    try { msg = (await error.context.json()).erro || msg; } catch {}
+    throw new Error(msg);
+  }
+  if (data?.erro) throw new Error(data.erro);
+  return data;
+}
+
+async function sincronizaAssinatura(avisar) {
+  try {
+    const r = await chamaAssinatura("status");
+    const { data } = await sb.from("ad_profissionais").select("*").eq("id", st.user.id).single();
+    if (data) st.perfil = data;
+    if (avisar) AD.toast(r.status === "authorized" ? "Assinatura ativa! Obrigado 💛" : "Pagamento ainda não confirmado. Pode levar alguns minutos.", r.status !== "authorized");
+  } catch (e) { if (avisar) AD.toast(e.message, 1); }
 }
 
 // ---------- Perfil (primeiro acesso) ----------
@@ -79,6 +119,7 @@ $("p-ok").onclick = async () => {
 // ---------- Abas ----------
 document.querySelectorAll("nav.tabs button").forEach((b) => (b.onclick = () => abaAtiva(b.dataset.tab)));
 function abaAtiva(t) {
+  if (st.perfil && !liberado() && t !== "link") { AD.toast("Assine para usar a agenda.", 1); t = "link"; }
   document.querySelectorAll("nav.tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === t));
   document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("hide", x.id !== "t-" + t));
   ({ agenda: renderAgenda, servicos: renderServicos, horarios: renderHorarios, resumo: renderResumo, link: renderLink })[t]();
@@ -292,12 +333,34 @@ function renderLink() {
   $("abrir-link").href = url;
   $("compartilhar").href = "https://wa.me/?text=" + encodeURIComponent(`Agora você pode marcar seu horário comigo direto por aqui, a qualquer hora: ${url}`);
   $("e-nome").value = st.perfil.nome; $("e-prof").value = st.perfil.profissao || ""; $("e-zap").value = st.perfil.whatsapp || "";
-  const fimTeste = new Date(new Date(st.perfil.criado_em).getTime() + 14 * 864e5);
-  const dias = Math.ceil((fimTeste - Date.now()) / 864e5);
-  $("assinatura-txt").textContent = dias > 0
-    ? `Você está no período de teste grátis: faltam ${dias} dia${dias > 1 ? "s" : ""} (até ${AD.dataCurta(fimTeste)}). Depois, R$ ${AD_CONFIG.PRECO_MENSAL}/mês.`
-    : `Seu teste grátis terminou. Assinatura: R$ ${AD_CONFIG.PRECO_MENSAL}/mês.`;
+  const d = diasTeste(), status = st.perfil.assinatura_status;
+  const ST = { authorized: "ativa ✅", pending: "aguardando pagamento", paused: "pausada", cancelled: "cancelada" };
+  $("assinatura-txt").innerHTML = assinante()
+    ? `Assinatura <b>ativa</b>: R$ ${AD_CONFIG.PRECO_MENSAL}/mês, renovação automática pelo Mercado Pago.`
+    : (d > 0 ? `Você está no teste grátis: faltam <b>${d} dia${d > 1 ? "s" : ""}</b> (até ${AD.dataCurta(fimTeste())}). Se assinar agora, a primeira cobrança só acontece quando o teste acabar.`
+             : `Seu teste grátis terminou. Assine para reativar sua agenda.`)
+      + (ST[status] && status !== "authorized" ? `<br>Situação: ${ST[status]}.` : "");
+  $("assinar-box").classList.toggle("hide", assinante());
+  $("cancelar-ass").classList.toggle("hide", !assinante());
+  if (!$("mp-email").value) $("mp-email").value = st.user.email || "";
 }
+$("assinar").onclick = async () => {
+  const email = $("mp-email").value.trim();
+  if (!/^\S+@\S+\.\S+$/.test(email)) return AD.toast("Informe um e-mail válido.", 1);
+  $("assinar").disabled = true; $("assinar").textContent = "Abrindo o Mercado Pago…";
+  try {
+    const r = await chamaAssinatura("assinar", { email });
+    location.href = r.url;
+  } catch (e) {
+    AD.toast(e.message, 1);
+    $("assinar").disabled = false; $("assinar").textContent = `Assinar por R$ ${AD_CONFIG.PRECO_MENSAL}/mês`;
+  }
+};
+$("cancelar-ass").onclick = async () => {
+  if (!confirm("Cancelar sua assinatura? Sua agenda e seu link de agendamento serão pausados.")) return;
+  try { await chamaAssinatura("cancelar"); await sincronizaAssinatura(); AD.toast("Assinatura cancelada."); atualizaAvisos(); renderLink(); }
+  catch (e) { AD.toast(e.message, 1); }
+};
 $("copiar").onclick = async () => {
   try { await navigator.clipboard.writeText($("meu-link").value); AD.toast("Link copiado!"); }
   catch { $("meu-link").select(); AD.toast("Selecione e copie o link."); }
