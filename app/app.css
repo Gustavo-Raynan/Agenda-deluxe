@@ -2,15 +2,15 @@
 /* Paleta oficial — Luxo minimalista dark */
 :root, [data-tema="escuro"] {
   color-scheme: dark;
-  --bg: #10130F; --bg2: #191E18; --card: #20271F; --card2: #20271F; --solido: #191E18;
-  --ink: #F5F3ED; --mute: #A6AA9C; --line: rgba(245,243,237,.08); --line2: rgba(245,243,237,.14); --soft: rgba(245,243,237,.05);
+  --bg: #171C16; --bg2: #1F261D; --card: #283027; --card2: #283027; --solido: #1F261D;
+  --ink: #F7F5EF; --mute: #B3B7A8; --line: rgba(245,243,237,.10); --line2: rgba(245,243,237,.17); --soft: rgba(245,243,237,.07);
   --acc: #C5A568; --acc2: rgba(197,165,104,.13); --ouro: #DFC58E; --ouro2: rgba(223,197,142,.12);
   --salvia: #A6AA9C; --salvia2: rgba(166,170,156,.12);
   --grad: #C5A568; --gradOuro: #C5A568;
   --accRGB: 197,165,104; --secRGB: 117,169,135;
   --ok: #75A987; --ok2: rgba(117,169,135,.15); --amb: #D5A85C; --amb2: rgba(213,168,92,.14);
   --red: #C87575; --red2: rgba(200,117,117,.15); --info: #9FB4C8; --info2: rgba(159,180,200,.13);
-  --zap: #2FB766; --zapInk: #08210F; --topbg: rgba(16,19,15,.86); --navbg: rgba(25,30,24,.94);
+  --zap: #2FB766; --zapInk: #08210F; --topbg: rgba(23,28,22,.88); --navbg: rgba(33,40,31,.95);
   --sombra: 0 10px 30px -18px rgba(0,0,0,.7);
   --branco: var(--card2); --marrom: var(--ink); --marrom-2: var(--mute); --marrom-3: var(--mute); --linha: var(--line);
   --blush: var(--acc); --blush-2: var(--acc2); --nude: var(--soft); --erro: var(--red); --erro-bg: var(--red2);
@@ -312,3 +312,40 @@ nav.abas button.on svg { animation: popa .35s ease; }
 .folha.on #folha-conteudo > *:nth-child(2) { animation-delay: .04s; } .folha.on #folha-conteudo > *:nth-child(3) { animation-delay: .08s; } .folha.on #folha-conteudo > *:nth-child(n+4) { animation-delay: .12s; }
 .esqueleto { border-radius: 20px; margin-bottom: 10px; background: linear-gradient(90deg, var(--card) 0, var(--soft) 50%, var(--card) 100%); background-size: 600px 100%; animation: brilhoCarrega 1.1s linear infinite; border: 1px solid var(--line); }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* ===== Mais animações ===== */
+@keyframes enche { from { transform: scaleX(0); } }
+@keyframes onda { 0% { box-shadow: 0 0 0 0 rgba(var(--accRGB), .55); } 100% { box-shadow: 0 0 0 16px rgba(var(--accRGB), 0); } }
+@keyframes daDireita { from { opacity: 0; transform: translateX(26px); } }
+@keyframes daEsquerda { from { opacity: 0; transform: translateX(-26px); } }
+@keyframes flutuaIc { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes brilhaIc { 0%, 100% { box-shadow: 0 0 0 0 rgba(var(--accRGB), .0), 0 20px 40px -20px rgba(0,0,0,.7); } 50% { box-shadow: 0 0 0 10px rgba(var(--accRGB), .12), 0 20px 40px -20px rgba(0,0,0,.7); } }
+@keyframes confeteApp { 0% { transform: translate(0,0) rotate(0); opacity: 1; } 100% { transform: translate(var(--x), var(--y)) rotate(var(--r)); opacity: 0; } }
+@keyframes toastIn { 0% { transform: translate(-50%, 24px) scale(.96); } 70% { transform: translate(-50%, -4px) scale(1.01); } 100% { transform: translate(-50%, 0) scale(1); } }
+.barra-h span, .meta .barra span { transform-origin: left center; animation: enche 1s cubic-bezier(.2,.8,.2,1) both .15s; }
+.tela.da-direita > * { animation-name: daDireita; }
+.tela.da-esquerda > * { animation-name: daEsquerda; }
+#toast.on { animation: toastIn .4s cubic-bezier(.2,.8,.2,1); }
+.fab { position: fixed; z-index: 24; right: 18px; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); width: 58px; height: 58px; border-radius: 50%; border: 0; background: var(--acc); color: #17140C; display: grid; place-items: center; cursor: pointer; box-shadow: 0 14px 30px -10px rgba(0,0,0,.6); animation: onda 2.4s ease-out 1.2s infinite; transition: transform .15s; }
+.fab svg { width: 26px; height: 26px; }
+.fab:active { transform: scale(.9) rotate(90deg); }
+.confete-app { position: fixed; width: 8px; height: 12px; border-radius: 2px; pointer-events: none; z-index: 96; animation: confeteApp 1.3s cubic-bezier(.15,.7,.3,1) forwards; }
+/* tutorial */
+#tutorial { position: fixed; inset: 0; z-index: 92; background: var(--bg); display: flex; flex-direction: column; padding: calc(16px + env(safe-area-inset-top, 0px)) 22px calc(22px + env(safe-area-inset-bottom, 0px)); }
+#tutorial .pular { align-self: flex-end; border: 0; background: none; color: var(--mute); font-weight: 600; padding: 8px; cursor: pointer; }
+#tutorial .slide { flex: 1; display: grid; align-content: center; justify-items: center; text-align: center; gap: 14px; max-width: 420px; margin: 0 auto; }
+#tutorial .slide.entra { animation: daDireita .4s cubic-bezier(.2,.8,.2,1); }
+#tutorial .slide.volta { animation: daEsquerda .4s cubic-bezier(.2,.8,.2,1); }
+#tutorial .big { width: 112px; height: 112px; border-radius: 34px; background: var(--card); border: 1px solid rgba(var(--accRGB), .4); display: grid; place-items: center; color: var(--ouro); animation: flutuaIc 3s ease-in-out infinite, brilhaIc 3s ease-in-out infinite; }
+#tutorial .big svg { width: 52px; height: 52px; }
+#tutorial .big img { width: 100%; height: 100%; border-radius: 34px; object-fit: cover; }
+#tutorial h2 { font-size: 26px; font-weight: 800; letter-spacing: -.035em; line-height: 1.15; margin-top: 8px; }
+#tutorial p { color: var(--mute); font-size: 15.5px; line-height: 1.55; }
+#tutorial ul { text-align: left; color: var(--ink); font-size: 14.5px; line-height: 1.5; padding-left: 0; list-style: none; display: grid; gap: 8px; margin-top: 4px; }
+#tutorial li { display: flex; gap: 10px; align-items: flex-start; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; }
+#tutorial li::before { content: "✓"; color: var(--ouro); font-weight: 800; }
+#tutorial .pontos { display: flex; justify-content: center; gap: 7px; margin: 14px 0 18px; }
+#tutorial .pontos i { width: 7px; height: 7px; border-radius: 99px; background: var(--line2); transition: width .25s, background .25s; }
+#tutorial .pontos i.on { width: 22px; background: var(--acc); }
+#tutorial .acoes { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; max-width: 420px; width: 100%; margin: 0 auto; }
+@media (prefers-reduced-motion: reduce) { .fab, #tutorial .big { animation: none !important; } .confete-app { display: none; } }

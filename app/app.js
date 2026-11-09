@@ -117,7 +117,9 @@ async function iniciar() {
   st.prof = prof;
   $("b-perfil").textContent = iniciais(prof.nome);
   $("v-login").classList.add("hide"); $("v-app").classList.remove("hide");
-  if (travaCfg()) mostraTrava(); else if (!localStorage.getItem("nay.trava.perguntou")) setTimeout(() => { localStorage.setItem("nay.trava.perguntou", "1"); criaSenha(true); }, 1200);
+  const pedeSenha = () => { if (!travaCfg() && !localStorage.getItem("nay.trava.perguntou")) setTimeout(() => { localStorage.setItem("nay.trava.perguntou", "1"); criaSenha(true); }, 500); };
+  if (travaCfg()) mostraTrava();
+  if (!localStorage.getItem("nay.tutorial")) mostraTutorial(pedeSenha); else pedeSenha();
   await carregaServicos();
   tempoReal(); contaAvisos(); registraSW();
   const m = location.hash.match(/ag=([0-9a-f-]{36})/);
@@ -130,8 +132,12 @@ async function carregaServicos() { st.servicos = await q(sb.from("ad_servicos").
 // ---------- navegação ----------
 document.querySelectorAll("#abas button").forEach((b) => (b.onclick = () => vaiPara(b.dataset.aba)));
 const TITULOS = { inicio: "Início", agenda: "Agenda", clientes: "Clientes", caixa: "Caixa", mais: "Mais" };
+const ORDEM_ABAS = ["inicio", "agenda", "clientes", "caixa", "mais"];
 function vaiPara(aba) {
+  st.direcao = ORDEM_ABAS.indexOf(aba) >= ORDEM_ABAS.indexOf(st.aba || "inicio") ? "da-direita" : "da-esquerda";
+  if (aba === st.aba) st.direcao = "";
   st.aba = aba;
+  atualizaFab();
   document.querySelectorAll("#abas button").forEach((b) => b.classList.toggle("on", b.dataset.aba === aba));
   $("titulo").innerHTML = (aba === "inicio" ? "Nayara Nails" : TITULOS[aba] || "") + `<small>${esc(dataLonga(new Date()))}</small>`;
   scrollTo(0, 0);
@@ -145,7 +151,7 @@ function saudacao() {
   const h = Number(new Date().toLocaleTimeString("en-GB", { hour: "2-digit", timeZone: TZ }));
   return (h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite") + ", " + primeiroNome(st.prof.nome) + "!";
 }
-const tela = (html) => { $("conteudo").innerHTML = `<div class="tela">${html}</div>`; contaNumeros($("conteudo")); return $("conteudo"); };
+const tela = (html) => { $("conteudo").innerHTML = `<div class="tela ${st.direcao || ""}">${html}</div>`; st.direcao = ""; contaNumeros($("conteudo")); return $("conteudo"); };
 // Números sobem até o valor (dinheiro e quantidades)
 const calma = matchMedia("(prefers-reduced-motion: reduce)").matches;
 function contaNumeros(raiz) {
@@ -196,6 +202,7 @@ async function contaAvisos() {
   st.naoLidos = count || 0;
   $("n-avisos").textContent = st.naoLidos > 9 ? "9+" : st.naoLidos;
   $("n-avisos").classList.toggle("hide", !st.naoLidos);
+  if (st.naoLidos && !st._sinoTocou) { st._sinoTocou = true; const sino = $("b-sino"); setTimeout(() => sino.classList.add("toca"), 800); }
 }
 
 // ---------- cartões ----------
@@ -232,6 +239,8 @@ async function telaInicio() {
   if (meta) {
     const recMes = (await pagsEntre(hoje.slice(0, 8) + "01", amanha)).reduce((s, p) => s + Number(p.valor), 0);
     const pct = Math.min(100, Math.round((recMes / meta) * 100));
+    const chave = "nay.meta." + hoje.slice(0, 7);
+    if (pct >= 100 && !localStorage.getItem(chave)) { localStorage.setItem(chave, "1"); setTimeout(() => { festa(); toast("Meta do mês batida! Parabéns! 🏆"); }, 900); }
     metaHtml = `<div class="meta" style="margin-top:0"><small><span>Meta do mês · ${brl(recMes)} de ${brl(meta)}</span><span>${pct}%</span></small><div class="barra"><span style="width:${pct}%"></span></div></div>`;
   }
 
@@ -275,7 +284,8 @@ async function telaInicio() {
   ligaCartoes(r);
   r.querySelectorAll("[data-aviso]").forEach((b) => (b.onclick = async () => {
     await sb.from("ad_avisos").update({ lido: true }).eq("id", b.dataset.aviso); contaAvisos();
-    if (b.dataset.agid) detalheAg(b.dataset.agid); else telaInicio();
+    const v = avisos.find((x) => x.id === b.dataset.aviso);
+    if (v?.tipo === "confirmar") lembretesEmSequencia(); else if (v?.tipo === "aniversario") { vaiPara("clientes"); } else if (b.dataset.agid) detalheAg(b.dataset.agid); else telaInicio();
   }));
   r.querySelectorAll("[data-ir]").forEach((b) => (b.onclick = () => {
     const ir = b.dataset.ir;
@@ -291,7 +301,7 @@ async function telaInicio() {
 }
 
 function listaConfirmar(lista) {
-  abreFolha(cabFolha("Clientes sem confirmar", "Toque em Lembrete para mandar a mensagem com o link de confirmação.") +
+  abreFolha(cabFolha("Clientes sem confirmar", "Toque em Lembrete para mandar a mensagem com o link de confirmação.") + `<button class="btn prim cheio" style="margin-bottom:12px" onclick="lembretesEmSequencia()">📲 Enviar todos em sequência</button>` +
     `<div class="lista">${lista.map((a) => `<div class="item" style="cursor:default"><div class="cresce"><b>${esc(a.cliente_nome)}</b><div class="pequeno">${dataCurta(a.inicio)} às ${hora(a.inicio)} · ${esc(a.servico_nome)}</div></div>
       <a class="btn zap mini" target="_blank" rel="noopener" href="${linkZap(a, "lembrete")}">Lembrete</a></div>`).join("")}</div>`);
 }
@@ -432,7 +442,7 @@ async function detalheAg(id) {
       if (novo === "faltou" && !confirm("Marcar que a cliente não compareceu?")) return;
       await q(sb.from("ad_agendamentos").update({ status: novo }).eq("id", a.id));
       toast({ confirmado: "Horário confirmado.", chegou: "Chegada registrada.", atendendo: "Atendimento iniciado.", concluido: "Atendimento finalizado.", faltou: "Falta registrada." }[novo]);
-      if (novo === "concluido") return registraPagamento(a, true);
+      if (novo === "concluido") { festa(); return registraPagamento(a, true); }
       detalheAg(a.id); atualizaTela();
     }));
     r.querySelector("[data-cancelar]")?.addEventListener("click", async () => {
@@ -584,7 +594,7 @@ async function registraPagamento(a, depoisDeFinalizar) {
       if (!(valor > 0)) return toast("Informe o valor.", 1);
       await q(sb.from("ad_pagamentos").insert({ profissional_id: st.user.id, agendamento_id: a?.id || null, cliente_id: a?.cliente_id || null, valor, forma, observacao: r.querySelector("[data-obs]")?.value.trim() || null }));
       if (a && pago + valor >= Number(a.preco) - 0.009) await q(sb.from("ad_agendamentos").update({ pago: true }).eq("id", a.id));
-      toast(`Pagamento de ${brl(valor)} registrado.`);
+      toast(`Pagamento de ${brl(valor)} registrado. ✨`); festa();
       if (a) { if (a.status === "concluido" && confirm("Mandar mensagem de agradecimento para a cliente?")) abreZap(linkZap(a, "agradecimento")); detalheAg(a.id); }
       else fechaFolha();
       atualizaTela();
@@ -854,12 +864,14 @@ function telaMais() {
   const itens = [
     ["servicos", IC.tesoura, "Serviços e preços", "Adicionar, editar, mudar preço e duração"],
     ["horarios", IC.relogio, "Horários e folgas", "Dias de trabalho, intervalos, feriados e férias"],
+    ["automacoes", IC.relogio, "Automações", "Finalizar sozinho, avisos às 18h, aniversários, feriados"],
     ["notificacoes", IC.sino, "Notificações", "Avisos no celular de novos agendamentos"],
     ["chegar", IC.local, "Como chegar", "Endereço, mapa e compartilhar localização"],
     ["site", IC.link, "Site de agendamento", "Copiar e divulgar seu link"],
     ["salao", IC.salao, "Dados do salão", "Nome, WhatsApp, Instagram e endereço"],
     ["seguranca", IC.cadeado, "Senha do app e biometria", travaCfg() ? "Ativada neste celular" : "Proteja o app com uma senha de números"],
     ["aparencia", IC.lua, "Aparência", temaAtual() === "claro" ? "Tema claro" : "Tema escuro"],
+    ["tutorial", IC.estrela, "Tutorial do app", "Veja de novo como usar cada parte"],
     ["instalar", IC.baixar, "Instalar o app no celular", "Ícone na tela inicial, abre como aplicativo"],
     ["senha", IC.estrela, "Trocar senha da conta", "A senha do e-mail de login"],
     ["sair", IC.sair, "Sair", ""],
@@ -867,7 +879,7 @@ function telaMais() {
   const r = tela(`<div class="lista">${itens.map(([k, ic, t, s]) => `<button class="item" data-m="${k}"><div class="ic">${ic}</div><div class="cresce"><b>${t}</b>${s ? `<div class="pequeno">${s}</div>` : ""}</div><span class="seta">›</span></button>`).join("")}</div>
     <p class="pequeno" style="text-align:center;margin-top:20px">Nay Nails Gestão · versão 1.0<br>Mesma agenda do site de agendamento</p>`);
   r.querySelectorAll("[data-m]").forEach((b) => (b.onclick = () => ({
-    servicos: telaServicos, horarios: telaHorarios, notificacoes: telaNotificacoes, chegar: comoChegar, site: telaSite, salao: dadosSalao, instalar: instrucoesInstalar, senha: novaSenha, seguranca: telaSeguranca, aparencia: telaAparencia,
+    servicos: telaServicos, horarios: telaHorarios, notificacoes: telaNotificacoes, chegar: comoChegar, site: telaSite, salao: dadosSalao, instalar: instrucoesInstalar, senha: novaSenha, seguranca: telaSeguranca, aparencia: telaAparencia, automacoes: telaAutomacoes, tutorial: () => mostraTutorial(),
     sair: async () => { if (confirm("Sair do app?")) { await sb.auth.signOut(); location.reload(); } },
   })[b.dataset.m]()));
 }
@@ -1283,4 +1295,143 @@ function telaAparencia() {
     ${[["escuro", "Escuro (oficial)", "Preto esverdeado com detalhes em dourado champagne"], ["claro", "Claro", "Verde-sálvia claro com dourado"]].map(([k, n, d]) => `<button class="item" data-t="${k}"><div class="ic">${k === "escuro" ? IC.lua : IC.estrela}</div><div class="cresce"><b>${n}</b><div class="pequeno">${d}</div></div>${temaAtual() === k ? '<span class="chip confirmado">Em uso</span>' : ""}</button>`).join("")}</div>`, (r) => {
     r.querySelectorAll("[data-t]").forEach((b) => (b.onclick = () => { aplicaTema(b.dataset.t); telaAparencia(); if (st.aba === "mais") telaMais(); }));
   });
+}
+
+
+// =====================================================================
+// BOTÃO FLUTUANTE, CONFETE
+// =====================================================================
+function atualizaFab() {
+  let f = $("fab");
+  if (!f) { f = document.createElement("button"); f.id = "fab"; f.className = "fab"; f.innerHTML = IC.mais; document.body.appendChild(f); }
+  const acao = { inicio: ["Novo agendamento", () => novoAgendamento({})], agenda: ["Novo agendamento", () => novoAgendamento({ data: st.dia })], clientes: ["Cadastrar cliente", () => editaCliente(null)], caixa: ["Registrar pagamento", () => registraPagamento(null)] }[st.aba];
+  f.classList.toggle("hide", !acao);
+  if (acao) { f.setAttribute("aria-label", acao[0]); f.onclick = acao[1]; }
+}
+function festa() {
+  if (calma) return;
+  const cores = ["#C5A568", "#DFC58E", "#F5F3ED", "#75A987", "#A6AA9C"];
+  for (let i = 0; i < 60; i++) {
+    const c = document.createElement("span"); c.className = "confete-app";
+    const ang = -Math.PI / 2 + (Math.random() - 0.5) * 2.4, dist = 140 + Math.random() * 240;
+    c.style.cssText = `left:${innerWidth / 2}px;top:${innerHeight * 0.55}px;background:${cores[i % cores.length]};--x:${Math.cos(ang) * dist}px;--y:${Math.sin(ang) * dist + 260}px;--r:${Math.random() * 720 - 360}deg;animation-delay:${Math.random() * 0.12}s`;
+    document.body.appendChild(c); setTimeout(() => c.remove(), 1500);
+  }
+}
+
+// =====================================================================
+// AUTOMAÇÕES
+// =====================================================================
+function feriadosNacionais() {
+  // Feriados nacionais (Sexta-feira Santa e Corpus Christi calculados para cada ano)
+  const pascoa = (a) => { const f = Math.floor, b = a % 19, c = f(a / 100), d = a % 100, e = f(c / 4), g = c % 4, h = f((c + 8) / 25), i = f((c - h + 1) / 3), k = (19 * b + c - e - i + 15) % 30, l = f(d / 4), m = d % 4, n = (32 + 2 * g + 2 * l - k - m) % 7, o = f((b + 11 * k + 22 * n) / 451), mes = f((k + n - 7 * o + 114) / 31), dia = ((k + n - 7 * o + 114) % 31) + 1; return new Date(Date.UTC(a, mes - 1, dia)); };
+  const lista = [];
+  const ano = Number(isoDia().slice(0, 4));
+  [ano, ano + 1].forEach((a) => {
+    const p = pascoa(a), mais = (n) => { const d = new Date(p); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+    lista.push([`${a}-01-01`, "Confraternização Universal"], [mais(-2), "Sexta-feira Santa"], [`${a}-04-21`, "Tiradentes"], [`${a}-05-01`, "Dia do Trabalho"], [mais(60), "Corpus Christi"],
+      [`${a}-09-07`, "Independência"], [`${a}-10-12`, "Nossa Senhora Aparecida"], [`${a}-11-02`, "Finados"], [`${a}-11-15`, "Proclamação da República"], [`${a}-11-20`, "Consciência Negra"], [`${a}-12-25`, "Natal"]);
+  });
+  return lista.filter(([d]) => d >= isoDia()).sort().slice(0, 12);
+}
+
+async function telaAutomacoes() {
+  const a = { concluir: true, confirmar18: true, aniversario: true, resumo: true, ...(st.prof.automacoes || {}) };
+  const itens = [
+    ["concluir", "Finalizar atendimentos sozinho", "1 hora depois do horário, os atendimentos confirmados viram concluídos e você recebe um aviso para registrar o pagamento."],
+    ["confirmar18", "Aviso às 18h de quem não confirmou", "Todo dia às 18h, se alguma cliente de amanhã não confirmou, você recebe um aviso para mandar os lembretes."],
+    ["aniversario", "Aniversários do dia às 8h", "Aviso com as clientes que fazem aniversário, para mandar os parabéns."],
+    ["resumo", "Resumo da agenda às 7h30", "Quantas clientes, quanto está previsto e a primeira do dia."],
+  ];
+  abreFolha(cabFolha("Automações", "O app trabalha sozinho, mesmo fechado.") + `
+    <div class="cartao">${itens.map(([k, t, d]) => `<label class="interruptor"><span><b>${t}</b><span class="pequeno" style="display:block;margin-top:2px">${d}</span></span><input type="checkbox" data-a="${k}" ${a[k] !== false ? "checked" : ""}></label>`).join("")}</div>
+    <div class="pilha">
+      <button class="btn prim cheio" data-lembretes>📲 Enviar lembretes de amanhã em sequência</button>
+      <button class="btn cheio" data-feriados>🗓️ Bloquear feriados nacionais</button>
+    </div>
+    <p class="pequeno" style="margin-top:12px">Também automático: avisos de novo agendamento, cancelamento, confirmação e 30 minutos antes de cada cliente, e clientes cadastradas sozinhas quando agendam pelo site.</p>`, (r) => {
+    r.querySelectorAll("[data-a]").forEach((c) => (c.onchange = async () => {
+      a[c.dataset.a] = c.checked;
+      st.prof = await q(sb.from("ad_profissionais").update({ automacoes: a }).eq("id", st.user.id).select().single());
+      toast(c.checked ? "Automação ligada." : "Automação desligada.");
+    }));
+    r.querySelector("[data-lembretes]").onclick = lembretesEmSequencia;
+    r.querySelector("[data-feriados]").onclick = telaFeriados;
+  });
+}
+
+async function telaFeriados() {
+  const lista = feriadosNacionais();
+  const bloq = await q(sb.from("ad_bloqueios").select("inicio").gte("inicio", inicioDia(isoDia())));
+  const ja = new Set(bloq.map((b) => isoDia(b.inicio)));
+  abreFolha(cabFolha("Feriados nacionais", "Marque os dias em que o salão não abre. O site deixa de oferecer horários neles.") + `
+    <div class="cartao">${lista.map(([d, n]) => `<label class="interruptor"><span><b>${n}</b><span class="pequeno" style="display:block">${diaSemana(meioDia(d))}, ${meioDia(d).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })}${ja.has(d) ? " · já bloqueado" : ""}</span></span><input type="checkbox" data-d="${d}" data-n="${esc(n)}" ${ja.has(d) ? "checked disabled" : "checked"}></label>`).join("")}</div>
+    <button class="btn prim cheio" data-salvar>Bloquear os marcados</button>`, (r) => {
+    r.querySelector("[data-salvar]").onclick = async () => {
+      const marcados = [...r.querySelectorAll("[data-d]:checked:not(:disabled)")].map((c) => ({ profissional_id: st.user.id, inicio: inicioDia(c.dataset.d), fim: inicioDia(somaDias(c.dataset.d, 1)), motivo: "Feriado: " + c.dataset.n }));
+      if (!marcados.length) return toast("Nenhum feriado novo marcado.", 1);
+      await q(sb.from("ad_bloqueios").insert(marcados));
+      toast(`${marcados.length} feriado${marcados.length > 1 ? "s bloqueados" : " bloqueado"}.`); festa(); fechaFolha(); atualizaTela();
+    };
+  });
+}
+
+// Envia os lembretes de amanhã um atrás do outro: ao voltar do WhatsApp, já aparece a próxima cliente
+async function lembretesEmSequencia() {
+  const amanha = somaDias(isoDia(), 1);
+  const fila = (await agsEntre(amanha, somaDias(amanha, 1))).filter((a) => a.status === "marcado");
+  if (!fila.length) { fechaFolha(); return toast("Todas as clientes de amanhã já confirmaram. 🎉"); }
+  st.fila = fila; st.filaPos = 0; proximoLembrete();
+}
+function proximoLembrete() {
+  const a = st.fila[st.filaPos];
+  if (!a) { st.fila = null; fechaFolha(); festa(); return toast("Lembretes enviados! ✨"); }
+  abreFolha(cabFolha(`Lembrete ${st.filaPos + 1} de ${st.fila.length}`, "Toque em enviar, mande no WhatsApp e volte para o app.") + `
+    <div class="proxima"><small>Amanhã às ${hora(a.inicio)}</small><h3>${esc(a.cliente_nome)}</h3><div class="mudo">${esc(a.servico_nome)} · ${brl(a.preco)}</div></div>
+    <a class="btn zap cheio" data-enviar target="_blank" rel="noopener" href="${linkZap(a, "lembrete")}">${IC.zap}Enviar lembrete</a>
+    <div class="grade2" style="margin-top:10px"><button class="btn" data-pular>Pular</button><button class="btn" data-parar>Parar</button></div>`, (r) => {
+    r.querySelector("[data-enviar]").onclick = () => { st.filaPos++; st.filaEsperando = true; };
+    r.querySelector("[data-pular]").onclick = () => { st.filaPos++; proximoLembrete(); };
+    r.querySelector("[data-parar]").onclick = () => { st.fila = null; fechaFolha(); };
+  });
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden && st.fila && st.filaEsperando) { st.filaEsperando = false; setTimeout(proximoLembrete, 300); } });
+
+// =====================================================================
+// TUTORIAL
+// =====================================================================
+const PASSOS_TUTORIAL = [
+  { img: true, t: "Bem-vinda ao Nay Nails Gestão", d: "Tudo do salão no seu celular, ligado ao site onde as clientes agendam. É uma agenda só: o que elas marcam aparece aqui na hora." },
+  { ic: "salao", t: "Início: o resumo do dia", l: ["Agendamentos de hoje e quanto já entrou", "Quem falta confirmar e horários livres", "A próxima cliente com o WhatsApp a um toque"] },
+  { ic: "agenda", t: "Agenda", l: ["Veja por dia, semana ou mês, com o previsto e o lucro", "Toque numa cliente para confirmar, remarcar ou cancelar", "Use o botão dourado + para marcar um horário"] },
+  { ic: "sino", t: "Avisos no celular", l: ["Nova cliente agendou, cancelou ou confirmou", "30 minutos antes de cada atendimento", "Resumo às 7h30 e lembrete às 18h"], extra: "Ative em Mais › Notificações." },
+  { ic: "cliente", t: "Clientes", l: ["Histórico, quanto já gastou e de quanto em quanto tempo volta", "Filtros de frequentes, sumidas e aniversariantes", "Mensagens prontas: parabéns, convite para voltar e avaliação"] },
+  { ic: "dinheiro", t: "Caixa e lucro", l: ["Registre pagamentos (Pix, dinheiro, cartão) e despesas", "Veja o lucro do dia, da semana e do mês", "Defina uma meta e receba dicas para faturar mais"] },
+  { ic: "relogio", t: "Automações", l: ["Atendimentos finalizados sozinhos depois do horário", "Lembretes de amanhã enviados em sequência", "Feriados bloqueados com um toque"], extra: "Configure em Mais › Automações." },
+  { ic: "cadeado", t: "Seu app protegido", d: "Crie uma senha de números e entre com Face ID ou digital. Ninguém mais vê sua agenda e suas clientes." },
+];
+function mostraTutorial(aoTerminar) {
+  let i = 0;
+  const el = document.createElement("div"); el.id = "tutorial"; document.body.appendChild(el);
+  const fim = () => { localStorage.setItem("nay.tutorial", "1"); el.remove(); aoTerminar && aoTerminar(); };
+  const desenha = (dir) => {
+    const p = PASSOS_TUTORIAL[i], ult = i === PASSOS_TUTORIAL.length - 1;
+    el.innerHTML = `<button class="pular" data-pular>${ult ? "" : "Pular"}</button>
+      <div class="slide ${dir || ""}">
+        <div class="big">${p.img ? '<img src="../nayara/logo.jpg" alt="">' : IC[p.ic]}</div>
+        <h2>${p.t}</h2>${p.d ? `<p>${p.d}</p>` : ""}${p.l ? `<ul>${p.l.map((x) => `<li>${x}</li>`).join("")}</ul>` : ""}${p.extra ? `<p style="font-size:13.5px;color:var(--ouro)">${p.extra}</p>` : ""}
+      </div>
+      <div class="pontos">${PASSOS_TUTORIAL.map((_, k) => `<i class="${k === i ? "on" : ""}"></i>`).join("")}</div>
+      <div class="acoes"><button class="btn" data-voltar ${i ? "" : "disabled"}>Voltar</button><button class="btn prim" data-prox>${ult ? "Começar a usar" : "Próximo"}</button></div>`;
+    el.querySelector("[data-pular]").onclick = fim;
+    el.querySelector("[data-voltar]").onclick = () => { if (i) { i--; desenha("volta"); } };
+    el.querySelector("[data-prox]").onclick = () => { if (ult) { festa(); fim(); } else { i++; desenha("entra"); } };
+  };
+  let x0 = null;
+  el.addEventListener("touchstart", (e) => (x0 = e.touches[0].clientX), { passive: true });
+  el.addEventListener("touchend", (e) => {
+    if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null;
+    if (dx < -50 && i < PASSOS_TUTORIAL.length - 1) { i++; desenha("entra"); } else if (dx > 50 && i > 0) { i--; desenha("volta"); }
+  });
+  desenha();
 }
