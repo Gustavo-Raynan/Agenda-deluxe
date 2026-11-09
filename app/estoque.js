@@ -47,7 +47,7 @@ async function telaEstoque() {
     const filt = esm.filter((p) => (!st.estTom || p.tonalidade === st.estTom) && (!busca || [p.nome, p.marca, p.codigo].join(" ").toLowerCase().includes(busca)));
     const tons = TONS.filter((t) => esm.some((p) => p.tonalidade === t));
     corpo = `
-      <div class="tres-bot"><button class="btn prim" data-foto>${IC.camera}Por foto</button><button class="btn" data-lista>${IC.busca}Da lista</button><button class="btn" data-manual>${IC.mais}À mão</button></div>
+      <div class="tres-bot"><button class="btn prim" data-lista>${IC.esmalte}Marcar os que tenho</button><button class="btn" data-foto>${IC.camera}Foto</button><button class="btn" data-manual>${IC.mais}À mão</button></div>
       ${r0.revisao.length ? `<div class="cartao" style="border-color:rgba(var(--accRGB),.45)"><div class="linha"><div class="cresce"><b>${r0.revisao.length} cor${r0.revisao.length > 1 ? "es" : ""} esperando sua conferência</b><div class="pequeno">Confira e publique para aparecerem no site.</div></div><button class="btn prim mini" data-revisar>Conferir</button></div></div>` : ""}
       <div class="busca">${IC.busca}<input class="campo" id="busca-esm" placeholder="Buscar cor, marca ou código" value="${esc(st.estBusca)}" autocomplete="off"></div>
       ${tons.length ? `<div class="opcoes" style="margin-bottom:12px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px">${["", ...tons].map((t) => `<button type="button" data-tom="${t}" class="${st.estTom === t ? "on" : ""}" style="flex:none">${t || "Todas"}</button>`).join("")}</div>` : ""}
@@ -516,30 +516,66 @@ async function revisaItens(itens) {
   });
 }
 
-// Adicionar sem foto: escolhe da lista de cores conhecidas ou do próprio catálogo
+// Lista de esmaltes do Brasil: marca "Tenho" nos que existem no salão
 async function daLista() {
   const [meus, base] = await Promise.all([q(sb.from("ad_produtos").select("*").eq("categoria", "Esmaltes")), baseEsmaltes()]);
-  const itens = [...meus.map((p) => ({ ...p, _meu: true })), ...base.filter((b) => !procura(b, meus, []).meu)];
-  abreFolha(cabFolha("Adicionar da lista", "Toque no esmalte para somar 1 no estoque. Se ainda não tem no salão, ele é cadastrado e aparece no site.") + `
-    <div class="busca">${IC.busca}<input class="campo" data-b placeholder="Digite marca ou nome" autocomplete="off"></div>
-    <div class="lista" data-l>${itens.map((p, i) => `<button class="item" data-k="${i}" data-t="${esc(norm([p.marca, p.nome, p.codigo, p.linha].join(" ")))}">${swatch(p, 38)}<div class="cresce"><b>${esc(p.nome)}</b><div class="pequeno">${esc(p.marca || "")}${p.linha ? " · " + esc(p.linha) : ""}${p._meu ? ` · ${qtd(p.quantidade)} no salão` : ""}</div></div><span class="chip ${p._meu ? "confirmado" : "marcado"}">${p._meu ? "+1" : "Adicionar"}</span></button>`).join("")}</div>
-    <p class="pequeno" style="text-align:center;margin:6px 0 12px">Não achou? Use "Por foto" ou "À mão". Cada esmalte cadastrado entra nesta lista.</p>`, (r) => {
-    r.querySelector("[data-b]").oninput = (e) => { const t = norm(e.target.value); r.querySelectorAll("[data-t]").forEach((b) => b.classList.toggle("hide", !!t && !t.split(" ").every((w) => b.dataset.t.includes(w)))); };
-    r.querySelectorAll("[data-k]").forEach((b) => (b.onclick = async () => {
-      const p = itens[+b.dataset.k]; b.disabled = true;
-      let id = p._meu ? p.id : null;
-      if (!id) {
-        const novo = await q(sb.from("ad_produtos").insert({ profissional_id: st.prof.id, categoria: "Esmaltes", nome: p.nome, marca: p.marca, codigo: p.codigo, linha: p.linha,
-          tonalidade: p.tonalidade, acabamento: p.acabamento, cor_hex: p.cor_hex, foto_url: p.foto_url, quantidade: 0, minimo: 1, catalogo: "publicado" }).select().single());
-        id = novo.id; p._meu = true; p.id = id; p.quantidade = 0;
-      }
-      await q(sb.from("ad_movimentos").insert({ profissional_id: st.prof.id, produto_id: id, tipo: "compra", quantidade: 1, motivo: "Adicionado da lista" }));
-      p.quantidade = Number(p.quantidade) + 1;
-      b.querySelector(".chip").textContent = "+1"; b.querySelector(".chip").className = "chip confirmado";
-      b.querySelector(".pequeno").innerHTML = `${esc(p.marca || "")}${p.linha ? " · " + esc(p.linha) : ""} · ${qtd(p.quantidade)} no salão`;
-      b.disabled = false; toast(`${p.nome}: ${qtd(p.quantidade)} no salão`);
-      if (st.aba === "estoque") telaEstoque();
-    }));
+  const itens = [...meus.map((p) => ({ ...p, _meu: p })), ...base.filter((b) => !procura(b, meus, []).meu).map((b) => ({ ...b, _meu: null }))]
+    .sort((a, b) => (a.marca || "~").localeCompare(b.marca || "~") || a.nome.localeCompare(b.nome));
+  const marcas = [...new Set(itens.map((p) => p.marca || "Sem marca"))];
+  let marca = "", soTenho = false, busca = "";
+  const tem = (p) => p._meu && Number(p._meu.quantidade) > 0;
+  abreFolha(cabFolha("Esmaltes do Brasil", "Marque os que você tem no salão. Os marcados aparecem no site; desmarcar deixa como indisponível.") + `
+    <div class="busca">${IC.busca}<input class="campo" data-b placeholder="Buscar marca ou nome" autocomplete="off"></div>
+    <div class="opcoes" data-marcas style="flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;margin-bottom:8px">${["", ...marcas].map((m) => `<button type="button" data-m="${esc(m)}" class="${m === "" ? "on" : ""}" style="flex:none">${esc(m || "Todas")}</button>`).join("")}</div>
+    <label class="interruptor" style="margin-bottom:8px"><span>Mostrar só os que tenho</span><input type="checkbox" data-so></label>
+    <p class="pequeno" data-conta style="margin:0 4px 8px"></p>
+    <div class="lista" data-l></div>
+    <div class="cartao" style="margin-top:12px"><b>Não achou um esmalte?</b><p class="pequeno" style="margin:2px 0 10px">Adicione aqui. Ele entra na lista para sempre.</p>
+      <div class="grade2"><input class="campo" data-nm list="marcas-esm3" placeholder="Marca"><input class="campo" data-nn placeholder="Nome da cor"></div>
+      <datalist id="marcas-esm3">${MARCAS.map((m) => `<option value="${m}">`).join("")}</datalist>
+      <div class="grade2" style="margin-top:8px"><select class="campo" data-nt><option value="">Tonalidade</option>${TONS.map((t) => `<option>${t}</option>`).join("")}</select><button class="btn prim" data-novo>Adicionar e marcar</button></div>
+      <p class="pequeno" style="margin-top:8px">Quer foto? Use "Por foto" na tela de esmaltes.</p></div>`, (r) => {
+    const desenha = () => {
+      const t = norm(busca).split(" ").filter(Boolean);
+      const lista = itens.filter((p) => (!marca || (p.marca || "Sem marca") === marca) && (!soTenho || tem(p)) && t.every((w) => norm([p.marca, p.nome, p.codigo, p.linha, p.tonalidade].join(" ")).includes(w)));
+      r.querySelector("[data-conta]").textContent = `${itens.filter(tem).length} marcados no salão · mostrando ${Math.min(lista.length, 200)} de ${lista.length}`;
+      r.querySelector("[data-l]").innerHTML = lista.slice(0, 200).map((p) => { const i = itens.indexOf(p); return `<label class="item" style="cursor:pointer">${swatch(p._meu || p, 38)}<div class="cresce"><b>${esc(p.nome)}</b><div class="pequeno">${esc(p.marca || "")}${p.linha ? " · " + esc(p.linha) : ""}${p.tonalidade ? " · " + esc(p.tonalidade) : ""}</div></div>
+        ${tem(p) ? `<span class="qtd-mini"><button type="button" data-menos="${i}">−</button><b>${qtd(p._meu.quantidade)}</b><button type="button" data-mais="${i}">+</button></span>` : ""}
+        <input type="checkbox" data-k="${i}" ${tem(p) ? "checked" : ""} style="width:24px;height:24px;accent-color:var(--acc);flex:none"></label>`; }).join("") || `<div class="vazio">Nada encontrado. Adicione abaixo.</div>`;
+      r.querySelectorAll("[data-k]").forEach((c) => (c.onchange = () => marca1(itens[+c.dataset.k], c.checked ? "tenho" : "acabou")));
+      r.querySelectorAll("[data-mais]").forEach((b) => (b.onclick = (e) => { e.preventDefault(); marca1(itens[+b.dataset.mais], "mais"); }));
+      r.querySelectorAll("[data-menos]").forEach((b) => (b.onclick = (e) => { e.preventDefault(); marca1(itens[+b.dataset.menos], "menos"); }));
+    };
+    const marca1 = async (p, acao) => {
+      try {
+        if (!p._meu) {
+          p._meu = await q(sb.from("ad_produtos").insert({ profissional_id: st.prof.id, categoria: "Esmaltes", nome: p.nome, marca: p.marca, codigo: p.codigo, linha: p.linha,
+            tonalidade: p.tonalidade, acabamento: p.acabamento, cor_hex: p.cor_hex, foto_url: p.foto_url, quantidade: 0, minimo: 1, catalogo: "publicado" }).select().single());
+        }
+        const atual = Number(p._meu.quantidade);
+        const nova = acao === "tenho" ? Math.max(1, atual) : acao === "acabou" ? 0 : acao === "mais" ? atual + 1 : Math.max(0, atual - 1);
+        if (nova !== atual) await q(sb.from("ad_movimentos").insert({ profissional_id: st.prof.id, produto_id: p._meu.id, tipo: "ajuste", quantidade: nova, motivo: acao === "acabou" ? "Acabou" : "Lista de esmaltes" }));
+        if (nova > 0 && p._meu.catalogo !== "publicado") { await q(sb.from("ad_produtos").update({ catalogo: "publicado" }).eq("id", p._meu.id)); p._meu.catalogo = "publicado"; }
+        p._meu.quantidade = nova;
+      } catch { /* erro já avisado */ }
+      desenha(); if (st.aba === "estoque") telaEstoque();
+    };
+    r.querySelector("[data-b]").oninput = (e) => { busca = e.target.value; desenha(); };
+    r.querySelector("[data-so]").onchange = (e) => { soTenho = e.target.checked; desenha(); };
+    r.querySelectorAll("[data-m]").forEach((b) => (b.onclick = () => { marca = b.dataset.m; r.querySelectorAll("[data-m]").forEach((x) => x.classList.toggle("on", x === b)); desenha(); }));
+    r.querySelector("[data-novo]").onclick = async () => {
+      const m = r.querySelector("[data-nm]").value.trim(), n = r.querySelector("[data-nn]").value.trim(), t = r.querySelector("[data-nt]").value || null;
+      if (!m || !n) return toast("Escreva a marca e o nome.", 1);
+      const ja = procura({ marca: m, nome: n }, itens.map((x) => x._meu || x), []).meu;
+      if (ja) { const it = itens.find((x) => (x._meu || x) === ja); return marca1(it, "tenho").then(() => toast("Esse já estava na lista. Marcado!")); }
+      const cor = t ? { Vermelhos: "#B3262E", Vinhos: "#5E1A2A", Rosas: "#E58FA8", Nudes: "#D8B49B", Marrons: "#6B4232", Brancos: "#F4F1EA", Pretos: "#141414", Cinzas: "#8C8C8C", Azuis: "#2F5FA8", Verdes: "#3D7A4E", Roxos: "#6B3F8F", Laranjas: "#E2733A", Amarelos: "#E8C547" }[t] || null : null;
+      await sb.from("ad_esmaltes_base").insert({ marca: m, nome: n, tonalidade: t, cor_hex: cor, fonte: "salao" });
+      const novo = { marca: m, nome: n, tonalidade: t, cor_hex: cor, _meu: null };
+      itens.unshift(novo); BASE = null;
+      r.querySelector("[data-nm]").value = ""; r.querySelector("[data-nn]").value = "";
+      await marca1(novo, "tenho"); toast(`${n} adicionado e marcado.`);
+    };
+    desenha();
   });
 }
 
