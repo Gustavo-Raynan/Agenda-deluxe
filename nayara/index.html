@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Nayara Fernandes · Nails e cuidados — Agende seu horário</title>
-<meta name="description" content="Agende seu horário com Nayara Fernandes, Nails e cuidados. Escolha o serviço, o dia e o horário em menos de um minuto.">
-<meta property="og:title" content="Nayara Fernandes · Nails e cuidados">
-<meta property="og:description" content="Agende seu horário online em menos de um minuto.">
+<title>Nayara Fernandes | Nails e cuidados — Lagoa Santa</title>
+<meta name="description" content="Nayara Fernandes, Nails e cuidados em Lagoa Santa/MG: manicure, pedicure, cuticulagem e spa dos pés. Agende seu horário online.">
+<meta property="og:title" content="Nayara Fernandes | Nails e cuidados">
+<meta property="og:description" content="Unhas e cuidados com carinho em cada detalhe. Agende online o seu horário.">
 <meta property="og:image" content="logo.jpg">
 <meta name="theme-color" content="#9DA592">
 <link rel="icon" href="icone-192.png">
@@ -14,181 +14,211 @@
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
-  :root {
-    --salvia: #A3AB97; --salvia-2: #8C957F; --salvia-clara: #E8ECE2; --fundo: #F2F4EE;
-    --oliva: #343B2E; --oliva-2: #5D6553; --ouro: #A6844A; --ouro-2: #C9A86A; --ouro-claro: #E9D7AE;
-    --branco: #FFFFFF; --linha: #DCE1D4; --erro: #A8443A; --zap: #1E9E57;
-    --serif: "Cormorant Garamond", Georgia, serif; --sans: "Jost", system-ui, sans-serif;
-  }
-  * { box-sizing: border-box; }
-  html { -webkit-text-size-adjust: 100%; }
-  body { margin: 0; font: 400 17px/1.5 var(--sans); color: var(--oliva); background: var(--fundo); -webkit-font-smoothing: antialiased; }
-  img { display: block; max-width: 100%; }
-  button, input, textarea { font: inherit; color: inherit; }
-  a { color: inherit; }
-  :focus-visible { outline: 3px solid var(--ouro); outline-offset: 2px; }
+:root{
+ --g:#A6844A;--g2:#C6A262;--gt:#8A6B35;
+ --bg:#EEF1EA;--card:#fff;--raise:#F6F7F3;--field:#fff;--b:#DCE1D4;--t:#343B2E;--m:#6A7260;
+ --s1:#B3BAA7;--s2:#A3AB97;--s3:#8C957F;--sc:#E8ECE2;
+ --ok:#3F7A4E;--zap:#1E9E57;--err:#A8443A;
+ --serif:"Cormorant Garamond",Georgia,serif;--font:"Jost",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+ --brilho:linear-gradient(90deg,transparent,#E9D7AE 30%,#C6A26299 70%,transparent);
+}
+*{box-sizing:border-box;margin:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{font-family:var(--font);background:var(--bg);color:var(--t);line-height:1.55;font-size:16px;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.hide{display:none!important}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+:focus-visible{outline:2px solid var(--g);outline-offset:2px}
 
-  /* ---------- Topo com a logo ---------- */
-  .topo { background: radial-gradient(120% 90% at 50% 0%, #B3BAA7 0%, var(--salvia) 45%, var(--salvia-2) 100%); padding: 22px 18px 34px; text-align: center; }
-  .logo { width: min(300px, 74vw); height: auto; aspect-ratio: 1; object-fit: cover; margin: 0 auto; border-radius: 50%; box-shadow: 0 18px 50px rgba(40, 48, 32, .35), 0 0 0 6px rgba(233, 215, 174, .35); }
-  .frase { font: 500 italic 1.45rem/1.25 var(--serif); color: #fff; margin: 22px auto 18px; max-width: 22ch; text-shadow: 0 1px 2px rgba(0,0,0,.15); }
-  .acoes-topo { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 999px; padding: 14px 24px; font-weight: 600; font-size: 1rem; cursor: pointer; text-decoration: none; transition: transform .15s ease, box-shadow .15s ease; }
-  .btn:active { transform: scale(.98); }
-  .btn svg { width: 20px; height: 20px; flex: none; }
-  .btn-ouro { background: linear-gradient(180deg, #C6A262, var(--ouro)); color: #fff; box-shadow: 0 6px 18px rgba(120, 90, 40, .35); }
-  .btn-vidro { background: rgba(255,255,255,.22); color: #fff; border: 1px solid rgba(255,255,255,.5); padding: 11px 18px; font-size: .95rem; }
-  .btn-zap { background: var(--zap); color: #fff; }
-  .btn-linha { background: #fff; color: var(--oliva); border: 1.5px solid var(--linha); }
-  .btn-cheio { width: 100%; padding: 17px 24px; font-size: 1.08rem; }
-  .btn[disabled] { opacity: .55; pointer-events: none; }
+/* ===== Topo ===== */
+header{text-align:center;padding:26px 16px 34px;background:radial-gradient(120% 90% at 50% 0,var(--s1) 0,var(--s2) 50%,var(--s3) 100%);color:#fff}
+.logo{width:min(300px,74vw);aspect-ratio:1;object-fit:cover;display:block;margin:0 auto;border-radius:50%;box-shadow:0 18px 50px #2830205a,0 0 0 6px #E9D7AE59}
+h1{font:600 clamp(32px,8vw,48px)/1.05 var(--serif);margin-top:20px;text-shadow:0 1px 2px #0002}
+.sl{color:#fffffff0;margin:10px auto 22px;max-width:36ch;text-wrap:balance;font-size:17px}
+.cta{display:inline-block;background:linear-gradient(180deg,var(--g2),var(--g));color:#fff;text-decoration:none;font-weight:600;padding:15px 32px;border-radius:999px;box-shadow:0 10px 26px -8px #6E5226b3;transition:filter .15s,transform .1s}
+.cta:hover{filter:brightness(1.06)}
+.cta:active{transform:scale(.97)}
 
-  main { max-width: 560px; margin: -18px auto 0; padding: 0 14px 120px; position: relative; }
-  .bloco { background: var(--branco); border-radius: 22px; padding: 22px 18px; margin-bottom: 14px; box-shadow: 0 1px 0 var(--linha), 0 10px 30px rgba(52, 59, 46, .06); }
-  h2 { font: 600 1.75rem/1.1 var(--serif); margin: 0 0 4px; color: var(--oliva); }
-  .sub { color: var(--oliva-2); margin: 0 0 16px; font-size: .95rem; }
-  .passo { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--salvia-clara); color: var(--oliva); font: 600 .9rem var(--sans); margin-right: 8px; vertical-align: 3px; }
+/* faixa de informações */
+.info{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:18px 14px 4px}
+.info span,.info a{border:1px solid var(--b);background:var(--card);border-radius:999px;padding:8px 15px;font-size:14px;text-decoration:none;transition:border-color .15s}
+.info a{font-weight:500}
+.info a:hover{border-color:var(--g)}
+.bad{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;max-width:760px;margin:14px auto 0;padding:10px 22px;font-size:14px;color:var(--t)}
+.bad div{display:flex;align-items:center;gap:9px}
+.bad div::before{content:"";flex:none;width:18px;height:18px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A6844A' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/contain no-repeat}
+.bad b{font-weight:500}
+@media(min-width:680px){.bad{grid-template-columns:repeat(4,auto);justify-content:space-between}}
 
-  /* ---------- Serviços ---------- */
-  .servicos { display: grid; gap: 10px; }
-  .serv { display: grid; grid-template-columns: 1fr auto; gap: 4px 14px; align-items: center; width: 100%; text-align: left; background: #fff; border: 1.5px solid var(--linha); border-radius: 16px; padding: 14px 16px; cursor: pointer; }
-  .serv b { font-weight: 600; font-size: 1.04rem; }
-  .serv .det { grid-column: 1; color: var(--oliva-2); font-size: .9rem; }
-  .serv .desc { grid-column: 1 / -1; color: var(--oliva-2); font-size: .88rem; font-style: italic; }
-  .serv .preco { grid-row: 1 / span 2; grid-column: 2; text-align: right; font: 600 1.25rem var(--serif); color: var(--ouro); white-space: nowrap; }
-  .serv .preco small { display: block; font: 400 .7rem var(--sans); color: var(--oliva-2); }
-  .serv[aria-pressed="true"] { border-color: var(--ouro); background: #FBF7EE; box-shadow: 0 0 0 2px var(--ouro-2) inset; }
+/* ===== Cartões ===== */
+main{max-width:760px;margin:auto;padding:0 14px 56px}
+section{position:relative;background:var(--card);border:1px solid var(--b);border-radius:22px;padding:24px 18px;margin-top:16px;box-shadow:0 10px 30px #343B2E0d}
+section::before{content:"";position:absolute;left:28px;right:28px;top:-1px;height:2px;background:var(--brilho);border-radius:2px}
+h2{font:600 28px/1.1 var(--serif);margin-bottom:14px}
+.sub{margin:4px 0 14px;color:var(--m);font-size:14px}
+.note{font-size:13.5px;color:var(--m);margin-top:10px}
 
-  /* ---------- Dias e horários ---------- */
-  .dias { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 8px; scroll-snap-type: x mandatory; scrollbar-width: none; }
-  .dias::-webkit-scrollbar { display: none; }
-  .dia { flex: 0 0 64px; scroll-snap-align: start; border: 1.5px solid var(--linha); background: #fff; border-radius: 16px; padding: 9px 0; cursor: pointer; display: grid; gap: 1px; text-align: center; }
-  .dia small { font-size: .74rem; color: var(--oliva-2); text-transform: capitalize; }
-  .dia b { font: 600 1.45rem/1 var(--serif); }
-  .dia[aria-pressed="true"] { background: var(--oliva); color: #fff; border-color: var(--oliva); }
-  .dia[aria-pressed="true"] small { color: var(--ouro-claro); }
-  .dia:disabled { opacity: .35; cursor: default; }
-  .horas { display: grid; grid-template-columns: repeat(auto-fill, minmax(82px, 1fr)); gap: 8px; margin-top: 14px; }
-  .hora { border: 1.5px solid var(--linha); background: #fff; border-radius: 12px; padding: 12px 0; font-weight: 600; cursor: pointer; }
-  .hora[aria-pressed="true"] { background: var(--ouro); border-color: var(--ouro); color: #fff; }
-  .vazio { color: var(--oliva-2); font-size: .95rem; grid-column: 1 / -1; padding: 6px 0; }
+/* ===== Formulário ===== */
+label.f{display:block;font-size:14px;font-weight:500;color:var(--t);margin:16px 0 6px}
+label.f small{color:var(--m);font-weight:400}
+input:not([type=checkbox]):not([type=hidden]),select,textarea{width:100%;padding:14px;background-color:var(--field);color:var(--t);border:1.5px solid var(--b);border-radius:14px;font:16px var(--font)}
+select{appearance:none;-webkit-appearance:none;padding-right:42px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236A7260' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;background-size:18px}
+textarea{resize:vertical;min-height:72px}
+input::placeholder,textarea::placeholder{color:#9AA090}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--g);box-shadow:0 0 0 3px #A6844A2b}
 
-  /* ---------- Dados ---------- */
-  label { display: block; font-size: .9rem; font-weight: 500; margin: 0 0 6px; }
-  .campo { margin-bottom: 14px; }
-  input, textarea { width: 100%; border: 1.5px solid var(--linha); border-radius: 14px; padding: 14px; background: #fff; font-size: 1.05rem; }
-  input:focus, textarea:focus { border-color: var(--ouro); outline: none; box-shadow: 0 0 0 3px rgba(166,132,74,.18); }
-  textarea { resize: vertical; min-height: 70px; font-size: 1rem; }
-  .resumo { background: var(--salvia-clara); border-radius: 16px; padding: 14px 16px; margin-bottom: 16px; line-height: 1.6; }
-  .resumo b { font-weight: 600; }
+/* serviços: pode marcar mais de um */
+.sv{display:flex;align-items:center;gap:13px;padding:14px;border:1.5px solid var(--b);border-radius:16px;margin-bottom:8px;cursor:pointer;transition:border-color .15s,background .15s}
+.sv:hover{border-color:var(--s2)}
+.sv:has(input:checked){border-color:var(--g);background:#FBF7EE}
+.sv input{appearance:none;-webkit-appearance:none;flex:none;width:24px;height:24px;margin:0;border:1.5px solid #B8BEAE;border-radius:8px;background:#fff;display:grid;place-content:center;cursor:pointer;transition:background .12s,border-color .12s}
+.sv input::after{content:"";width:12px;height:12px;background:#fff;transform:scale(0);transition:transform .12s;clip-path:polygon(14% 44%,0 65%,50% 100%,100% 16%,80% 0%,43% 62%)}
+.sv input:checked{background:var(--g);border-color:var(--g)}
+.sv input:checked::after{transform:scale(1)}
+.sv span{flex:1;font-size:16px;font-weight:500}
+.sv small{display:block;color:var(--m);font-size:13.5px;font-weight:400}
+.sv small i{display:block;font-style:italic}
+.sv em{font:600 19px var(--serif);font-style:normal;white-space:nowrap;color:var(--gt);text-align:right}
+.sv em b{display:block;font:400 11px var(--font);color:var(--m)}
+.total{display:flex;justify-content:space-between;align-items:baseline;font-weight:600;margin-top:18px;padding-top:16px;border-top:1px solid var(--b)}
+.total small{display:block;font-weight:400;color:var(--m);font-size:13px}
+.total em{font:700 28px var(--serif);font-style:normal;color:var(--gt)}
+.go{width:100%;margin-top:20px;padding:17px;background:linear-gradient(180deg,var(--g2),var(--g));color:#fff;font:600 17px var(--font);border:0;border-radius:16px;cursor:pointer;box-shadow:0 8px 22px -10px #6E5226b3;transition:filter .15s,transform .1s}
+.go:hover:not(:disabled){filter:brightness(1.06)}
+.go:active{transform:scale(.98)}
+.go:disabled{opacity:.6;cursor:wait}
+.btn2{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:13px 16px;border-radius:14px;border:1.5px solid var(--b);background:var(--raise);color:var(--t);text-decoration:none;font:600 14.5px var(--font);cursor:pointer}
+.btn2:hover{border-color:var(--g)}
 
-  /* ---------- Barra fixa ---------- */
-  .barra { position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 14px calc(12px + env(safe-area-inset-bottom)); background: rgba(242, 244, 238, .94); backdrop-filter: blur(10px); border-top: 1px solid var(--linha); transform: translateY(110%); transition: transform .25s ease; z-index: 5; }
-  .barra.on { transform: none; }
-  .barra .in { max-width: 560px; margin: 0 auto; display: flex; gap: 12px; align-items: center; }
-  .barra .txt { flex: 1; min-width: 0; font-size: .9rem; line-height: 1.3; }
-  .barra .txt b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* horários */
+.slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.slots .note{grid-column:1/-1;margin:0}
+.slot{padding:13px 4px;background:var(--field);color:var(--t);border:1.5px solid var(--b);border-radius:12px;font:600 16px var(--font);cursor:pointer;transition:border-color .15s,background .15s,transform .1s}
+.slot:hover{border-color:var(--g)}
+.slot:active{transform:scale(.97)}
+.slot.on{background:var(--g);border-color:var(--g);color:#fff}
+@media(min-width:560px){.slots{grid-template-columns:repeat(5,1fr)}}
+.msg{font-size:14px;margin-top:12px;color:var(--err);min-height:1px}
 
-  /* ---------- Sucesso ---------- */
-  .ok { text-align: center; }
-  .ok .selo { width: 74px; height: 74px; margin: 4px auto 12px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(180deg, #C6A262, var(--ouro)); color: #fff; box-shadow: 0 8px 22px rgba(120,90,40,.3); }
-  .ok .selo svg { width: 38px; height: 38px; }
-  .ok .pilha { display: grid; gap: 10px; margin-top: 18px; }
+/* confirmação */
+.okbox{text-align:center;border-color:#C9B98F;background:linear-gradient(#FBF7EE,var(--card))}
+.okbox .ic{width:72px;height:72px;margin:0 auto 10px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(180deg,var(--g2),var(--g));color:#fff;box-shadow:0 8px 22px -8px #6E5226b3}
+.okbox .ic svg{width:36px;height:36px}
+.okbox h2{margin:6px 0}
+.okbox .resumo{font-size:17px;font-weight:600;margin:10px 0;line-height:1.5}
+.okbox .go{display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;background:var(--zap);box-shadow:none}
+.okbox .btn2{margin-top:10px;width:100%}
 
-  /* ---------- Instagram ---------- */
-  .insta { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; text-decoration: none; }
-  .insta .ico { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; color: #fff; background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fd5949 45%, #d6249f 60%, #285AEB 90%); }
-  .insta .ico svg { width: 30px; height: 30px; }
-  .insta b { font: 600 1.25rem var(--serif); display: block; }
-  .insta span { color: var(--oliva-2); font-size: .92rem; }
+/* como chegar */
+.end{font-size:17px;font-weight:600}
+.end small{display:block;color:var(--m);font-weight:400;font-size:14px}
+.mapa{border-radius:18px;overflow:hidden;border:1px solid var(--b);aspect-ratio:16/11;margin:14px 0;background:var(--sc)}
+.mapa iframe{width:100%;height:100%;border:0;display:block}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.acts .btn2.full{grid-column:1/-1}
+.passos{margin:16px 0 0;padding-left:20px;font-size:15px;color:var(--t)}
+.passos li{margin:6px 0}
 
-  footer { text-align: center; color: var(--oliva-2); font-size: .82rem; padding: 10px 0 30px; }
-  .esconde { display: none !important; }
-  #aviso { position: fixed; left: 50%; top: 16px; transform: translate(-50%, -150%); background: var(--oliva); color: #fff; padding: 12px 18px; border-radius: 12px; z-index: 20; transition: transform .25s; max-width: 92vw; font-size: .95rem; }
-  #aviso.on { transform: translate(-50%, 0); }
-  #aviso.erro { background: var(--erro); }
-  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+/* instagram */
+.insta{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center;text-decoration:none}
+.insta .ico{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;color:#fff;background:radial-gradient(circle at 30% 107%,#fdf497 0%,#fd5949 45%,#d6249f 60%,#285AEB 90%)}
+.insta .ico svg{width:30px;height:30px}
+.insta b{font:600 22px var(--serif);display:block}
+.insta span{color:var(--m);font-size:14.5px}
+
+footer{text-align:center;color:var(--m);font-size:14px;padding:16px 16px 40px;line-height:1.7}
+footer .marca{font:italic 500 20px var(--serif);color:var(--t)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
-
-<header class="topo">
-  <img class="logo" src="logo.jpg" alt="Nayara Fernandes, Nails e cuidados" width="640" height="641">
-  <p class="frase">Agende seu horário em menos de um minuto</p>
-  <div class="acoes-topo">
-    <a class="btn btn-ouro" href="#servicos">Agendar meu horário</a>
-  </div>
-  <div class="acoes-topo" style="margin-top:10px">
-    <a class="btn btn-vidro" id="topo-insta" target="_blank" rel="noopener">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>Instagram</a>
-    <a class="btn btn-vidro" id="topo-zap" target="_blank" rel="noopener">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.4a.5.5 0 0 0 0-.4l-.8-1.9c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.7a2.8 2.8 0 0 0 1.8-1.3 2.3 2.3 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3Z"/></svg>WhatsApp</a>
-  </div>
+<header>
+  <img class="logo" src="logo.jpg" width="640" height="641" fetchpriority="high" alt="Nayara Fernandes, Nails e cuidados">
+  <h1>Cuidado em cada detalhe</h1>
+  <p class="sl">Unhas lindas e pés bem cuidados, com carinho e capricho. Agende seu horário em menos de um minuto.</p>
+  <a class="cta" href="#servicos">Agendar meu horário</a>
 </header>
 
+<div class="info" id="info">
+  <a id="infoZap" target="_blank" rel="noopener">WhatsApp</a>
+  <a id="infoInsta" target="_blank" rel="noopener">Instagram</a>
+  <a href="#como-chegar">Como chegar</a>
+</div>
+<div class="bad"><div><b>Hora marcada, sem espera</b></div><div><b>Pé, mão e spa dos pés</b></div><div><b>Atendimento com carinho</b></div><div><b>Agende pelo celular</b></div></div>
+
 <main>
-  <div id="fluxo">
-    <section class="bloco" id="servicos">
-      <h2><span class="passo">1</span>Escolha o serviço</h2>
-      <p class="sub">Os valores são a partir de. O valor final é combinado no atendimento.</p>
-      <div class="servicos" id="lista-serv"><p class="vazio">Carregando serviços…</p></div>
-    </section>
+<section id="servicos">
+  <h2>Serviços e valores</h2>
+  <p class="sub">Marque um ou mais serviços. Os valores são a partir de, e o final é combinado no atendimento.</p>
+  <div id="lista"><p class="note">Carregando serviços…</p></div>
+  <div class="total"><span>Total<small id="tempo">Escolha os serviços</small></span><em id="total">R$ 0</em></div>
+</section>
 
-    <section class="bloco esconde" id="quando">
-      <h2><span class="passo">2</span>Escolha o dia e a hora</h2>
-      <p class="sub" id="quando-sub"></p>
-      <div class="dias" id="dias"></div>
-      <div class="horas" id="horas"></div>
-    </section>
+<section id="agendar">
+  <h2>Agendamento</h2>
+  <label class="f" for="nome">Seu nome</label><input id="nome" autocomplete="name" placeholder="Nome completo">
+  <label class="f" for="tel">Seu WhatsApp</label><input id="tel" type="tel" inputmode="tel" autocomplete="tel" maxlength="15" placeholder="(31) 99999-9999">
+  <label class="f" for="data">Data</label><select id="data"></select>
+  <label class="f" id="lbHora">Horário</label>
+  <div class="slots" id="slots" role="group" aria-labelledby="lbHora"><p class="note">Escolha os serviços e a data para ver os horários livres.</p></div>
+  <label class="f" for="obs">Observação <small>(opcional)</small></label>
+  <textarea id="obs" maxlength="200" placeholder="Ex.: quero esmalte vermelho, unha quebrada…"></textarea>
+  <input class="hp" id="site" tabindex="-1" autocomplete="off" aria-hidden="true">
+  <p class="msg" id="msg" role="alert"></p>
+  <button class="go" id="enviar" type="button">Confirmar agendamento</button>
+  <p class="note">Seu horário é reservado na hora. Depois você envia o resumo no WhatsApp para a Nayara.</p>
+</section>
 
-    <section class="bloco esconde" id="dados">
-      <h2><span class="passo">3</span>Seus dados</h2>
-      <p class="sub">Para a Nayara saber quem vem e falar com você.</p>
-      <div class="campo"><label for="c-nome">Seu nome</label><input id="c-nome" autocomplete="name" placeholder="Nome e sobrenome"></div>
-      <div class="campo"><label for="c-zap">Seu WhatsApp com DDD</label><input id="c-zap" inputmode="tel" autocomplete="tel" placeholder="(31) 99999-9999"></div>
-      <div class="campo"><label for="c-obs">Alguma observação? <span style="font-weight:400;color:var(--oliva-2)">(opcional)</span></label><textarea id="c-obs" maxlength="200" placeholder="Ex.: quero esmalte vermelho, unha quebrada…"></textarea></div>
-      <div class="resumo" id="resumo"></div>
-      <button class="btn btn-ouro btn-cheio" id="confirmar">Confirmar agendamento</button>
-    </section>
+<section id="confirmado" class="okbox hide" tabindex="-1">
+  <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+  <h2>Horário reservado!</h2>
+  <p class="resumo" id="okResumo"></p>
+  <p class="note" style="font-size:15px">Falta só um passo: toque no botão abaixo e envie o resumo no WhatsApp para a Nayara.</p>
+  <a class="go" id="okWhats" href="#" target="_blank" rel="noopener">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm4.5 12.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.4a.5.5 0 0 0 0-.4l-.8-1.9c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.7a2.8 2.8 0 0 0 1.8-1.3 2.3 2.3 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3Z"/></svg>
+    Enviar resumo no WhatsApp</a>
+  <button type="button" class="btn2" id="lembrete">Salvar lembrete no meu celular</button>
+  <button type="button" class="btn2" id="novo">Fazer outro agendamento</button>
+</section>
+
+<section id="como-chegar">
+  <h2>Como chegar</h2>
+  <p class="end">Rua Governador Mario Covas, 105<small>Bairro Promissão · Lagoa Santa - MG · CEP 33230-382</small></p>
+  <div class="mapa"><iframe title="Mapa do salão Nayara Fernandes" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://maps.google.com/maps?q=Nayara%20Fernandes%20Nails%2C%20R.%20Gov.%20Mario%20Covas%2C%20105%20-%20Promiss%C3%A3o%2C%20Lagoa%20Santa%20-%20MG%2C%2033230-382&z=16&hl=pt-BR&output=embed"></iframe></div>
+  <div class="acts">
+    <a class="btn2" href="https://www.google.com/maps/dir/?api=1&destination=R.%20Gov.%20Mario%20Covas%2C%20105%20-%20Promiss%C3%A3o%2C%20Lagoa%20Santa%20-%20MG%2C%2033230-382&travelmode=driving" target="_blank" rel="noopener">Rota no Google Maps</a>
+    <a class="btn2" href="https://waze.com/ul?q=R.%20Gov.%20Mario%20Covas%2C%20105%2C%20Lagoa%20Santa&navigate=yes" target="_blank" rel="noopener">Abrir no Waze</a>
+    <a class="btn2 full" href="https://share.google/AJ7Rs87t4wpcrDhNh" target="_blank" rel="noopener">Ver no Google e avaliações</a>
   </div>
+  <ol class="passos">
+    <li>Toque em <b>Rota no Google Maps</b> ou <b>Waze</b>. O trajeto sai da sua localização atual.</li>
+    <li>Siga até o bairro <b>Promissão</b>, em Lagoa Santa.</li>
+    <li>Entre na <b>Rua Governador Mario Covas</b> e procure o <b>número 105</b>.</li>
+    <li>Chegou? É só chamar a Nayara no <a id="passoZap" target="_blank" rel="noopener" style="color:var(--gt)">WhatsApp</a>.</li>
+  </ol>
+</section>
 
-  <section class="bloco ok esconde" id="sucesso">
-    <div class="selo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
-    <h2>Horário reservado!</h2>
-    <p id="suc-txt" style="margin:6px 0 0"></p>
-    <p class="sub" style="margin-top:12px">Agora envie a mensagem para a Nayara no WhatsApp para ela já deixar tudo pronto para você.</p>
-    <div class="pilha">
-      <a class="btn btn-zap btn-cheio" id="suc-zap" target="_blank" rel="noopener">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm4.5 12.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.4a.5.5 0 0 0 0-.4l-.8-1.9c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.7a2.8 2.8 0 0 0 1.8-1.3 2.3 2.3 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3Z"/></svg>
-        Enviar para a Nayara no WhatsApp</a>
-      <button class="btn btn-linha btn-cheio" id="suc-lembrete">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
-        Salvar lembrete no meu celular</button>
-      <button class="btn btn-linha btn-cheio" id="suc-outro">Agendar outro horário</button>
-    </div>
-  </section>
-
-  <a class="bloco insta" id="insta" target="_blank" rel="noopener">
+<section>
+  <a class="insta" id="insta" target="_blank" rel="noopener">
     <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg></div>
     <div><b>@nayfernandes.nails</b><span>Veja os trabalhos e as novidades no Instagram</span></div>
   </a>
-
-  <footer>Agendamento online por Agenda Deluxe</footer>
+</section>
 </main>
 
-<div class="barra" id="barra"><div class="in">
-  <div class="txt" id="barra-txt"></div>
-  <button class="btn btn-ouro" id="barra-btn">Continuar</button>
-</div></div>
-<div id="aviso" role="status" aria-live="polite"></div>
+<footer><span class="marca">Nayara Fernandes · Nails e cuidados</span><br>Lagoa Santa - MG<br><a id="rodapeInsta" target="_blank" rel="noopener" style="color:var(--gt);text-decoration:none">@nayfernandes.nails</a></footer>
 
 <script>
+/* ===== CONFIGURAÇÕES ===== */
 const SLUG = "nayfernandes";
 const sb = supabase.createClient("https://izpsmlbfponhqwzjodyf.supabase.co", "sb_publishable_AvyHVWMBYWUlw5SRiDJt3w_KH2eIhbm");
 const TZ = "America/Sao_Paulo";
+const SEM = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+const SEM3 = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const brl = (v) => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -197,149 +227,148 @@ const dataLonga = (d) => { const t = new Date(d).toLocaleDateString("pt-BR", { w
 const isoDia = (d = new Date()) => new Date(d).toLocaleDateString("en-CA", { timeZone: TZ });
 const somaDias = (iso, n) => { const d = new Date(iso + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const dur = (m) => (m < 60 ? m + " min" : Math.floor(m / 60) + "h" + (m % 60 ? String(m % 60).padStart(2, "0") : ""));
-const fmtZap = (z) => { z = z.replace(/\D/g, "").replace(/^55/, ""); return z.length >= 10 ? `(${z.slice(0, 2)}) ${z.slice(2, -4)}-${z.slice(-4)}` : z; };
-function aviso(msg, erro) { const a = $("aviso"); a.textContent = msg; a.className = "on" + (erro ? " erro" : ""); clearTimeout(a._t); a._t = setTimeout(() => (a.className = ""), 4000); }
+const fmtTel = (z) => { z = String(z).replace(/\D/g, "").replace(/^55(?=\d{10,11}$)/, ""); return z.length >= 10 ? `(${z.slice(0, 2)}) ${z.slice(2, -4)}-${z.slice(-4)}` : z; };
 
-const st = { pag: null, serv: null, dia: null, hora: null, agendado: null };
+const st = { pag: null, hora: null, ag: null };
+
+function selecionados() { return [...document.querySelectorAll("#lista input:checked")].map((i) => st.pag.servicos.find((s) => s.id === i.value)); }
+function minutos() { return selecionados().reduce((t, s) => t + s.duracao_min, 0); }
+
+// Agrupa dias com o mesmo horário: "Seg a Sex · 09:00 às 18:00"
+function resumoHorarios(hs) {
+  const porDia = {};
+  hs.forEach((h) => { (porDia[h.dia] = porDia[h.dia] || []).push(`${h.inicio} às ${h.fim}`); });
+  const ordem = [1, 2, 3, 4, 5, 6, 0].filter((d) => porDia[d]);
+  const grupos = [];
+  ordem.forEach((d) => {
+    const txt = porDia[d].join(" e "), g = grupos[grupos.length - 1];
+    const prox = (a, b) => (a === 6 && b === 0) || b === a + 1;
+    if (g && g.txt === txt && prox(g.fim, d)) g.fim = d; else grupos.push({ ini: d, fim: d, txt });
+  });
+  return grupos.map((g) => `${SEM3[g.ini]}${g.fim !== g.ini ? " a " + SEM3[g.fim] : ""} · ${g.txt}`);
+}
 
 async function carregar() {
   const { data, error } = await sb.rpc("ad_pagina_publica", { p_slug: SLUG });
-  if (error || !data) { $("lista-serv").innerHTML = `<p class="vazio">Não foi possível carregar os serviços agora. Chame no WhatsApp.</p>`; return; }
+  if (error || !data) { $("lista").innerHTML = `<p class="note">Não foi possível carregar os serviços agora. Chame a Nayara no WhatsApp.</p>`; return; }
   st.pag = data;
-  const zap = "https://wa.me/" + data.whatsapp;
-  $("topo-zap").href = zap + "?text=" + encodeURIComponent("Olá, Nayara! Vim pelo site de agendamento.");
+  const zap = "https://wa.me/" + data.whatsapp + "?text=" + encodeURIComponent("Olá, Nayara! Vim pelo site de agendamento.");
   const insta = "https://www.instagram.com/" + (data.instagram || "nayfernandes.nails") + "/";
-  $("topo-insta").href = insta; $("insta").href = insta;
+  ["infoZap", "passoZap"].forEach((id) => ($(id).href = zap));
+  ["infoInsta", "insta", "rodapeInsta"].forEach((id) => ($(id).href = insta));
+  $("info").insertAdjacentHTML("afterbegin", resumoHorarios(data.horarios || []).map((t) => `<span>${t}</span>`).join(""));
+
   if (data.liberado === false || !data.servicos.length) {
-    $("lista-serv").innerHTML = `<p class="vazio">A agenda online está pausada no momento. Chame a Nayara no WhatsApp para marcar.</p><a class="btn btn-zap btn-cheio" href="${zap}" target="_blank" rel="noopener">Chamar no WhatsApp</a>`;
+    $("lista").innerHTML = `<p class="note" style="font-size:15px">A agenda online está pausada no momento. Chame a Nayara no <a href="${zap}" target="_blank" rel="noopener" style="color:var(--gt)">WhatsApp</a> para marcar.</p>`;
+    $("agendar").classList.add("hide");
     return;
   }
-  $("lista-serv").innerHTML = data.servicos.map((s) => `
-    <button class="serv" aria-pressed="false" data-id="${s.id}">
-      <b>${esc(s.nome)}</b>
-      <span class="preco"><small>a partir de</small>${brl(s.preco)}</span>
-      <span class="det">${dur(s.duracao_min)}</span>
-      ${s.descricao ? `<span class="desc">${esc(s.descricao)}</span>` : ""}
-    </button>`).join("");
-  $("lista-serv").querySelectorAll(".serv").forEach((b) => (b.onclick = () => escolheServico(b.dataset.id)));
-}
+  $("lista").innerHTML = data.servicos.map((s) => `
+    <label class="sv"><input type="checkbox" value="${s.id}">
+      <span>${esc(s.nome)}<small>${dur(s.duracao_min)}${s.descricao ? `<i>${esc(s.descricao)}</i>` : ""}</small></span>
+      <em><b>a partir de</b>${brl(s.preco)}</em></label>`).join("");
+  $("lista").querySelectorAll("input").forEach((i) => (i.onchange = () => { atualizaTotal(); carregaSlots(); }));
 
-function escolheServico(id) {
-  st.serv = st.pag.servicos.find((s) => s.id === id); st.hora = null;
-  $("lista-serv").querySelectorAll(".serv").forEach((x) => x.setAttribute("aria-pressed", x.dataset.id === id));
-  $("quando").classList.remove("esconde"); $("dados").classList.add("esconde");
-  $("quando-sub").textContent = `${st.serv.nome} · ${dur(st.serv.duracao_min)}`;
-  desenhaDias();
-  atualizaBarra();
-  $("quando").scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-const abre = (d) => st.pag.dias.includes(new Date(d + "T12:00:00Z").getUTCDay());
-function desenhaDias() {
   const hoje = isoDia();
-  const dias = Array.from({ length: 30 }, (_, i) => somaDias(hoje, i));
-  if (!st.dia || !abre(st.dia)) st.dia = dias.find(abre) || hoje;
-  $("dias").innerHTML = dias.map((d) => {
+  const dias = Array.from({ length: 30 }, (_, i) => somaDias(hoje, i)).filter((d) => data.dias.includes(new Date(d + "T12:00:00Z").getUTCDay()));
+  $("data").innerHTML = dias.map((d) => {
     const dt = new Date(d + "T12:00:00Z");
-    const sem = d === hoje ? "hoje" : d === somaDias(hoje, 1) ? "amanhã" : dt.toLocaleDateString("pt-BR", { weekday: "short", timeZone: "UTC" }).replace(".", "");
-    return `<button class="dia" data-d="${d}" aria-pressed="${d === st.dia}" ${abre(d) ? "" : "disabled"} aria-label="${dataLonga(dt)}">
-      <small>${sem}</small><b>${dt.getUTCDate()}</b><small>${dt.toLocaleDateString("pt-BR", { month: "short", timeZone: "UTC" }).replace(".", "")}</small></button>`;
+    const rot = d === hoje ? "Hoje" : d === somaDias(hoje, 1) ? "Amanhã" : SEM[dt.getUTCDay()];
+    return `<option value="${d}">${rot}, ${dt.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", timeZone: "UTC" })}</option>`;
   }).join("");
-  $("dias").querySelectorAll(".dia").forEach((b) => (b.onclick = () => { st.dia = b.dataset.d; st.hora = null; desenhaDias(); atualizaBarra(); }));
-  carregaHoras();
+  $("data").onchange = carregaSlots;
 }
 
-async function carregaHoras() {
-  $("horas").innerHTML = `<p class="vazio">Procurando horários livres…</p>`;
-  const pedido = st.dia + st.serv.id; st._pedido = pedido;
-  const { data, error } = await sb.rpc("ad_horarios_livres", { p_slug: SLUG, p_servico: st.serv.id, p_data: st.dia });
-  if (st._pedido !== pedido) return;
-  if (error) { $("horas").innerHTML = `<p class="vazio">Não consegui buscar os horários. Tente de novo.</p>`; return; }
-  $("horas").innerHTML = data.length
-    ? data.map((t) => `<button class="hora" data-t="${t}" aria-pressed="${t === st.hora}">${hora(t)}</button>`).join("")
-    : `<p class="vazio">Nenhum horário livre neste dia. Escolha outro dia acima.</p>`;
-  $("horas").querySelectorAll(".hora").forEach((b) => (b.onclick = () => {
+function atualizaTotal() {
+  const sel = selecionados();
+  $("total").textContent = brl(sel.reduce((t, s) => t + Number(s.preco), 0));
+  $("tempo").textContent = sel.length ? `${sel.length} serviço${sel.length > 1 ? "s" : ""} · cerca de ${dur(minutos())}` : "Escolha os serviços";
+}
+
+async function carregaSlots() {
+  st.hora = null;
+  const min = minutos();
+  if (!min) { $("slots").innerHTML = `<p class="note">Escolha os serviços para ver os horários livres.</p>`; return; }
+  if (!$("data").value) { $("slots").innerHTML = `<p class="note">Sem datas disponíveis no momento.</p>`; return; }
+  $("slots").innerHTML = `<p class="note">Procurando horários livres…</p>`;
+  const pedido = $("data").value + min; st._p = pedido;
+  const { data, error } = await sb.rpc("ad_horarios_livres_min", { p_slug: SLUG, p_min: min, p_data: $("data").value });
+  if (st._p !== pedido) return;
+  if (error) { $("slots").innerHTML = `<p class="note">Não consegui buscar os horários. Tente de novo.</p>`; return; }
+  $("slots").innerHTML = data.length
+    ? data.map((t) => `<button type="button" class="slot" data-t="${t}">${hora(t)}</button>`).join("")
+    : `<p class="note">Nenhum horário livre nesta data. Escolha outra data.</p>`;
+  $("slots").querySelectorAll(".slot").forEach((b) => (b.onclick = () => {
     st.hora = b.dataset.t;
-    $("horas").querySelectorAll(".hora").forEach((x) => x.setAttribute("aria-pressed", x === b));
-    mostraDados();
+    $("slots").querySelectorAll(".slot").forEach((x) => x.classList.toggle("on", x === b));
+    $("msg").textContent = "";
   }));
 }
 
-function mostraDados() {
-  $("resumo").innerHTML = `<b>${esc(st.serv.nome)}</b> · a partir de ${brl(st.serv.preco)}<br>${dataLonga(st.hora)} às <b>${hora(st.hora)}</b>`;
-  $("dados").classList.remove("esconde");
-  atualizaBarra();
-  $("dados").scrollIntoView({ behavior: "smooth", block: "start" });
-}
+// máscara do telefone
+$("tel").oninput = (e) => {
+  let v = e.target.value.replace(/\D/g, "").slice(0, 11);
+  e.target.value = v.length > 6 ? `(${v.slice(0, 2)}) ${v.slice(2, v.length - 4)}-${v.slice(-4)}` : v.length > 2 ? `(${v.slice(0, 2)}) ${v.slice(2)}` : v;
+};
+try { const c = JSON.parse(localStorage.getItem("nay_cliente") || "{}"); $("nome").value = c.nome || ""; $("tel").value = c.tel || ""; } catch {}
 
-function atualizaBarra() {
-  const b = $("barra");
-  if (!st.serv || st.agendado) return b.classList.remove("on");
-  b.classList.add("on");
-  if (!st.hora) { $("barra-txt").innerHTML = `<b>${esc(st.serv.nome)}</b>Agora escolha o dia e a hora`; $("barra-btn").textContent = "Ver horários"; $("barra-btn").onclick = () => $("quando").scrollIntoView({ behavior: "smooth" }); }
-  else { $("barra-txt").innerHTML = `<b>${esc(st.serv.nome)}</b>${dataLonga(st.hora).split(",")[0]}, ${hora(st.hora)}`; $("barra-btn").textContent = "Continuar"; $("barra-btn").onclick = () => { $("dados").scrollIntoView({ behavior: "smooth" }); setTimeout(() => $("c-nome").focus(), 400); }; }
-}
-
-try { const c = JSON.parse(localStorage.getItem("nay_cliente") || "{}"); $("c-nome").value = c.nome || ""; $("c-zap").value = c.zap || ""; } catch {}
-
-$("confirmar").onclick = async () => {
-  const nome = $("c-nome").value.trim(), zap = $("c-zap").value.replace(/\D/g, ""), obs = $("c-obs").value.trim();
-  if (nome.length < 2) { aviso("Escreva seu nome.", 1); return $("c-nome").focus(); }
-  if (zap.length < 10 || zap.length > 13) { aviso("Escreva seu WhatsApp com DDD.", 1); return $("c-zap").focus(); }
-  $("confirmar").disabled = true; $("confirmar").textContent = "Reservando…";
-  const { data: id, error } = await sb.rpc("ad_agendar", { p_slug: SLUG, p_servico: st.serv.id, p_inicio: st.hora, p_nome: nome, p_whatsapp: zap, p_obs: obs || null });
-  $("confirmar").disabled = false; $("confirmar").textContent = "Confirmar agendamento";
+$("enviar").onclick = async () => {
+  const msg = (t) => { $("msg").textContent = t; };
+  if ($("site").value) return; // robôs
+  const sel = selecionados(), nome = $("nome").value.trim(), tel = $("tel").value.replace(/\D/g, ""), obs = $("obs").value.trim();
+  if (!sel.length) { msg("Escolha pelo menos um serviço."); return $("servicos").scrollIntoView({ behavior: "smooth" }); }
+  if (nome.length < 2) { msg("Escreva seu nome."); return $("nome").focus(); }
+  if (tel.length < 10) { msg("Escreva seu WhatsApp com DDD."); return $("tel").focus(); }
+  if (!st.hora) { msg("Escolha um horário."); return; }
+  msg("");
+  $("enviar").disabled = true; $("enviar").textContent = "Reservando…";
+  const { data: id, error } = await sb.rpc("ad_agendar_varios", { p_slug: SLUG, p_servicos: sel.map((s) => s.id), p_inicio: st.hora, p_nome: nome, p_whatsapp: tel, p_obs: obs || null });
+  $("enviar").disabled = false; $("enviar").textContent = "Confirmar agendamento";
   if (error) {
-    if (error.message.includes("disponível")) { aviso("Esse horário acabou de ser ocupado. Escolha outro.", 1); st.hora = null; $("dados").classList.add("esconde"); carregaHoras(); $("quando").scrollIntoView({ behavior: "smooth" }); }
-    else aviso("Não foi possível agendar: " + error.message, 1);
+    if (error.message.includes("disponível")) { msg("Esse horário acabou de ser ocupado. Escolha outro."); carregaSlots(); }
+    else msg("Não foi possível agendar: " + error.message);
     return;
   }
-  try { localStorage.setItem("nay_cliente", JSON.stringify({ nome, zap })); } catch {}
-  st.agendado = { id, nome, zap, obs };
-  sucesso();
+  try { localStorage.setItem("nay_cliente", JSON.stringify({ nome, tel: $("tel").value })); } catch {}
+  st.ag = { id, nome, tel, obs, sel, inicio: st.hora, min: minutos() };
+  confirmado();
 };
 
-function mensagemNayara() {
-  const a = st.agendado;
-  return `Olá, Nayara! 💅 Acabei de agendar pelo site:\n\n` +
-    `*Serviço:* ${st.serv.nome}\n*Dia:* ${dataLonga(st.hora)}\n*Horário:* ${hora(st.hora)}\n*Nome:* ${a.nome}\n*WhatsApp:* ${fmtZap(a.zap)}` +
+function confirmado() {
+  const a = st.ag, nomes = a.sel.map((s) => s.nome).join(" + ");
+  $("okResumo").innerHTML = `${esc(nomes)}<br>${dataLonga(a.inicio)} às ${hora(a.inicio)}`;
+  const texto = `Olá, Nayara! 💅 Acabei de agendar pelo site:\n\n` +
+    `*Serviço:* ${nomes}\n*Dia:* ${dataLonga(a.inicio)}\n*Horário:* ${hora(a.inicio)}\n` +
+    `*Valor:* a partir de ${brl(a.sel.reduce((t, s) => t + Number(s.preco), 0))}\n*Nome:* ${a.nome}\n*WhatsApp:* ${fmtTel(a.tel)}` +
     (a.obs ? `\n*Observação:* ${a.obs}` : "");
+  $("okWhats").href = `https://wa.me/${st.pag.whatsapp}?text=${encodeURIComponent(texto)}`;
+  $("servicos").classList.add("hide"); $("agendar").classList.add("hide");
+  $("confirmado").classList.remove("hide");
+  $("confirmado").scrollIntoView({ behavior: "smooth", block: "center" });
+  $("confirmado").focus({ preventScroll: true });
 }
 
-function sucesso() {
-  $("fluxo").classList.add("esconde"); $("barra").classList.remove("on");
-  $("sucesso").classList.remove("esconde");
-  $("suc-txt").innerHTML = `<b>${esc(st.serv.nome)}</b><br>${dataLonga(st.hora)} às <b>${hora(st.hora)}</b>`;
-  const link = `https://wa.me/${st.pag.whatsapp}?text=${encodeURIComponent(mensagemNayara())}`;
-  $("suc-zap").href = link;
-  scrollTo({ top: 0, behavior: "smooth" });
-  // Abre o WhatsApp sozinho com a mensagem pronta
-  setTimeout(() => { location.href = link; }, 1200);
-}
-
-$("suc-lembrete").onclick = () => {
-  const ini = new Date(st.hora), fim = new Date(ini.getTime() + st.serv.duracao_min * 60000);
+$("lembrete").onclick = () => {
+  const a = st.ag, ini = new Date(a.inicio), fim = new Date(ini.getTime() + a.min * 60000);
   const f = (d) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
-  const ics = [
-    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Agenda Deluxe//PT-BR", "BEGIN:VEVENT",
-    `UID:${st.agendado.id}@agenda-deluxe`, `DTSTAMP:${f(new Date())}`, `DTSTART:${f(ini)}`, `DTEND:${f(fim)}`,
-    `SUMMARY:${st.serv.nome} com Nayara Fernandes`,
-    `DESCRIPTION:Nails e cuidados. WhatsApp: ${fmtZap(st.pag.whatsapp)}`,
+  const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Agenda Deluxe//PT-BR", "BEGIN:VEVENT",
+    `UID:${a.id}@agenda-deluxe`, `DTSTAMP:${f(new Date())}`, `DTSTART:${f(ini)}`, `DTEND:${f(fim)}`,
+    `SUMMARY:${a.sel.map((s) => s.nome).join(" + ")} com Nayara Fernandes`,
+    `LOCATION:R. Gov. Mario Covas\\, 105 - Promissão\\, Lagoa Santa - MG`,
+    `DESCRIPTION:Nails e cuidados. WhatsApp: ${fmtTel(st.pag.whatsapp)}`,
     "BEGIN:VALARM", "TRIGGER:-P1D", "ACTION:DISPLAY", "DESCRIPTION:Amanhã: horário com a Nayara", "END:VALARM",
     "BEGIN:VALARM", "TRIGGER:-PT2H", "ACTION:DISPLAY", "DESCRIPTION:Daqui a 2 horas: horário com a Nayara", "END:VALARM",
-    "END:VEVENT", "END:VCALENDAR",
-  ].join("\r\n");
+    "END:VEVENT", "END:VCALENDAR"].join("\r\n");
   const url = URL.createObjectURL(new Blob([ics], { type: "text/calendar" }));
-  const a = document.createElement("a"); a.href = url; a.download = "horario-nayara.ics"; a.click();
+  const l = document.createElement("a"); l.href = url; l.download = "horario-nayara.ics"; l.click();
   setTimeout(() => URL.revokeObjectURL(url), 5000);
-  aviso("Abra o arquivo para adicionar à agenda do celular.");
 };
 
-$("suc-outro").onclick = () => {
-  st.serv = null; st.hora = null; st.agendado = null;
-  $("sucesso").classList.add("esconde"); $("fluxo").classList.remove("esconde");
-  $("quando").classList.add("esconde"); $("dados").classList.add("esconde"); $("c-obs").value = "";
-  $("lista-serv").querySelectorAll(".serv").forEach((x) => x.setAttribute("aria-pressed", "false"));
+$("novo").onclick = () => {
+  st.ag = null; st.hora = null; $("obs").value = "";
+  document.querySelectorAll("#lista input").forEach((i) => (i.checked = false));
+  atualizaTotal(); carregaSlots();
+  $("confirmado").classList.add("hide"); $("servicos").classList.remove("hide"); $("agendar").classList.remove("hide");
   $("servicos").scrollIntoView({ behavior: "smooth" });
 };
 
