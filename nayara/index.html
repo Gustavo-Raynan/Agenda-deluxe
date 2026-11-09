@@ -276,7 +276,7 @@ header .cta::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:4
 
 <section id="catalogo" class="hide">
   <h2>Nosso catálogo de cores</h2>
-  <p class="sub">Veja as cores que temos no salão. Toque em uma cor para escolher para o seu atendimento ou salvar nas favoritas.</p>
+  <p class="sub">Esses são os esmaltes que temos no salão agora. Toque no ♡ para salvar os seus favoritos e mostrar para a Nayara no dia.</p>
   <div class="cat-busca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="catBusca" type="search" placeholder="Buscar cor, marca ou código" autocomplete="off" enterkeyhint="search"></div>
   <div class="cat-tons" id="catTons"></div>
   <div class="cat-sel"><select id="catMarca" aria-label="Marca"></select><select id="catAcab" aria-label="Acabamento"></select></div>
@@ -291,12 +291,7 @@ header .cta::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:4
   <p class="etapa" id="lbHora">Escolha o horário</p>
   <div class="slots" id="slots" role="group" aria-labelledby="lbHora"><p class="note">Escolha um serviço para ver os horários livres.</p></div>
 
-  <div id="blocoCores" class="hide">
-    <p class="etapa">Cores <small style="color:var(--m);font-weight:400">(opcional)</small></p>
-    <div class="escolhidas" id="escolhidas"></div>
-    <button type="button" class="mais-cores" id="irCatalogo" style="margin-top:8px">Escolher cores no catálogo</button>
-    <label class="check"><input type="checkbox" id="noSalao"> Prefiro escolher a cor no salão</label>
-  </div>
+  <button type="button" class="mais-cores hide" id="irCatalogo" style="margin-top:18px">💅 Ver os esmaltes que temos no salão</button>
 
   <p class="etapa">Seus dados</p>
   <label class="f" for="nome" style="margin-top:0">Seu nome</label><input id="nome" autocomplete="name" placeholder="Nome completo" enterkeyhint="next">
@@ -377,8 +372,7 @@ const dur = (m) => (m < 60 ? m + " min" : Math.floor(m / 60) + "h" + (m % 60 ? S
 const fmtTel = (z) => { z = String(z).replace(/\D/g, "").replace(/^55(?=\d{10,11}$)/, ""); return z.length >= 10 ? `(${z.slice(0, 2)}) ${z.slice(2, -4)}-${z.slice(-4)}` : z; };
 const vai = (el, bloco = "start") => el.scrollIntoView({ behavior: "smooth", block: bloco });
 
-const st = { pag: null, serv: null, dia: null, hora: null, ag: null, cat: [], cores: [], tom: "", ver: 12 };
-const PAPEIS = ["Cor principal", "Cor secundária", "Decoração", "Referência de acabamento"];
+const st = { pag: null, serv: null, dia: null, hora: null, ag: null, cat: [], tom: "", ver: 12 };
 const TONS_HEX = { Vermelhos: "#B3262E", Vinhos: "#5E1A2A", Rosas: "#E58FA8", Nudes: "#D8B49B", Marrons: "#6B4232", Brancos: "#F4F1EA", Pretos: "#141414", Cinzas: "#8C8C8C", Azuis: "#2F5FA8", Verdes: "#3D7A4E", Roxos: "#6B3F8F", Laranjas: "#E2733A", Amarelos: "#E8C547", Glitter: "#C9B27A", Metalizados: "#A7A9AC", Perolados: "#EDE3D6", Translúcidos: "#E9E4DE", Outros: "#777" };
 const favs = new Set((() => { try { return JSON.parse(localStorage.getItem("nay_favs") || "[]"); } catch { return []; } })());
 const salvaFavs = () => { try { localStorage.setItem("nay_favs", JSON.stringify([...favs])); } catch {} };
@@ -430,8 +424,7 @@ async function carregaCatalogo() {
   const { data, error } = await sb.rpc("ad_catalogo", { p_slug: SLUG });
   if (error || !data || !data.length) return;
   st.cat = data.map((c) => ({ ...c, cor_hex: c.cor_hex || c.cor, foto_url: c.foto_url || c.foto }));
-  st.cores = st.cores.filter((x) => data.some((c) => c.id === x.id && c.status !== "indisponivel"));
-  $("catalogo").classList.remove("hide"); $("blocoCores").classList.remove("hide");
+  $("catalogo").classList.remove("hide"); $("irCatalogo").classList.remove("hide");
   const tons = [...new Set(data.map((c) => c.tonalidade).filter(Boolean))];
   const marcas = [...new Set(data.map((c) => c.marca).filter(Boolean))].sort();
   const acabs = [...new Set(data.map((c) => c.acabamento).filter(Boolean))].sort();
@@ -445,18 +438,15 @@ async function carregaCatalogo() {
   let t; $("catBusca").oninput = () => { clearTimeout(t); t = setTimeout(() => { st.ver = 12; desenhaCores(); }, 200); };
   $("maisCores").onclick = () => { st.ver += 12; desenhaCores(); };
   $("irCatalogo").onclick = () => vai($("catalogo"));
-  $("noSalao").onchange = () => { if ($("noSalao").checked) { st.cores = []; desenhaCores(); } desenhaEscolhidas(); };
-  desenhaCores(); desenhaEscolhidas();
+  desenhaCores();
 }
 const semAc = (x) => String(x || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 function desenhaCores() {
   const b = semAc($("catBusca").value), m = $("catMarca").value, a = $("catAcab").value;
   const lista = st.cat.filter((c) => (!st.tom || (st.tom === "♥" ? favs.has(c.id) : c.tonalidade === st.tom)) && (!m || c.marca === m) && (!a || c.acabamento === a) && (!b || semAc([c.nome, c.marca, c.codigo, c.linha, c.tonalidade].join(" ")).includes(b)));
   $("cores").innerHTML = lista.length ? lista.slice(0, st.ver).map((c, i) => {
-    const ch = st.cores.find((x) => x.id === c.id);
-    return `<div class="cor ${ch ? "on" : ""} ${c.status === "indisponivel" ? "off" : ""}" data-id="${c.id}" role="button" tabindex="0" style="animation-delay:${(i % 12) * 0.03}s">
+    return `<div class="cor ${c.status === "indisponivel" ? "off" : ""}" data-id="${c.id}" role="button" tabindex="0" style="animation-delay:${(i % 12) * 0.03}s">
       <div class="ft" style="background:${esc(c.cor_hex || "#444")}">${c.foto_url ? `<img src="${esc(c.foto_url)}" alt="${esc(c.nome)}" loading="lazy">` : ""}</div>
-      ${ch ? `<span class="papel">${esc(ch.papel.replace("Referência de acabamento", "Acabamento"))}</span>` : ""}
       <button type="button" class="fav ${favs.has(c.id) ? "on" : ""}" data-fav="${c.id}" aria-label="Favoritar" style="border:0">${favs.has(c.id) ? "♥" : "♡"}</button>
       <b>${esc(c.nome)}</b><small>${esc(c.marca || "")}${c.codigo ? " · " + esc(c.codigo) : ""}${c.acabamento ? " · " + esc(c.acabamento) : ""}</small>
       <span class="st ${c.status}">${ST_COR[c.status]}</span></div>`;
@@ -469,35 +459,19 @@ function desenhaCores() {
   }));
 }
 function abreCor(c) {
-  const atual = st.cores.find((x) => x.id === c.id);
-  const off = c.status === "indisponivel";
   $("modalCx").innerHTML = `${c.foto_url ? `<img src="${esc(c.foto_url)}" alt="">` : `<div style="height:160px;border-radius:16px;background:${esc(c.cor_hex || "#444")}"></div>`}
-    <h3>${esc(c.nome)}</h3><p>${[c.marca, c.codigo && "cód. " + c.codigo, c.linha, c.tonalidade, c.acabamento].filter(Boolean).map(esc).join(" · ")}</p>
+    <h3>${esc(c.nome)}</h3><p>${[c.marca, c.codigo && "cód. " + c.codigo, c.tonalidade, c.acabamento].filter(Boolean).map(esc).join(" · ")}</p>
     <span class="st ${c.status}" style="font-size:12px;padding:3px 10px">${ST_COR[c.status]}</span>
-    ${off ? `<p style="margin-top:12px">Essa cor acabou temporariamente. Escolha outra ou salve nas favoritas.</p>` : `<p style="margin-top:14px;color:var(--t);font-weight:500">Usar esta cor como:</p>
-    <div class="papeis">${PAPEIS.map((p) => `<button type="button" data-p="${p}" class="${atual?.papel === p ? "on" : ""}">${p}</button>`).join("")}</div>`}
+    ${c.status === "indisponivel" ? `<p style="margin-top:12px">Acabou no momento. Logo deve voltar.</p>` : `<p style="margin-top:12px">Gostou? Salve nas favoritas e mostre para a Nayara no dia do atendimento.</p>`}
     <div class="papeis">
       <button type="button" data-favm>${favs.has(c.id) ? "♥ Nas favoritas" : "♡ Favoritar"}</button>
-      ${atual ? `<button type="button" data-tirar>Tirar da escolha</button>` : `<button type="button" data-fechar>Fechar</button>`}
+      <button type="button" data-fechar>Fechar</button>
     </div>`;
   $("modalCor").classList.remove("hide");
   const fecha = () => $("modalCor").classList.add("hide");
   $("modalCor").onclick = (e) => { if (e.target === $("modalCor")) fecha(); };
-  $("modalCx").querySelectorAll("[data-p]").forEach((b) => (b.onclick = () => {
-    st.cores = st.cores.filter((x) => x.id !== c.id && x.papel !== b.dataset.p);
-    st.cores.push({ id: c.id, papel: b.dataset.p });
-    $("noSalao").checked = false; fecha(); desenhaCores(); desenhaEscolhidas();
-  }));
   $("modalCx").querySelector("[data-favm]").onclick = () => { favs.has(c.id) ? favs.delete(c.id) : favs.add(c.id); salvaFavs(); abreCor(c); desenhaCores(); };
-  $("modalCx").querySelector("[data-tirar]")?.addEventListener("click", () => { st.cores = st.cores.filter((x) => x.id !== c.id); fecha(); desenhaCores(); desenhaEscolhidas(); });
-  $("modalCx").querySelector("[data-fechar]")?.addEventListener("click", fecha);
-}
-function desenhaEscolhidas() {
-  const ord = st.cores.slice().sort((a, b) => PAPEIS.indexOf(a.papel) - PAPEIS.indexOf(b.papel));
-  $("escolhidas").innerHTML = ord.map((x) => { const c = st.cat.find((k) => k.id === x.id); if (!c) return "";
-    return `<div class="escolhida">${c.foto_url ? `<img src="${esc(c.foto_url)}" alt="">` : `<span class="bol" style="background:${esc(c.cor_hex || "#444")}"></span>`}<div><b>${esc(c.nome)}</b><small>${esc(x.papel)}${c.marca ? " · " + esc(c.marca) : ""}</small></div><button type="button" data-tira="${c.id}" aria-label="Remover">✕</button></div>`; }).join("");
-  $("escolhidas").querySelectorAll("[data-tira]").forEach((b) => (b.onclick = () => { st.cores = st.cores.filter((x) => x.id !== b.dataset.tira); desenhaCores(); desenhaEscolhidas(); }));
-  $("irCatalogo").textContent = st.cores.length ? "Trocar ou adicionar cores" : "Escolher cores no catálogo";
+  $("modalCx").querySelector("[data-fechar]").onclick = fecha;
 }
 
 const abre = (d) => st.pag.dias.includes(new Date(d + "T12:00:00Z").getUTCDay());
@@ -577,16 +551,15 @@ $("enviar").onclick = async () => {
   if (tel.length < 10) { msg("Escreva seu WhatsApp com DDD."); return $("tel").focus(); }
   msg("");
   $("enviar").disabled = true; $("enviar").textContent = "Reservando…";
-  const { data: id, error } = await sb.rpc("ad_agendar_varios", { p_slug: SLUG, p_servicos: [st.serv.id], p_inicio: st.hora, p_nome: nome, p_whatsapp: tel, p_obs: [obs, $("noSalao").checked ? "Prefere escolher a cor no salão." : ""].filter(Boolean).join(" ") || null, p_cores: st.cores.length ? st.cores.map((x) => ({ id: x.id, papel: x.papel })) : null });
+  const { data: id, error } = await sb.rpc("ad_agendar_varios", { p_slug: SLUG, p_servicos: [st.serv.id], p_inicio: st.hora, p_nome: nome, p_whatsapp: tel, p_obs: obs || null });
   $("enviar").disabled = false; $("enviar").textContent = "Confirmar agendamento";
   if (error) {
-    if (error.message.includes("cores escolhidas")) { msg("Uma das cores escolhidas acabou de ficar indisponível. Escolha outra."); carregaCatalogo(); vai($("catalogo")); }
-    else if (error.message.includes("disponível")) { msg("Esse horário acabou de ser ocupado. Escolha outro."); carregaSlots(); vai($("agendar")); }
+    if (error.message.includes("disponível")) { msg("Esse horário acabou de ser ocupado. Escolha outro."); carregaSlots(); vai($("agendar")); }
     else msg("Não foi possível agendar: " + error.message);
     return;
   }
   try { localStorage.setItem("nay_cliente", JSON.stringify({ nome, tel: $("tel").value })); } catch {}
-  st.ag = { id, nome, tel, obs, serv: st.serv, inicio: st.hora, cores: st.cores.map((x) => ({ ...x, c: st.cat.find((k) => k.id === x.id) })), noSalao: $("noSalao").checked };
+  st.ag = { id, nome, tel, obs, serv: st.serv, inicio: st.hora };
   confirmado();
 };
 
@@ -596,10 +569,9 @@ function confirmado() {
   const texto = `Olá, Nayara! 💅 Acabei de agendar pelo site:\n\n` +
     `*Serviço:* ${a.serv.nome}\n*Dia:* ${dataLonga(a.inicio)}\n*Horário:* ${hora(a.inicio)}\n` +
     `*Valor:* a partir de ${brl(a.serv.preco)}\n*Nome:* ${a.nome}\n*WhatsApp:* ${fmtTel(a.tel)}` +
-    (a.cores.length ? `\n*Cores:* ${a.cores.map((x) => `${x.papel}: ${x.c?.nome}${x.c?.marca ? " (" + x.c.marca + (x.c.codigo ? " " + x.c.codigo : "") + ")" : ""}`).join("; ")}` : a.noSalao ? "\n*Cores:* vou escolher no salão" : "") +
     (a.obs ? `\n*Observação:* ${a.obs}` : "");
   $("okWhats").href = `https://wa.me/${st.pag.whatsapp}?text=${encodeURIComponent(texto)}`;
-  $("servicos").classList.add("hide"); $("agendar").classList.add("hide"); $("catalogo").classList.add("hide");
+  $("servicos").classList.add("hide"); $("agendar").classList.add("hide");
   $("confirmado").classList.remove("hide", "rv"); $("confirmado").classList.add("mostra"); atualiza();
   setTimeout(confete, 250);
   vai($("confirmado"), "center");
@@ -623,7 +595,7 @@ $("lembrete").onclick = () => {
 };
 
 $("novo").onclick = () => {
-  st.ag = null; st.serv = null; st.hora = null; st.cores = []; $("obs").value = ""; $("noSalao").checked = false; carregaCatalogo();
+  st.ag = null; st.serv = null; st.hora = null; $("obs").value = "";
   document.querySelectorAll("#lista input").forEach((i) => (i.checked = false));
   carregaSlots();
   $("confirmado").classList.add("hide"); $("servicos").classList.remove("hide"); $("agendar").classList.remove("hide");

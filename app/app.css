@@ -413,3 +413,7 @@ nav.abas button.on svg { color: var(--ouro); }
 .hero .v { color: var(--escuroOuro); }
 .hero .hstats div { background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.08); }
 .hero .meta .barra { background: rgba(255,255,255,.12); }
+.tres-bot { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.tres-bot .btn { padding: 12px 8px; font-size: 13.5px; gap: 6px; }
+.giro { width: 42px; height: 42px; margin: 0 auto; border-radius: 50%; border: 3px solid var(--acc2); border-top-color: var(--acc); animation: gira .8s linear infinite; }
+@keyframes gira { to { transform: rotate(360deg); } }

@@ -47,7 +47,7 @@ async function telaEstoque() {
     const filt = esm.filter((p) => (!st.estTom || p.tonalidade === st.estTom) && (!busca || [p.nome, p.marca, p.codigo].join(" ").toLowerCase().includes(busca)));
     const tons = TONS.filter((t) => esm.some((p) => p.tonalidade === t));
     corpo = `
-      <div class="grade2" style="margin-bottom:12px"><button class="btn prim" data-foto>${IC.camera}Por foto</button><button class="btn" data-manual>${IC.mais}À mão</button></div>
+      <div class="tres-bot"><button class="btn prim" data-foto>${IC.camera}Por foto</button><button class="btn" data-lista>${IC.busca}Da lista</button><button class="btn" data-manual>${IC.mais}À mão</button></div>
       ${r0.revisao.length ? `<div class="cartao" style="border-color:rgba(var(--accRGB),.45)"><div class="linha"><div class="cresce"><b>${r0.revisao.length} cor${r0.revisao.length > 1 ? "es" : ""} esperando sua conferência</b><div class="pequeno">Confira e publique para aparecerem no site.</div></div><button class="btn prim mini" data-revisar>Conferir</button></div></div>` : ""}
       <div class="busca">${IC.busca}<input class="campo" id="busca-esm" placeholder="Buscar cor, marca ou código" value="${esc(st.estBusca)}" autocomplete="off"></div>
       ${tons.length ? `<div class="opcoes" style="margin-bottom:12px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px">${["", ...tons].map((t) => `<button type="button" data-tom="${t}" class="${st.estTom === t ? "on" : ""}" style="flex:none">${t || "Todas"}</button>`).join("")}</div>` : ""}
@@ -56,7 +56,7 @@ async function telaEstoque() {
           <div class="esm-foto" style="background:${p.cor_hex || "var(--soft)"}">${p.foto_url ? `<img src="${esc(p.foto_url)}" alt="" loading="lazy">` : ""}<span class="chip ${CAT_STATUS[p.catalogo][1]}">${CAT_STATUS[p.catalogo][0]}</span></div>
           <b>${esc(p.nome)}</b><small>${esc(p.marca || "Sem marca")}${p.codigo ? " · " + esc(p.codigo) : ""}</small>
           <small class="${d[1] === "cancelado" ? "neg" : ""}">${qtd(p.quantidade)} un · ${d[0]}</small></button>`; }).join("")}</div>`
-        : `<div class="vazio">${IC.esmalte}<div>${esm.length ? "Nenhuma cor encontrada." : "Fotografe seus esmaltes para montar o catálogo. Dá para fotografar vários de uma vez."}</div></div>`}`;
+        : `<div class="vazio">${IC.esmalte}<div>${esm.length ? "Nenhuma cor encontrada." : "Adicione seus esmaltes: escolha da lista os que o app já conhece e fotografe só os outros. Dá para fotografar vários de uma vez."}</div></div>`}`;
   } else if (seg === "produtos") {
     const outros = lista.filter((p) => p.categoria !== "Esmaltes");
     const porCat = {}; outros.forEach((p) => (porCat[p.categoria] = porCat[p.categoria] || []).push(p));
@@ -87,6 +87,7 @@ async function telaEstoque() {
   $("busca-esm")?.addEventListener("input", (e) => { st.estBusca = e.target.value; clearTimeout(st._tb); st._tb = setTimeout(async () => { await telaEstoque(); const i = $("busca-esm"); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 350); });
   r.querySelector("[data-foto]")?.addEventListener("click", cadastroPorFoto);
   r.querySelector("[data-manual]")?.addEventListener("click", () => editaProduto(null, "Esmaltes"));
+  r.querySelector("[data-lista]")?.addEventListener("click", daLista);
   r.querySelector("[data-revisar]")?.addEventListener("click", conferirCatalogo);
   r.querySelector("[data-novo-prod]")?.addEventListener("click", () => editaProduto(null, "Outros produtos"));
   r.querySelector("[data-compra]")?.addEventListener("click", () => registraCompra());
@@ -317,30 +318,58 @@ async function leRotulo(canvas) {
 }
 
 // ---------------------------------------------------------------------
-// CADASTRO POR FOTO (uma, várias ou foto em grupo)
+// CADASTRO POR FOTO (uma, várias ou foto em grupo) — com IA quando configurada
 // ---------------------------------------------------------------------
+const norm = (t) => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+let BASE = null;
+async function baseEsmaltes() { if (!BASE) BASE = await q(sb.from("ad_esmaltes_base").select("*").order("marca").order("nome")); return BASE; }
+// Procura o esmalte no catálogo do salão (para somar no estoque) e na lista de cores conhecidas
+function procura(it, meus, base) {
+  const m = norm(it.marca), n = norm(it.nome), c = norm(it.codigo);
+  const igual = (p) => (n && norm(p.nome) === n && (!m || !p.marca || norm(p.marca) === m)) || (c && m && norm(p.codigo) === c && norm(p.marca) === m);
+  return { meu: n || c ? meus.find(igual) : null, conhecido: n ? base.find(igual) : null };
+}
+async function iaIdentifica(canvas, grupo) {
+  if (st.iaSemChave) return null;
+  try {
+    const imagem = paraCanvas(canvas, grupo ? 1400 : 900).toDataURL("image/jpeg", 0.82);
+    const { data, error } = await sb.functions.invoke("ad-ia-esmalte", { body: { imagem, grupo } });
+    if (error) return null;
+    if (data?.erro === "sem_chave") { st.iaSemChave = true; return null; }
+    return data?.esmaltes || null;
+  } catch { return null; }
+}
+
 function cadastroPorFoto() {
-  abreFolha(cabFolha("Cadastrar esmaltes por foto", "Fotografe um esmalte por vez ou vários juntos. O app detecta a cor sozinho e você confere antes de publicar.") + `
+  abreFolha(cabFolha("Cadastrar esmaltes por foto", st.iaSemChave ? "O app detecta a cor sozinho. Marca e nome você confere ou escolhe da lista." : "Fotografe e o app reconhece marca, nome e cor sozinho. Se o esmalte já existe no salão, só soma no estoque.") + `
     <div class="pilha">
       <label class="btn prim cheio" style="cursor:pointer">${IC.camera}Tirar foto agora<input type="file" accept="image/*" capture="environment" data-cam hidden></label>
-      <label class="btn cheio" style="cursor:pointer">${IC.galeria}Escolher fotos da galeria (várias)<input type="file" accept="image/*" multiple data-gal hidden></label>
-      <label class="btn cheio" style="cursor:pointer">${IC.esmalte}Foto em grupo (vários esmaltes na mesma foto)<input type="file" accept="image/*" data-grupo hidden></label>
+      <label class="btn cheio" style="cursor:pointer">${IC.esmalte}Foto de vários esmaltes juntos<input type="file" accept="image/*" data-grupo hidden></label>
+      <label class="btn cheio" style="cursor:pointer">${IC.galeria}Escolher fotos da galeria<input type="file" accept="image/*" multiple data-gal hidden></label>
     </div>
-    <div class="cartao" style="margin-top:14px"><b>Dicas para a foto</b><ul class="pequeno" style="margin-top:6px;padding-left:18px;line-height:1.7"><li>Luz natural, sem flash</li><li>Fundo branco ou claro</li><li>Rótulo virado para a câmera, se quiser que o app leia a marca</li></ul></div>`, (r) => {
+    <div class="cartao" style="margin-top:14px"><b>Dicas para a foto</b><ul class="pequeno" style="margin-top:6px;padding-left:18px;line-height:1.7"><li>Luz natural, sem flash</li><li>Rótulo virado para a câmera</li><li>Vários juntos: frascos em pé, um ao lado do outro</li></ul></div>`, (r) => {
     r.querySelector("[data-cam]").onchange = (e) => fotosSoltas([...e.target.files]);
     r.querySelector("[data-gal]").onchange = (e) => fotosSoltas([...e.target.files]);
     r.querySelector("[data-grupo]").onchange = (e) => e.target.files[0] && fotoEmGrupo(e.target.files[0]);
   });
 }
 
+function carregando(txt) {
+  abreFolha(`<div style="text-align:center;padding:40px 10px"><div class="giro"></div><p style="margin-top:16px;font-weight:600" data-txt>${txt}</p></div>`);
+  return (t) => { const el = document.querySelector("#folha [data-txt]"); if (el) el.textContent = t; };
+}
+
 async function fotosSoltas(arquivos) {
   if (!arquivos.length) return;
-  toast(`Analisando ${arquivos.length} foto${arquivos.length > 1 ? "s" : ""}…`);
+  const muda = carregando(`Analisando ${arquivos.length > 1 ? arquivos.length + " fotos" : "a foto"}…`);
   const itens = [];
+  let i = 0;
   for (const f of arquivos.slice(0, 30)) {
+    muda(`Reconhecendo ${++i} de ${Math.min(arquivos.length, 30)}…`);
     const img = await carregaImagem(f);
     const cv = paraCanvas(img, 900), cor = corDominante(cv);
-    itens.push({ canvas: cv, cor, tonalidade: tonalidadeDe(cor) });
+    const ia = (await iaIdentifica(cv, false))?.[0];
+    itens.push({ canvas: cv, cor: ia?.cor_hex || cor, tonalidade: ia?.tonalidade || tonalidadeDe(cor), marca: ia?.marca, nome: ia?.nome, codigo: ia?.codigo, linha: ia?.linha, acabamento: ia?.acabamento, ia: !!ia });
   }
   revisaItens(itens);
 }
@@ -348,6 +377,24 @@ async function fotosSoltas(arquivos) {
 async function fotoEmGrupo(arquivo) {
   const img = await carregaImagem(arquivo);
   const W = img.naturalWidth, H = img.naturalHeight;
+  if (!st.iaSemChave) {
+    carregando("Procurando os esmaltes na foto…");
+    const lista = await iaIdentifica(paraCanvas(img, 1400), true);
+    const comCaixa = (lista || []).filter((e) => e.caixa && e.caixa[2] > 0.02 && e.caixa[3] > 0.02);
+    if (comCaixa.length) {
+      const itens = comCaixa.map((e) => {
+        const [x, y, w, h] = e.caixa, lado = Math.max(w * W, h * H) * 1.08;
+        const cx = (x + w / 2) * W, cy = (y + h / 2) * H;
+        const sx = Math.max(0, Math.min(W - Math.min(lado, W), cx - lado / 2)), sy = Math.max(0, Math.min(H - Math.min(lado, H), cy - lado / 2));
+        const cv = paraCanvas(img, 700, [sx, sy, Math.min(lado, W), Math.min(lado, H)]);
+        const cor = e.cor_hex || corDominante(cv);
+        return { canvas: cv, cor, tonalidade: e.tonalidade || tonalidadeDe(cor), marca: e.marca, nome: e.nome, codigo: e.codigo, linha: e.linha, acabamento: e.acabamento, ia: true };
+      });
+      toast(`${itens.length} esmalte${itens.length > 1 ? "s" : ""} encontrado${itens.length > 1 ? "s" : ""} na foto.`);
+      return revisaItens(itens);
+    }
+    toast("Não consegui separar os frascos sozinho. Toque em cada um.", 1);
+  }
   let tam = 0.28; const marcas = [];
   abreFolha(cabFolha("Toque em cada esmalte", "Toque no meio de cada frasco da foto. Cada toque vira uma ficha.") + `
     <div style="position:relative;border-radius:18px;overflow:hidden;border:1px solid var(--line2);touch-action:manipulation" data-area>
@@ -359,7 +406,7 @@ async function fotoEmGrupo(arquivo) {
     const area = r.querySelector("[data-area]"), pts = r.querySelector("[data-pontos]");
     const desenha = () => {
       const lado = tam * Math.min(W, H);
-      pts.innerHTML = marcas.map((m, i) => `<span style="position:absolute;left:${((m.x - lado / 2) / W) * 100}%;top:${((m.y - lado / 2) / H) * 100}%;width:${(lado / W) * 100}%;height:${(lado / H) * 100}%;border:2px solid #DFC58E;border-radius:12px;box-shadow:0 0 0 999px rgba(0,0,0,.0);display:grid;place-items:center;color:#17140C;font-weight:800"><b style="background:#DFC58E;border-radius:99px;min-width:24px;height:24px;display:grid;place-items:center;font-size:13px">${i + 1}</b></span>`).join("");
+      pts.innerHTML = marcas.map((m, i) => `<span style="position:absolute;left:${((m.x - lado / 2) / W) * 100}%;top:${((m.y - lado / 2) / H) * 100}%;width:${(lado / W) * 100}%;height:${(lado / H) * 100}%;border:2px solid #DFC58E;border-radius:12px;display:grid;place-items:center"><b style="background:#DFC58E;color:#17140C;border-radius:99px;min-width:24px;height:24px;display:grid;place-items:center;font-size:13px">${i + 1}</b></span>`).join("");
       const ok = r.querySelector("[data-ok]"); ok.disabled = !marcas.length; ok.textContent = marcas.length ? `Pronto (${marcas.length})` : "Pronto";
     };
     area.onclick = (e) => { const b = area.getBoundingClientRect(); marcas.push({ x: ((e.clientX - b.left) / b.width) * W, y: ((e.clientY - b.top) / b.height) * H }); desenha(); };
@@ -367,36 +414,61 @@ async function fotoEmGrupo(arquivo) {
     r.querySelector("[data-desfaz]").onclick = () => { marcas.pop(); desenha(); };
     r.querySelector("[data-ok]").onclick = () => {
       const lado = tam * Math.min(W, H);
-      const itens = marcas.map((m) => {
+      revisaItens(marcas.map((m) => {
         const sx = Math.max(0, Math.min(W - lado, m.x - lado / 2)), sy = Math.max(0, Math.min(H - lado, m.y - lado / 2));
         const cv = paraCanvas(img, 700, [sx, sy, lado, lado]), cor = corDominante(cv);
         return { canvas: cv, cor, tonalidade: tonalidadeDe(cor) };
-      });
-      revisaItens(itens);
+      }));
     };
   });
 }
 
-// Conferência antes de salvar: cada foto vira uma ficha editável
-function revisaItens(itens) {
-  abreFolha(cabFolha(`Conferir ${itens.length} esmalte${itens.length > 1 ? "s" : ""}`, "A cor e a tonalidade já foram detectadas. Complete marca e nome (ou toque em Ler rótulo).") + `
+// Conferência: cada foto vira uma ficha; o que já existe no salão só soma no estoque
+async function revisaItens(itens) {
+  const [meus, base] = await Promise.all([q(sb.from("ad_produtos").select("*").eq("categoria", "Esmaltes")), baseEsmaltes()]);
+  const opcoes = base.map((b) => `<option value="${esc(b.marca + " · " + b.nome)}">`).join("") + meus.map((p) => `<option value="${esc((p.marca || "") + " · " + p.nome)}">`).join("");
+  const reconhecidos = itens.filter((it) => procura(it, meus, base).meu).length;
+  abreFolha(cabFolha(`Conferir ${itens.length} esmalte${itens.length > 1 ? "s" : ""}`, (itens.some((i) => i.ia) ? "Reconhecido pela IA. " : "") + (reconhecidos ? `${reconhecidos} já existe${reconhecidos > 1 ? "m" : ""} no salão e só vai somar no estoque. ` : "") + "Confira e salve.") + `
     <div data-itens>${itens.map((it, i) => `<div class="cartao" data-i="${i}">
       <div class="linha" style="align-items:flex-start">
         <img src="${it.canvas.toDataURL("image/jpeg", .7)}" alt="" style="width:84px;height:84px;border-radius:14px;object-fit:cover;flex:none">
         <div class="cresce">
-          <div class="linha" style="gap:8px"><input type="color" data-hex value="${it.cor}" style="width:38px;height:38px;border:0;background:none;padding:0;flex:none"><select class="campo" data-tom style="padding:9px 36px 9px 10px">${TONS.map((t) => `<option ${t === it.tonalidade ? "selected" : ""}>${t}</option>`).join("")}</select></div>
-          <button type="button" class="link" data-ler style="margin-top:6px">🔍 Ler rótulo</button>
+          <div data-selo></div>
+          <div class="linha" style="gap:8px;margin-top:6px"><input type="color" data-hex value="${it.cor}" style="width:38px;height:38px;border:0;background:none;padding:0;flex:none"><select class="campo" data-tom style="padding:9px 36px 9px 10px">${TONS.map((t) => `<option ${t === it.tonalidade ? "selected" : ""}>${t}</option>`).join("")}</select></div>
+          ${it.ia ? "" : `<button type="button" class="link" data-ler style="margin-top:6px">🔍 Ler rótulo</button>`}
         </div>
         <button type="button" class="fechar" data-tira aria-label="Remover">✕</button>
       </div>
-      <div class="grade2"><div><label class="f">Marca</label><input class="campo" data-marca list="marcas-esm2"></div><div><label class="f">Código</label><input class="campo" data-cod></div></div>
-      <label class="f">Nome da cor</label><input class="campo" data-nome placeholder="Ex.: Vermelho Paixão">
-      <div class="grade2"><div><label class="f">Acabamento</label><select class="campo" data-acab>${ACABS.map((a) => `<option>${a}</option>`).join("")}</select></div><div><label class="f">Quantidade</label><input class="campo" data-q type="number" inputmode="numeric" min="0" value="1"></div></div>
+      <label class="f">Procurar na lista <span class="pequeno">(digite marca ou nome)</span></label><input class="campo" data-busca list="lista-esm" placeholder="Ex.: risqué carmim" autocomplete="off">
+      <div class="grade2"><div><label class="f">Marca</label><input class="campo" data-marca list="marcas-esm2" value="${esc(it.marca || "")}"></div><div><label class="f">Código</label><input class="campo" data-cod value="${esc(it.codigo || "")}"></div></div>
+      <label class="f">Nome da cor</label><input class="campo" data-nome placeholder="Ex.: Vermelho Paixão" value="${esc(it.nome || "")}">
+      <div class="grade2"><div><label class="f">Acabamento</label><select class="campo" data-acab>${ACABS.map((a) => `<option ${a === (it.acabamento || "Cremoso") ? "selected" : ""}>${a}</option>`).join("")}</select></div><div><label class="f">Quantidade</label><input class="campo" data-q type="number" inputmode="numeric" min="0" value="1"></div></div>
     </div>`).join("")}</div>
     <datalist id="marcas-esm2">${MARCAS.map((m) => `<option value="${m}">`).join("")}</datalist>
-    <label class="interruptor"><span><b>Publicar no site depois de salvar</b><span class="pequeno" style="display:block">Desligado: as cores ficam "em revisão" até você aprovar.</span></span><input type="checkbox" data-pub checked></label>
-    <button class="btn prim cheio" data-salvar style="margin-top:8px">Salvar ${itens.length} esmalte${itens.length > 1 ? "s" : ""}</button>`, (r) => {
-    r.querySelectorAll("[data-tira]").forEach((b) => (b.onclick = () => { b.closest("[data-i]").remove(); }));
+    <datalist id="lista-esm">${opcoes}</datalist>
+    <label class="interruptor"><span><b>Mostrar no site na hora</b><span class="pequeno" style="display:block">Desligado: ficam "em revisão" até você aprovar.</span></span><input type="checkbox" data-pub checked></label>
+    <button class="btn prim cheio" data-salvar style="margin-top:8px">Salvar</button>`, (r) => {
+    const atualizaSelo = (box) => {
+      const g = (k) => box.querySelector(`[data-${k}]`).value.trim();
+      const { meu } = procura({ marca: g("marca"), nome: g("nome"), codigo: g("cod") }, meus, base);
+      box.dataset.meu = meu ? meu.id : "";
+      box.querySelector("[data-selo]").innerHTML = meu ? `<span class="chip confirmado">Já tem no salão · ${qtd(meu.quantidade)} un → soma +${box.querySelector("[data-q]").value || 0}</span>` : `<span class="chip marcado">Esmalte novo</span>`;
+    };
+    r.querySelectorAll("[data-i]").forEach((box) => {
+      atualizaSelo(box);
+      ["marca", "nome", "cod", "q"].forEach((k) => box.querySelector(`[data-${k}]`).addEventListener("input", () => atualizaSelo(box)));
+      box.querySelector("[data-busca]").addEventListener("change", (e) => {
+        const [marca, ...resto] = e.target.value.split(" · "); const nome = resto.join(" · ");
+        const b = base.find((x) => x.marca === marca && x.nome === nome) || meus.find((x) => (x.marca || "") === marca && x.nome === nome);
+        if (!b) return;
+        box.querySelector("[data-marca]").value = b.marca || ""; box.querySelector("[data-nome]").value = b.nome;
+        if (b.codigo) box.querySelector("[data-cod]").value = b.codigo;
+        if (b.tonalidade) box.querySelector("[data-tom]").value = b.tonalidade;
+        if (b.acabamento) box.querySelector("[data-acab]").value = b.acabamento;
+        e.target.value = ""; atualizaSelo(box);
+      });
+    });
+    r.querySelectorAll("[data-tira]").forEach((b) => (b.onclick = () => b.closest("[data-i]").remove()));
     r.querySelectorAll("[data-hex]").forEach((inp) => (inp.onchange = () => (inp.closest("[data-i]").querySelector("[data-tom]").value = tonalidadeDe(inp.value))));
     r.querySelectorAll("[data-ler]").forEach((b) => (b.onclick = async () => {
       const box = b.closest("[data-i]"), it = itens[+box.dataset.i];
@@ -406,31 +478,68 @@ function revisaItens(itens) {
         if (res.marca && !box.querySelector("[data-marca]").value) box.querySelector("[data-marca]").value = res.marca;
         if (res.codigo && !box.querySelector("[data-cod]").value) box.querySelector("[data-cod]").value = res.codigo;
         if (res.nome && !box.querySelector("[data-nome]").value) box.querySelector("[data-nome]").value = res.nome;
-        b.textContent = res.marca || res.nome || res.codigo ? "✓ Rótulo lido — confira" : "Não consegui ler. Preencha à mão.";
-      } catch { b.textContent = "Não consegui ler. Preencha à mão."; }
+        b.textContent = res.marca || res.nome || res.codigo ? "✓ Rótulo lido — confira" : "Não consegui ler. Procure na lista ou preencha.";
+        atualizaSelo(box);
+      } catch { b.textContent = "Não consegui ler. Procure na lista ou preencha."; }
     }));
     r.querySelector("[data-salvar]").onclick = async () => {
       const caixas = [...r.querySelectorAll("[data-i]")];
       if (!caixas.length) return fechaFolha();
       const pub = r.querySelector("[data-pub]").checked;
       const bt = r.querySelector("[data-salvar]"); bt.disabled = true;
-      let feitos = 0;
+      let novos = 0, somados = 0;
       for (const box of caixas) {
         const it = itens[+box.dataset.i], g = (k) => box.querySelector(`[data-${k}]`).value.trim();
-        bt.textContent = `Salvando ${feitos + 1} de ${caixas.length}…`;
+        bt.textContent = `Salvando ${novos + somados + 1} de ${caixas.length}…`;
+        const n = Number(g("q") || 0);
         try {
+          if (box.dataset.meu) {
+            const p = meus.find((x) => x.id === box.dataset.meu);
+            if (n > 0) await q(sb.from("ad_movimentos").insert({ profissional_id: st.prof.id, produto_id: p.id, tipo: "compra", quantidade: n, motivo: "Reposição por foto" }));
+            const upd = {}; if (!p.foto_url) upd.foto_url = await enviaFoto(it.canvas); if (pub && p.catalogo !== "publicado") upd.catalogo = "publicado";
+            if (Object.keys(upd).length) await q(sb.from("ad_produtos").update(upd).eq("id", p.id));
+            somados++; continue;
+          }
           const foto = await enviaFoto(it.canvas);
-          const nome = g("nome") || `${g("tom")} ${feitos + 1}`;
-          const novo = await q(sb.from("ad_produtos").insert({ profissional_id: st.prof.id, categoria: "Esmaltes", nome, marca: g("marca") || null, codigo: g("cod") || null,
+          const nome = g("nome") || `${g("tom")} ${novos + 1}`;
+          const novo = await q(sb.from("ad_produtos").insert({ profissional_id: st.prof.id, categoria: "Esmaltes", nome, marca: g("marca") || null, codigo: g("cod") || null, linha: it.linha || null,
             tonalidade: g("tom"), acabamento: g("acab"), cor_hex: g("hex"), foto_url: foto, quantidade: 0, minimo: 1, catalogo: pub ? "publicado" : "revisao" }).select().single());
-          const n = Number(g("q") || 0);
           if (n > 0) await q(sb.from("ad_movimentos").insert({ profissional_id: st.prof.id, produto_id: novo.id, tipo: "compra", quantidade: n, motivo: "Cadastro por foto" }));
-          feitos++;
+          if (g("marca") && g("nome")) await sb.from("ad_esmaltes_base").insert({ marca: g("marca"), nome: g("nome"), codigo: g("cod") || null, linha: it.linha || null, tonalidade: g("tom"), acabamento: g("acab"), cor_hex: g("hex"), cor_aprox: false, foto_url: foto, fonte: "salao" });
+          novos++;
         } catch { /* segue para os próximos */ }
       }
-      toast(`${feitos} esmalte${feitos !== 1 ? "s" : ""} cadastrado${feitos !== 1 ? "s" : ""}${pub ? " e publicado" + (feitos !== 1 ? "s" : "") + " no site" : ""}! 💅`);
+      BASE = null;
+      toast([novos ? `${novos} novo${novos > 1 ? "s" : ""}` : "", somados ? `${somados} somado${somados > 1 ? "s" : ""} ao estoque` : ""].filter(Boolean).join(" · ") + (pub && novos ? " · já no site" : "") + " 💅");
       festa(); fechaFolha(); st.estSeg = "esmaltes"; vaiPara("estoque");
     };
+  });
+}
+
+// Adicionar sem foto: escolhe da lista de cores conhecidas ou do próprio catálogo
+async function daLista() {
+  const [meus, base] = await Promise.all([q(sb.from("ad_produtos").select("*").eq("categoria", "Esmaltes")), baseEsmaltes()]);
+  const itens = [...meus.map((p) => ({ ...p, _meu: true })), ...base.filter((b) => !procura(b, meus, []).meu)];
+  abreFolha(cabFolha("Adicionar da lista", "Toque no esmalte para somar 1 no estoque. Se ainda não tem no salão, ele é cadastrado e aparece no site.") + `
+    <div class="busca">${IC.busca}<input class="campo" data-b placeholder="Digite marca ou nome" autocomplete="off"></div>
+    <div class="lista" data-l>${itens.map((p, i) => `<button class="item" data-k="${i}" data-t="${esc(norm([p.marca, p.nome, p.codigo, p.linha].join(" ")))}">${swatch(p, 38)}<div class="cresce"><b>${esc(p.nome)}</b><div class="pequeno">${esc(p.marca || "")}${p.linha ? " · " + esc(p.linha) : ""}${p._meu ? ` · ${qtd(p.quantidade)} no salão` : ""}</div></div><span class="chip ${p._meu ? "confirmado" : "marcado"}">${p._meu ? "+1" : "Adicionar"}</span></button>`).join("")}</div>
+    <p class="pequeno" style="text-align:center;margin:6px 0 12px">Não achou? Use "Por foto" ou "À mão". Cada esmalte cadastrado entra nesta lista.</p>`, (r) => {
+    r.querySelector("[data-b]").oninput = (e) => { const t = norm(e.target.value); r.querySelectorAll("[data-t]").forEach((b) => b.classList.toggle("hide", !!t && !t.split(" ").every((w) => b.dataset.t.includes(w)))); };
+    r.querySelectorAll("[data-k]").forEach((b) => (b.onclick = async () => {
+      const p = itens[+b.dataset.k]; b.disabled = true;
+      let id = p._meu ? p.id : null;
+      if (!id) {
+        const novo = await q(sb.from("ad_produtos").insert({ profissional_id: st.prof.id, categoria: "Esmaltes", nome: p.nome, marca: p.marca, codigo: p.codigo, linha: p.linha,
+          tonalidade: p.tonalidade, acabamento: p.acabamento, cor_hex: p.cor_hex, foto_url: p.foto_url, quantidade: 0, minimo: 1, catalogo: "publicado" }).select().single());
+        id = novo.id; p._meu = true; p.id = id; p.quantidade = 0;
+      }
+      await q(sb.from("ad_movimentos").insert({ profissional_id: st.prof.id, produto_id: id, tipo: "compra", quantidade: 1, motivo: "Adicionado da lista" }));
+      p.quantidade = Number(p.quantidade) + 1;
+      b.querySelector(".chip").textContent = "+1"; b.querySelector(".chip").className = "chip confirmado";
+      b.querySelector(".pequeno").innerHTML = `${esc(p.marca || "")}${p.linha ? " · " + esc(p.linha) : ""} · ${qtd(p.quantidade)} no salão`;
+      b.disabled = false; toast(`${p.nome}: ${qtd(p.quantidade)} no salão`);
+      if (st.aba === "estoque") telaEstoque();
+    }));
   });
 }
 
