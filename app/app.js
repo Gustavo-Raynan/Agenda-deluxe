@@ -115,6 +115,7 @@ async function iniciar() {
   const { data: prof } = await sb.from("ad_profissionais").select("*").eq("id", st.user.id).maybeSingle();
   if (!prof) { toast("Esta conta não tem um salão cadastrado.", 1); await sb.auth.signOut(); return; }
   st.prof = prof;
+  $("b-perfil").textContent = iniciais(prof.nome);
   $("v-login").classList.add("hide"); $("v-app").classList.remove("hide");
   if (travaCfg()) mostraTrava(); else if (!localStorage.getItem("nay.trava.perguntou")) setTimeout(() => { localStorage.setItem("nay.trava.perguntou", "1"); criaSenha(true); }, 1200);
   await carregaServicos();
@@ -132,7 +133,7 @@ const TITULOS = { inicio: "Início", agenda: "Agenda", clientes: "Clientes", cai
 function vaiPara(aba) {
   st.aba = aba;
   document.querySelectorAll("#abas button").forEach((b) => b.classList.toggle("on", b.dataset.aba === aba));
-  $("titulo").innerHTML = (aba === "inicio" ? esc(saudacao()) : TITULOS[aba] || "") + `<small>${aba === "inicio" ? esc(dataLonga(new Date())) : "Nay Nails Gestão"}</small>`;
+  $("titulo").innerHTML = (aba === "inicio" ? "Nayara Nails" : TITULOS[aba] || "") + `<small>${esc(dataLonga(new Date()))}</small>`;
   scrollTo(0, 0);
   return atualizaTela();
 }
@@ -141,7 +142,7 @@ function atualizaTela() {
 }
 function saudacao() {
   const h = Number(new Date().toLocaleTimeString("en-GB", { hour: "2-digit", timeZone: TZ }));
-  return (h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite") + ", " + primeiroNome(st.prof.nome);
+  return (h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite") + ", " + primeiroNome(st.prof.nome) + "!";
 }
 const tela = (html) => { $("conteudo").innerHTML = `<div class="tela">${html}</div>`; return $("conteudo"); };
 
@@ -211,7 +212,7 @@ async function telaInicio() {
   if (meta) {
     const recMes = (await pagsEntre(hoje.slice(0, 8) + "01", amanha)).reduce((s, p) => s + Number(p.valor), 0);
     const pct = Math.min(100, Math.round((recMes / meta) * 100));
-    metaHtml = `<div class="meta"><small><span>Meta do mês · ${brl(recMes)} de ${brl(meta)}</span><span>${pct}%</span></small><div class="barra"><span style="width:${pct}%"></span></div></div>`;
+    metaHtml = `<div class="meta" style="margin-top:0"><small><span>Meta do mês · ${brl(recMes)} de ${brl(meta)}</span><span>${pct}%</span></small><div class="barra"><span style="width:${pct}%"></span></div></div>`;
   }
 
   const alertas = [];
@@ -220,17 +221,14 @@ async function telaInicio() {
   if (devendo.length) alertas.push(`<button class="item" data-ir="caixa"><div class="ic">${IC.dinheiro}</div><div class="cresce"><b>${devendo.length} atendimento${devendo.length > 1 ? "s" : ""} sem pagamento registrado</b><div class="pequeno">Registre para o caixa ficar certo.</div></div><span class="seta">›</span></button>`);
 
   const r = tela(`
-    <div class="hero">
-      <div class="l">Recebido hoje</div>
-      <div class="v">${brl(faturado)}</div>
-      <div class="sub">Previsto para hoje: ${brl(previsto)}${cancel ? ` · ${cancel} cancelado${cancel > 1 ? "s" : ""}` : ""}</div>
-      <div class="hstats">
-        <div><small>Atendimentos</small><b>${ativos.length}</b></div>
-        <div><small>A confirmar</small><b>${aConfirmar.length}</b></div>
-        <div><small>Horários livres</small><b>${livresHoje.length}</b></div>
-      </div>
-      ${metaHtml}
+    <div class="saud"><h2>${esc(saudacao())}</h2><p>Aqui está o resumo do seu salão.</p></div>
+    <div class="ind">
+      <div class="stat"><div class="ico">${IC.agenda}</div><small>Agendamentos hoje</small><b>${ativos.length}</b><i>${cancel ? cancel + " cancelado" + (cancel > 1 ? "s" : "") : "previsto " + brl(previsto)}</i></div>
+      <div class="stat ouro"><div class="ico">${IC.dinheiro}</div><small>Recebido hoje</small><b>${brl(faturado)}</b><i>de ${brl(previsto)} previstos</i></div>
+      <div class="stat"><div class="ico">${IC.sino}</div><small>Aguardando confirmação</small><b>${aConfirmar.length}</b><i>hoje e amanhã</i></div>
+      <div class="stat"><div class="ico">${IC.relogio}</div><small>Horários disponíveis</small><b>${livresHoje.length}</b><i>hoje, de 30 min</i></div>
     </div>
+    ${metaHtml ? `<div class="cartao">${metaHtml}</div>` : ""}
     <div id="banner-notif"></div>
     ${proxima ? `<div class="proxima">
         <small>${new Date(proxima.inicio).getTime() <= agora ? "Atendendo agora" : "Próxima cliente"}</small>
@@ -1031,6 +1029,7 @@ async function telaAvisos() {
   });
 }
 $("b-sino").onclick = telaAvisos;
+$("b-perfil").onclick = () => vaiPara("mais");
 
 // ---------- como chegar ----------
 function comoChegar() {
@@ -1257,11 +1256,11 @@ function telaSeguranca() {
 function temaAtual() { return localStorage.getItem("nay.tema") || "escuro"; }
 function aplicaTema(t) {
   localStorage.setItem("nay.tema", t); document.documentElement.dataset.tema = t;
-  document.querySelector('meta[name="theme-color"]').content = t === "claro" ? "#EEF1EA" : "#0E110C";
+  document.querySelector('meta[name="theme-color"]').content = t === "claro" ? "#EEF1EA" : "#10130F";
 }
 function telaAparencia() {
   abreFolha(cabFolha("Aparência") + `<div class="lista">
-    ${[["escuro", "Escuro", "Verde-oliva escuro com dourado, como a logo"], ["claro", "Claro", "Verde-sálvia claro com dourado"]].map(([k, n, d]) => `<button class="item" data-t="${k}"><div class="ic">${k === "escuro" ? IC.lua : IC.estrela}</div><div class="cresce"><b>${n}</b><div class="pequeno">${d}</div></div>${temaAtual() === k ? '<span class="chip confirmado">Em uso</span>' : ""}</button>`).join("")}</div>`, (r) => {
+    ${[["escuro", "Escuro (oficial)", "Preto esverdeado com detalhes em dourado champagne"], ["claro", "Claro", "Verde-sálvia claro com dourado"]].map(([k, n, d]) => `<button class="item" data-t="${k}"><div class="ic">${k === "escuro" ? IC.lua : IC.estrela}</div><div class="cresce"><b>${n}</b><div class="pequeno">${d}</div></div>${temaAtual() === k ? '<span class="chip confirmado">Em uso</span>' : ""}</button>`).join("")}</div>`, (r) => {
     r.querySelectorAll("[data-t]").forEach((b) => (b.onclick = () => { aplicaTema(b.dataset.t); telaAparencia(); if (st.aba === "mais") telaMais(); }));
   });
 }
