@@ -56,6 +56,7 @@ async function iniciar() {
     return;
   }
   mostra("v-painel");
+  $("topo-nome").textContent = st.perfil.nome;
   // Voltou do Mercado Pago? Confere o status da assinatura
   if (AD_CONFIG.COBRANCA_ATIVA && new URLSearchParams(location.search).get("assinatura")) {
     history.replaceState(null, "", location.pathname);
@@ -182,6 +183,7 @@ async function renderAgenda() {
             <span class="muted">${AD.esc(a.servico_nome)} · ${AD.brl(a.preco)} · até ${AD.hora(a.fim)}</span>
           </div>
         </div>
+        ${a.observacao ? `<div class="obs">📝 ${AD.esc(a.observacao)}</div>` : ""}
         <div style="margin-top:8px"><span class="badge ${a.status}">${STATUS[a.status]}</span> ${a.pago ? '<span class="badge pago">Pago</span>' : ""}</div>
         <div class="acoes">
           <a class="btn btn-zap btn-sm" target="_blank" rel="noopener" href="${linkZap(a)}">Lembrete</a>
@@ -335,7 +337,7 @@ async function renderResumo() {
 
 // ---------- Meu link ----------
 function renderLink() {
-  const url = AD.base() + "agendar.html?u=" + st.perfil.slug;
+  const url = AD.linkAgendar(st.perfil.slug);
   $("meu-link").value = url;
   $("abrir-link").href = url;
   $("compartilhar").href = "https://wa.me/?text=" + encodeURIComponent(`Agora você pode marcar seu horário comigo direto por aqui, a qualquer hora: ${url}`);

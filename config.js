@@ -6,12 +6,15 @@ window.AD_CONFIG = {
   PRECO_MENSAL: 20,
   // Cobrança desligada: app gratuito. Para ligar, mudar para true (e ad_cobranca_ativa() no banco).
   COBRANCA_ATIVA: false,
+  // Páginas de agendamento personalizadas (link -> pasta)
+  PAGINAS: { nayfernandes: "nayara/" },
 };
 window.sb = window.supabase.createClient(AD_CONFIG.SUPABASE_URL, AD_CONFIG.SUPABASE_KEY);
 
 // Utilitários compartilhados
 window.AD = {
   TZ: "America/Sao_Paulo",
+  linkAgendar(slug) { const p = (window.AD_CONFIG.PAGINAS || {})[slug]; return this.base() + (p || "agendar.html?u=" + slug); },
   base() { return location.origin + location.pathname.replace(/[^/]*$/, ""); },
   esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); },
   brl(v) { return Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); },
