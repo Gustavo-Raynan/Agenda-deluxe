@@ -420,3 +420,4 @@ nav.abas button.on svg { color: var(--ouro); }
 .qtd-mini { display: inline-flex; align-items: center; gap: 2px; background: var(--soft); border-radius: 99px; padding: 2px; flex: none; }
 .qtd-mini button { width: 28px; height: 28px; border-radius: 50%; border: 0; background: var(--card); color: var(--ink); font-size: 16px; font-weight: 700; cursor: pointer; }
 .qtd-mini b { min-width: 22px; text-align: center; font-size: 14px; }
+.tela.quieta, .tela.quieta * { animation: none !important; }

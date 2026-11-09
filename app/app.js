@@ -82,7 +82,7 @@ function abreFolha(html, aoAbrir) {
   $("folha-conteudo").querySelectorAll("[data-fechar]").forEach((b) => (b.onclick = fechaFolha));
   aoAbrir && aoAbrir($("folha-conteudo"));
 }
-function fechaFolha() { $("folha").classList.remove("on"); $("fundo").classList.remove("on"); if (location.hash) history.replaceState(null, "", location.pathname); }
+function fechaFolha() { $("folha").classList.remove("on"); $("fundo").classList.remove("on"); if (location.hash) history.replaceState(null, "", location.pathname); if (st.pendente) { st.pendente = false; setTimeout(() => atualizaSilencioso(), 350); } }
 $("fundo").onclick = fechaFolha;
 const cabFolha = (titulo, sub) => `<div class="cab"><div class="cresce"><h2>${titulo}</h2>${sub ? `<p class="mudo" style="margin-top:4px">${sub}</p>` : ""}</div><button class="fechar" data-fechar aria-label="Fechar">✕</button></div>`;
 
@@ -156,9 +156,13 @@ async function iniciar() {
   if (travaCfg()) mostraTrava();
   if (!localStorage.getItem("nay.tutorial")) mostraTutorial(pedeSenha); else pedeSenha();
   await carregaServicos();
-  tempoReal(); contaAvisos(); registraSW();
+  tempoReal(); contaAvisos(); registraSW(); vigia();
   const m = location.hash.match(/ag=([0-9a-f-]{36})/);
-  vaiPara("inicio");
+  const atalho = location.hash.slice(1);
+  if (atalho === "agenda") vaiPara("agenda");
+  else if (atalho === "esmaltes") { st.estSeg = "esmaltes"; vaiPara("estoque"); }
+  else vaiPara("inicio");
+  if (atalho === "novo") novoAgendamento({});
   if (m) detalheAg(m[1]);
 }
 
@@ -186,7 +190,7 @@ function saudacao() {
   const h = Number(new Date().toLocaleTimeString("en-GB", { hour: "2-digit", timeZone: TZ }));
   return (h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite") + ", " + primeiroNome(st.prof.nome) + "!";
 }
-const tela = (html) => { $("conteudo").innerHTML = `<div class="tela ${st.direcao || ""}">${html}</div>`; st.direcao = ""; contaNumeros($("conteudo")); return $("conteudo"); };
+const tela = (html) => { $("conteudo").innerHTML = `<div class="tela ${st.silencioso ? "quieta" : st.direcao || ""}">${html}</div>`; st.direcao = ""; if (!st.silencioso) contaNumeros($("conteudo")); return $("conteudo"); };
 // Números sobem até o valor (dinheiro e quantidades)
 const calma = matchMedia("(prefers-reduced-motion: reduce)").matches;
 function contaNumeros(raiz) {
@@ -231,6 +235,53 @@ function tempoReal() {
       const sino = $("b-sino"); sino.classList.remove("toca"); void sino.offsetWidth; sino.classList.add("toca");
     })
     .subscribe();
+}
+// ---------- atualização automática (a cada 5 segundos) ----------
+// Além do tempo real, confere o banco a cada 5 s. Se algo mudou (agendamento novo, remarcado,
+// cancelado, pago, estoque, caixa), a tela é refeita sozinha sem atrapalhar o que ela está fazendo.
+let assinatura = null, vigiaTimer = null;
+async function assinaDados() {
+  const ini = new Date(Date.now() - 864e5).toISOString();
+  const [ags, pags, lanc, prods, avisos] = await Promise.all([
+    sb.from("ad_agendamentos").select("id,status,inicio,fim,pago,preco").gte("inicio", ini).order("id").limit(1000),
+    sb.from("ad_pagamentos").select("id", { count: "exact", head: true }),
+    sb.from("ad_lancamentos").select("id", { count: "exact", head: true }),
+    sb.from("ad_produtos").select("id,quantidade,catalogo").order("id").limit(2000),
+    sb.from("ad_avisos").select("id", { count: "exact", head: true }).eq("lido", false),
+  ]);
+  if (ags.error) return null;
+  const txt = JSON.stringify([ags.data, pags.count, lanc.count, prods.data, avisos.count]);
+  let h = 0; for (let i = 0; i < txt.length; i++) h = (h * 31 + txt.charCodeAt(i)) | 0;
+  return { h, nAgs: ags.data.filter((a) => a.status !== "cancelado").length, avisos: avisos.count || 0 };
+}
+async function confere() {
+  if (document.hidden || !st.prof || $("trava")) return;
+  try {
+    const a = await assinaDados(); if (!a) return;
+    const antes = assinatura; assinatura = a;
+    if (!antes || antes.h === a.h) return;
+    if (a.nAgs > antes.nAgs) toast("📅 Novo agendamento chegou!");
+    if (a.avisos !== antes.avisos) contaAvisos();
+    atualizaSilencioso();
+  } catch { /* sem internet: tenta de novo em 5 s */ }
+}
+function atualizaSilencioso() {
+  const ocupada = $("folha").classList.contains("on") || ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName);
+  if (ocupada) { st.pendente = true; return; }
+  const y = scrollY; st.silencioso = true;
+  Promise.resolve(atualizaTela()).finally(() => { st.silencioso = false; scrollTo(0, y); });
+}
+function vigia() {
+  clearInterval(vigiaTimer); vigiaTimer = setInterval(confere, 5000); confere();
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) { confere(); swReg?.update().catch(() => {}); } });
+  // nova versão do app publicada: troca sozinho quando ela não estiver no meio de algo
+  setInterval(() => swReg?.update().catch(() => {}), 60000);
+  let recarregou = false;
+  navigator.serviceWorker?.addEventListener("controllerchange", () => {
+    if (recarregou) return; recarregou = true;
+    const tenta = () => ($("folha").classList.contains("on") ? setTimeout(tenta, 3000) : location.reload());
+    tenta();
+  });
 }
 async function contaAvisos() {
   const { count } = await sb.from("ad_avisos").select("id", { count: "exact", head: true }).eq("lido", false);
