@@ -174,7 +174,7 @@ function vaiPara(aba) {
   st.aba = aba;
   atualizaFab();
   document.querySelectorAll("#abas button").forEach((b) => b.classList.toggle("on", b.dataset.aba === aba));
-  $("titulo").innerHTML = (aba === "inicio" ? "Nayara Nails" : TITULOS[aba] || "") + `<small>${esc(dataLonga(new Date()))}</small>`;
+  $("titulo").innerHTML = aba === "inicio" ? `Nayara Fernandes<small>Nails e cuidados</small>` : (TITULOS[aba] || "") + `<small>${esc(dataLonga(new Date()))}</small>`;
   scrollTo(0, 0);
   $("conteudo").innerHTML = `<div style="padding-top:4px">${[64, 120, 120, 88, 88].map((h) => `<div class="esqueleto" style="height:${h}px"></div>`).join("")}</div>`;
   return atualizaTela();
@@ -284,7 +284,7 @@ async function telaInicio() {
     const pct = Math.min(100, Math.round((recMes / meta) * 100));
     const chave = "nay.meta." + hoje.slice(0, 7);
     if (pct >= 100 && !localStorage.getItem(chave)) { localStorage.setItem(chave, "1"); setTimeout(() => { festa(); toast("Meta do mês batida! Parabéns! 🏆"); }, 900); }
-    metaHtml = `<div class="meta" style="margin-top:0"><small><span>Meta do mês · ${brl(recMes)} de ${brl(meta)}</span><span>${pct}%</span></small><div class="barra"><span style="width:${pct}%"></span></div></div>`;
+    metaHtml = `<div class="meta"><small><span>Meta do mês · ${brl(recMes)} de ${brl(meta)}</span><span>${pct}%</span></small><div class="barra"><span style="width:${pct}%"></span></div></div>`;
   }
 
   const alertas = [];
@@ -297,46 +297,50 @@ async function telaInicio() {
   if (devendo.length) alertas.push(`<button class="item" data-ir="caixa"><div class="ic">${IC.dinheiro}</div><div class="cresce"><b>${devendo.length} atendimento${devendo.length > 1 ? "s" : ""} sem pagamento registrado</b><div class="pequeno">Registre para o caixa ficar certo.</div></div><span class="seta">›</span></button>`);
 
   const r = tela(`
-    <div class="saud"><h2>${esc(saudacao())}</h2><p>Aqui está o resumo do seu salão.</p></div>
-    <div class="ind">
-      <div class="stat"><div class="ico">${IC.agenda}</div><small>Agendamentos hoje</small><b>${ativos.length}</b><i>${cancel ? cancel + " cancelado" + (cancel > 1 ? "s" : "") : "previsto " + brl(previsto)}</i></div>
-      <div class="stat ouro"><div class="ico">${IC.dinheiro}</div><small>Recebido hoje</small><b>${brl(faturado)}</b><i>de ${brl(previsto)} previstos</i></div>
-      <div class="stat"><div class="ico">${IC.sino}</div><small>Aguardando confirmação</small><b>${aConfirmar.length}</b><i>hoje e amanhã</i></div>
-      <div class="stat"><div class="ico">${IC.relogio}</div><small>Horários disponíveis</small><b>${livresHoje.length}</b><i>hoje, de 30 min</i></div>
+    <div class="saud"><p>${esc(dataLonga(new Date()))}</p><h2>${esc(saudacao())}</h2></div>
+    <div class="painel-hoje">
+      <div class="linha entre"><span class="rot">Recebido hoje</span>${novos.length ? `<span class="selo">${novos.length} novo${novos.length > 1 ? "s" : ""} pelo site</span>` : ""}</div>
+      <div class="valor">${brl(faturado)}</div>
+      <div class="rot">de ${brl(previsto)} previstos para hoje</div>
+      <div class="hoje-nums">
+        <button data-ir="agenda"><b>${ativos.length}</b><small>atendimento${ativos.length !== 1 ? "s" : ""}</small></button>
+        <button data-ir="confirmar"><b>${aConfirmar.length}</b><small>a confirmar</small></button>
+        <button data-ir="agenda"><b>${livresHoje.length}</b><small>horários livres</small></button>
+      </div>
     </div>
-    <div class="resumo-val" style="margin-bottom:12px">
-      <div><small>Faturamento do mês</small><b class="pos">${brl(recMes)}</b></div>
-      <div><small>Despesas do mês</small><b class="neg">${brl(gastoMes)}</b></div>
-      <div><small>Lucro do mês</small><b>${brl(recMes - gastoMes)}</b></div>
-    </div>
-    <div class="resumo-val" style="margin-bottom:12px">
-      <div><small>Pagamentos pendentes</small><b>${brl(devendo.reduce((s, a) => s + Number(a.preco), 0))}</b></div>
-      <div><small>Estoque baixo</small><b class="${estq.baixos.length ? "neg" : ""}">${estq.baixos.length}</b></div>
-      <div><small>Novos agendamentos</small><b>${novos.length}</b></div>
-    </div>
-    ${metaHtml ? `<div class="cartao">${metaHtml}</div>` : ""}
-    <div id="banner-notif"></div>
     ${proxima ? `<div class="proxima">
-        <small>${new Date(proxima.inicio).getTime() <= agora ? "Atendendo agora" : "Próxima cliente"}</small>
-        <h3>${esc(proxima.cliente_nome)}</h3>
-        <div class="mudo">${esc(proxima.servico_nome)} · <span class="hora">${hora(proxima.inicio)}</span> · ${brl(proxima.preco)}</div>
+        <div class="linha" style="align-items:flex-start">
+          <div class="cresce"><small>${new Date(proxima.inicio).getTime() <= agora ? "Atendendo agora" : "Próxima cliente"}</small>
+            <h3>${esc(proxima.cliente_nome)}</h3>
+            <div class="mudo">${esc(proxima.servico_nome)} · ${brl(proxima.preco)}</div></div>
+          <div class="prox-hora">${hora(proxima.inicio)}</div>
+        </div>
         <div class="acoes">
           <a class="btn zap mini" target="_blank" rel="noopener" href="https://wa.me/${zapNum(proxima.cliente_whatsapp)}">${IC.zap}WhatsApp</a>
           <button class="btn mini" data-ag="${proxima.id}">Ver detalhes</button>
         </div></div>`
-      : `<div class="cartao"><h2>${ativos.length ? "Atendimentos de hoje concluídos ✨" : "Nenhuma cliente marcada hoje"}</h2><p class="mudo">${livresHoje.length ? `Ainda há ${livresHoje.length} horários livres hoje. Divulgue seu link de agendamento.` : "Aproveite para descansar ou organizar o salão."}</p></div>`}
+      : `<div class="cartao calmo"><b>${ativos.length ? "Atendimentos de hoje concluídos ✨" : "Nenhuma cliente marcada hoje"}</b><p class="mudo" style="margin-top:2px">${livresHoje.length ? `Ainda há ${livresHoje.length} horários livres. Divulgue seu link.` : "Aproveite para descansar ou organizar o salão."}</p></div>`}
+    <div class="cartao mes-resumo" data-ir="caixa">
+      <div class="linha entre"><h2 style="margin:0">Este mês</h2><span class="seta">›</span></div>
+      <div class="mes-nums">
+        <div><small>Faturamento</small><b>${brl(recMes)}</b></div>
+        <div><small>Despesas</small><b>${brl(gastoMes)}</b></div>
+        <div><small>Lucro</small><b class="${recMes - gastoMes < 0 ? "neg" : "ouro-t"}">${brl(recMes - gastoMes)}</b></div>
+      </div>
+      ${metaHtml}
+    </div>
     ${alertas.length ? `<div class="tit-linha"><h2>Avisos</h2><button data-ir="avisos">Ver todos</button></div><div class="lista">${alertas.join("")}</div>` : ""}
+    <div id="banner-notif"></div>
     <div class="tit-linha"><h2>Atalhos</h2></div>
     <div class="atalhos">
-      <button class="atalho" data-atalho="agenda"><span>${IC.agenda}</span>Agenda</button>
+      <button class="atalho" data-atalho="novo"><span>${IC.mais}</span>Agendar</button>
       <button class="atalho" data-atalho="clientes"><span>${IC.cliente}</span>Clientes</button>
       <button class="atalho" data-atalho="financeiro"><span>${IC.dinheiro}</span>Financeiro</button>
-      <button class="atalho" data-atalho="estoque"><span>${IC.caixa}</span>Estoque</button>
       <button class="atalho" data-atalho="esmaltes"><span>${IC.esmalte}</span>Esmaltes</button>
-      <button class="atalho" data-atalho="relatorios"><span>${IC.grafico}</span>Relatórios</button>
+      <button class="atalho" data-atalho="estoque"><span>${IC.caixa}</span>Estoque</button>
       <button class="atalho" data-atalho="compras"><span>${IC.carrinho}</span>Compras</button>
-      <button class="atalho" data-atalho="config"><span>${IC.engrenagem}</span>Configurações</button>
-      <button class="atalho" data-atalho="novo"><span>${IC.mais}</span>Novo agendamento</button>
+      <button class="atalho" data-atalho="relatorios"><span>${IC.grafico}</span>Relatórios</button>
+      <button class="atalho" data-atalho="config"><span>${IC.engrenagem}</span>Ajustes</button>
     </div>
     <div class="tit-linha"><h2>Hoje</h2><button data-ir="agenda">Agenda completa</button></div>
     ${ags.length ? ags.map((a) => cartaoAg(a)).join("") : `<div class="vazio">${IC.calendario}<div>Nenhum agendamento hoje.</div></div>`}
@@ -1155,7 +1159,7 @@ async function bannerNotificacao() {
   const el = $("banner-notif"); if (!el) return;
   const sub = suportaPush() ? await inscricaoAtual() : null;
   if (sub && Notification.permission === "granted") { el.innerHTML = ""; return; }
-  el.innerHTML = `<div class="cartao rosa linha"><div class="cresce"><b>Receba os avisos no celular</b><div class="pequeno">Saiba na hora quando uma cliente agendar ou cancelar.</div></div><button class="btn ouro mini" id="b-ativar">Ativar</button></div>`;
+  el.innerHTML = `<div class="cartao calmo"><b>Receba os avisos no celular</b><div class="pequeno" style="margin:2px 0 10px">Saiba na hora quando uma cliente agendar ou cancelar.</div><button class="btn prim mini" id="b-ativar">${IC.sino}Ativar avisos</button></div>`;
   $("b-ativar").onclick = async () => { if (await ativaNotificacoes()) bannerNotificacao(); };
 }
 
@@ -1417,10 +1421,10 @@ function telaSeguranca() {
 }
 
 // ---------- aparência ----------
-function temaAtual() { return localStorage.getItem("nay.tema") || "escuro"; }
+function temaAtual() { return localStorage.getItem("nay.tema2") || "claro"; }
 function aplicaTema(t) {
-  localStorage.setItem("nay.tema", t); document.documentElement.dataset.tema = t;
-  document.querySelector('meta[name="theme-color"]').content = t === "claro" ? "#EEF1EA" : "#10130F";
+  localStorage.setItem("nay.tema2", t); document.documentElement.dataset.tema = t;
+  document.querySelector('meta[name="theme-color"]').content = t === "claro" ? "#F6F2EC" : "#121110";
 }
 function telaAparencia() {
   abreFolha(cabFolha("Aparência") + `<div class="lista">

@@ -1,32 +1,31 @@
 /* Nay Nails Gestão — visual inspirado no Tico Finances: escuro, vidro, degradê rosé → dourado */
 /* Paleta oficial — Luxo minimalista dark */
-:root, [data-tema="escuro"] {
-  color-scheme: dark;
-  --bg: #171C16; --bg2: #1F261D; --card: #283027; --card2: #283027; --solido: #1F261D;
-  --ink: #F7F5EF; --mute: #B3B7A8; --line: rgba(245,243,237,.10); --line2: rgba(245,243,237,.17); --soft: rgba(245,243,237,.07);
-  --acc: #C5A568; --acc2: rgba(197,165,104,.13); --ouro: #DFC58E; --ouro2: rgba(223,197,142,.12);
-  --salvia: #A6AA9C; --salvia2: rgba(166,170,156,.12);
-  --grad: #C5A568; --gradOuro: #C5A568;
-  --accRGB: 197,165,104; --secRGB: 117,169,135;
-  --ok: #75A987; --ok2: rgba(117,169,135,.15); --amb: #D5A85C; --amb2: rgba(213,168,92,.14);
-  --red: #C87575; --red2: rgba(200,117,117,.15); --info: #9FB4C8; --info2: rgba(159,180,200,.13);
-  --zap: #2FB766; --zapInk: #08210F; --topbg: rgba(23,28,22,.88); --navbg: rgba(33,40,31,.95);
-  --sombra: 0 10px 30px -18px rgba(0,0,0,.7);
+:root, [data-tema="claro"] {
+  color-scheme: light;
+  --bg: #F6F2EC; --bg2: #EFE9E0; --card: #FFFFFF; --card2: #FFFFFF; --solido: #FFFFFF;
+  --ink: #221D18; --mute: #877E73; --line: #EDE6DC; --line2: #E1D8CB; --soft: #F5F0E8;
+  --acc: #B08A4E; --acc2: #F5ECDD; --ouro: #9A7540; --ouro2: #F5ECDD; --salvia: #877E73; --salvia2: #F5F0E8;
+  --grad: #B08A4E; --gradOuro: #C9A86A;
+  --accRGB: 176,138,78; --secRGB: 135,126,115;
+  --ok: #3C8A5C; --ok2: #E7F3EB; --amb: #B07A22; --amb2: #FBF0DC; --red: #B9493E; --red2: #FBE8E5; --info: #4A6C96; --info2: #E8EEF6;
+  --zap: #1FA855; --zapInk: #fff; --topbg: rgba(246,242,236,.9); --navbg: rgba(255,255,255,.96);
+  --btn: #221D18; --btnInk: #FFFFFF; --escuro: #221D18; --escuroInk: #FBF8F3; --escuroOuro: #E2C48E;
+  --sombra: 0 1px 2px rgba(60,45,30,.04), 0 10px 26px -16px rgba(60,45,30,.22);
   --branco: var(--card2); --marrom: var(--ink); --marrom-2: var(--mute); --marrom-3: var(--mute); --linha: var(--line);
   --blush: var(--acc); --blush-2: var(--acc2); --nude: var(--soft); --erro: var(--red); --erro-bg: var(--red2);
   --alerta: var(--amb); --alerta-bg: var(--amb2); --ouro-2: var(--ouro);
 }
-[data-tema="claro"] {
-  color-scheme: light;
-  --bg: #EEF1EA; --card: #FFFFFF; --card2: #FFFFFF; --solido: #FFFFFF;
-  --ink: #2F362A; --mute: #6A7260; --line: #DCE1D4; --line2: #CBD2C2; --soft: #E5EADF;
-  --acc: #9A7A42; --acc2: #F2EAD9; --ouro: #9A7A42; --ouro2: #F2EAD9; --salvia: #7F8B6E; --salvia2: #E5EADF;
-  --grad: linear-gradient(135deg, #6E7A5F 0%, #8C957F 42%, #C3A062 100%);
-  --gradOuro: linear-gradient(180deg, #D6B67C, #A9874F);
-  --accRGB: 166,132,74; --secRGB: 140,149,127;
-  --ok: #3E7A4E; --ok2: #E3F0E6; --amb: #A8731F; --amb2: #F8EBD6; --red: #A8443A; --red2: #F7E1DE; --info: #44628A; --info2: #E2E9F3;
-  --zap: #1E9E57; --zapInk: #fff; --topbg: rgba(238,241,234,.86); --navbg: rgba(255,255,255,.94);
-  --sombra: 0 1px 2px rgba(52,59,46,.05), 0 10px 26px -12px rgba(52,59,46,.2);
+[data-tema="escuro"] {
+  color-scheme: dark;
+  --bg: #121110; --bg2: #1A1917; --card: #1F1D1A; --card2: #24221F; --solido: #1A1917;
+  --ink: #F5F1EA; --mute: #A69E93; --line: rgba(245,241,234,.09); --line2: rgba(245,241,234,.16); --soft: rgba(245,241,234,.06);
+  --acc: #C9A86A; --acc2: rgba(201,168,106,.14); --ouro: #E2C48E; --ouro2: rgba(226,196,142,.12); --salvia: #A69E93; --salvia2: rgba(245,241,234,.06);
+  --grad: #C9A86A; --gradOuro: #C9A86A;
+  --accRGB: 201,168,106; --secRGB: 166,158,147;
+  --ok: #7DB08E; --ok2: rgba(125,176,142,.15); --amb: #D9AC5E; --amb2: rgba(217,172,94,.14); --red: #D98579; --red2: rgba(217,133,121,.15); --info: #9FB4C8; --info2: rgba(159,180,200,.13);
+  --zap: #2FB766; --zapInk: #08210F; --topbg: rgba(18,17,16,.88); --navbg: rgba(31,29,26,.96);
+  --btn: #C9A86A; --btnInk: #17140C; --escuro: #24221F; --escuroInk: #F5F1EA; --escuroOuro: #E2C48E;
+  --sombra: 0 10px 30px -18px rgba(0,0,0,.7);
 }
 
 * { box-sizing: border-box; margin: 0; font-variant-numeric: lining-nums tabular-nums; }
@@ -182,7 +181,7 @@ nav.abas button.on svg { color: var(--acc); }
 .btn:active { transform: scale(.97); }
 .btn[disabled] { opacity: .45; pointer-events: none; }
 .btn svg { width: 18px; height: 18px; flex: none; }
-.btn.ouro, .btn.prim { background: var(--acc); color: #17140C; border: 0; box-shadow: none; }
+.btn.ouro, .btn.prim { background: var(--btn); color: var(--btnInk); border: 0; box-shadow: none; }
 .btn.claro { background: var(--soft); }
 .btn.rosa { background: var(--acc2); color: var(--acc); border-color: transparent; }
 .btn.zap { background: var(--zap); color: var(--zapInk); border: 0; }
@@ -220,7 +219,7 @@ textarea.campo { min-height: 80px; resize: vertical; }
 .fundo.on { opacity: 1; pointer-events: auto; }
 .folha { position: fixed; z-index: 41; left: 0; right: 0; bottom: 0; max-height: 92vh; overflow-y: auto; background: var(--solido); border: 1px solid var(--line2); border-bottom: 0;
   border-radius: 28px 28px 0 0; padding: 10px 16px calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateY(105%); transition: transform .26s cubic-bezier(.2,.8,.2,1); max-width: 760px; margin: 0 auto; overscroll-behavior: contain; }
-[data-tema="claro"] .folha { background: var(--bg); }
+.folha { background: var(--bg); }
 .folha.on { transform: none; }
 .folha .pega { width: 40px; height: 5px; border-radius: 99px; background: var(--line2); margin: 0 auto 12px; }
 .folha .cab { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
@@ -326,7 +325,7 @@ nav.abas button.on svg { animation: popa .35s ease; }
 .tela.da-direita > * { animation-name: daDireita; }
 .tela.da-esquerda > * { animation-name: daEsquerda; }
 #toast.on { animation: toastIn .4s cubic-bezier(.2,.8,.2,1); }
-.fab { position: fixed; z-index: 24; right: 18px; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); width: 58px; height: 58px; border-radius: 50%; border: 0; background: var(--acc); color: #17140C; display: grid; place-items: center; cursor: pointer; box-shadow: 0 14px 30px -10px rgba(0,0,0,.6); animation: onda 2.4s ease-out 1.2s infinite; transition: transform .15s; }
+.fab { position: fixed; z-index: 24; right: 18px; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); width: 58px; height: 58px; border-radius: 50%; border: 0; background: var(--btn); color: var(--btnInk); display: grid; place-items: center; cursor: pointer; box-shadow: 0 14px 30px -12px rgba(34,29,24,.55); animation: onda 2.4s ease-out 1.2s infinite; transition: transform .15s; }
 .fab svg { width: 26px; height: 26px; }
 .fab:active { transform: scale(.9) rotate(90deg); }
 .confete-app { position: fixed; width: 8px; height: 12px; border-radius: 2px; pointer-events: none; z-index: 96; animation: confeteApp 1.3s cubic-bezier(.15,.7,.3,1) forwards; }
@@ -370,3 +369,47 @@ nav.abas button.on svg { animation: popa .35s ease; }
 .g-rec { background: var(--acc); } .g-gas { background: var(--red); opacity: .85; }
 .g-leg { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
 @keyframes sobe { from { transform: scaleY(0); } }
+
+
+/* ---------- Início limpo (v2) ---------- */
+.saud { margin: 4px 4px 16px; }
+.saud p { font-size: 13px; color: var(--mute); margin: 0 0 2px; }
+.saud h2 { font-size: 27px; font-weight: 800; letter-spacing: -.04em; }
+.painel-hoje { background: var(--escuro); color: var(--escuroInk); border-radius: 26px; padding: 20px 18px 16px; margin-bottom: 12px; box-shadow: 0 18px 40px -22px rgba(34,29,24,.6); }
+.painel-hoje .rot { font-size: 13px; opacity: .72; }
+.painel-hoje .valor { font-size: 38px; font-weight: 800; letter-spacing: -.045em; line-height: 1.1; margin: 4px 0 2px; color: var(--escuroOuro); }
+.painel-hoje .selo { font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 99px; background: rgba(226,196,142,.16); color: var(--escuroOuro); }
+.hoje-nums { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 16px; border-top: 1px solid rgba(255,255,255,.1); padding-top: 12px; }
+.hoje-nums button { border: 0; background: none; color: inherit; text-align: left; padding: 0 4px; cursor: pointer; }
+.hoje-nums button + button { border-left: 1px solid rgba(255,255,255,.1); padding-left: 14px; }
+.hoje-nums b { display: block; font-size: 22px; font-weight: 800; letter-spacing: -.03em; }
+.hoje-nums small { font-size: 12px; opacity: .7; }
+.proxima { padding: 16px 18px; }
+.proxima::before { display: none; }
+.proxima small { color: var(--ouro); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.proxima h3 { font-size: 20px; }
+.prox-hora { font-size: 22px; font-weight: 800; letter-spacing: -.03em; color: var(--ink); background: var(--acc2); border-radius: 14px; padding: 8px 12px; }
+.cartao.calmo { box-shadow: none; background: var(--card); }
+.cartao.mes-resumo { cursor: pointer; }
+.cartao.mes-resumo .seta { color: var(--mute); font-size: 22px; }
+.mes-nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+.mes-nums small { display: block; font-size: 12px; color: var(--mute); }
+.mes-nums b { display: block; font-size: 16.5px; font-weight: 750; letter-spacing: -.03em; margin-top: 1px; }
+.ouro-t { color: var(--ouro); }
+.cartao.mes-resumo .meta { margin-top: 14px; }
+.meta .barra { background: var(--soft); }
+.atalhos { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.atalho { border: 0; background: none; box-shadow: none; padding: 6px 2px; font-size: 12px; font-weight: 600; }
+.atalho span { width: 54px; height: 54px; border-radius: 18px; background: var(--card); border: 1px solid var(--line); color: var(--ouro); box-shadow: var(--sombra); }
+.atalho svg { width: 23px; height: 23px; }
+.stat, .lista, .cartao, .ag, .proxima { border-color: var(--line); }
+nav.abas { box-shadow: 0 14px 34px -18px rgba(60,45,30,.45); }
+nav.abas button.on { color: var(--ink); background: var(--acc2); }
+nav.abas button.on svg { color: var(--ouro); }
+.topo .sino b { color: #fff; background: var(--acc); }
+.topo .perfil { color: var(--ouro); }
+.hero { background: var(--escuro); color: var(--escuroInk); border: 0; border-radius: 26px; box-shadow: 0 18px 40px -22px rgba(34,29,24,.6); }
+.hero .l, .hero .sub, .hero .hstats small, .hero .meta small { color: inherit; opacity: .72; }
+.hero .v { color: var(--escuroOuro); }
+.hero .hstats div { background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.08); }
+.hero .meta .barra { background: rgba(255,255,255,.12); }
