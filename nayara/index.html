@@ -376,6 +376,10 @@ const st = { pag: null, serv: null, dia: null, hora: null, ag: null, cat: [], to
 const TONS_HEX = { Vermelhos: "#B3262E", Vinhos: "#5E1A2A", Rosas: "#E58FA8", Nudes: "#D8B49B", Marrons: "#6B4232", Brancos: "#F4F1EA", Pretos: "#141414", Cinzas: "#8C8C8C", Azuis: "#2F5FA8", Verdes: "#3D7A4E", Roxos: "#6B3F8F", Laranjas: "#E2733A", Amarelos: "#E8C547", Glitter: "#C9B27A", Metalizados: "#A7A9AC", Perolados: "#EDE3D6", Translúcidos: "#E9E4DE", Outros: "#777" };
 const favs = new Set((() => { try { return JSON.parse(localStorage.getItem("nay_favs") || "[]"); } catch { return []; } })());
 const salvaFavs = () => { try { localStorage.setItem("nay_favs", JSON.stringify([...favs])); } catch {} };
+function frasco(hex) {
+  const c = /^#[0-9a-f]{6}$/i.test(hex || "") ? hex : "#8C847A";
+  return "data:image/svg+xml;utf8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#26231F"/><rect x="38" y="8" width="24" height="30" rx="4" fill="#0F0D0B"/><rect x="41" y="10" width="5" height="26" rx="2" fill="#fff" opacity=".15"/><path d="M30 40h40l6 10v34a8 8 0 0 1-8 8H32a8 8 0 0 1-8-8V50z" fill="${c}"/><path d="M31 52c2-6 4-8 8-9v38c-4-1-7-4-8-8z" fill="#fff" opacity=".25"/><rect x="24" y="38" width="52" height="5" rx="2.5" fill="#0F0D0B"/></svg>`);
+}
 const ST_COR = { disponivel: "Disponível", poucas: "Poucas unidades", indisponivel: "Indisponível" };
 
 // "Seg a Sex · 09:00 às 18:00"
@@ -446,7 +450,7 @@ function desenhaCores() {
   const lista = st.cat.filter((c) => (!st.tom || (st.tom === "♥" ? favs.has(c.id) : c.tonalidade === st.tom)) && (!m || c.marca === m) && (!a || c.acabamento === a) && (!b || semAc([c.nome, c.marca, c.codigo, c.linha, c.tonalidade].join(" ")).includes(b)));
   $("cores").innerHTML = lista.length ? lista.slice(0, st.ver).map((c, i) => {
     return `<div class="cor ${c.status === "indisponivel" ? "off" : ""}" data-id="${c.id}" role="button" tabindex="0" style="animation-delay:${(i % 12) * 0.03}s">
-      <div class="ft" style="background:${esc(c.cor_hex || "#444")}">${c.foto_url ? `<img src="${esc(c.foto_url)}" alt="${esc(c.nome)}" loading="lazy">` : ""}</div>
+      <div class="ft"><img src="${c.foto_url ? esc(c.foto_url) : frasco(c.cor_hex)}" alt="${esc(c.nome)}" loading="lazy"></div>
       <button type="button" class="fav ${favs.has(c.id) ? "on" : ""}" data-fav="${c.id}" aria-label="Favoritar" style="border:0">${favs.has(c.id) ? "♥" : "♡"}</button>
       <b>${esc(c.nome)}</b><small>${esc(c.marca || "")}${c.codigo ? " · " + esc(c.codigo) : ""}${c.acabamento ? " · " + esc(c.acabamento) : ""}</small>
       <span class="st ${c.status}">${ST_COR[c.status]}</span></div>`;
@@ -459,7 +463,7 @@ function desenhaCores() {
   }));
 }
 function abreCor(c) {
-  $("modalCx").innerHTML = `${c.foto_url ? `<img src="${esc(c.foto_url)}" alt="">` : `<div style="height:160px;border-radius:16px;background:${esc(c.cor_hex || "#444")}"></div>`}
+  $("modalCx").innerHTML = `<img src="${c.foto_url ? esc(c.foto_url) : frasco(c.cor_hex)}" alt="">
     <h3>${esc(c.nome)}</h3><p>${[c.marca, c.codigo && "cód. " + c.codigo, c.tonalidade, c.acabamento].filter(Boolean).map(esc).join(" · ")}</p>
     <span class="st ${c.status}" style="font-size:12px;padding:3px 10px">${ST_COR[c.status]}</span>
     ${c.status === "indisponivel" ? `<p style="margin-top:12px">Acabou no momento. Logo deve voltar.</p>` : `<p style="margin-top:12px">Gostou? Salve nas favoritas e mostre para a Nayara no dia do atendimento.</p>`}

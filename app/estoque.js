@@ -28,7 +28,12 @@ function resumoEstoque(lista) {
     revisao: lista.filter((p) => p.categoria === "Esmaltes" && p.catalogo === "revisao"),
   };
 }
-const swatch = (p, tam = 46) => p.foto_url
+// Ilustração de frasco na cor do esmalte (quando ainda não tem foto)
+function frasco(hex) {
+  const c = /^#[0-9a-f]{6}$/i.test(hex || "") ? hex : "#CFC6BA";
+  return "data:image/svg+xml;utf8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#F4EFE8"/><rect x="38" y="8" width="24" height="30" rx="4" fill="#2A2420"/><rect x="41" y="10" width="5" height="26" rx="2" fill="#fff" opacity=".18"/><path d="M30 40h40l6 10v34a8 8 0 0 1-8 8H32a8 8 0 0 1-8-8V50z" fill="${c}"/><path d="M30 40h40l6 10v34a8 8 0 0 1-8 8H32a8 8 0 0 1-8-8V50z" fill="none" stroke="#000" stroke-opacity=".12" stroke-width="1.5"/><path d="M31 52c2-6 4-8 8-9v38c-4-1-7-4-8-8z" fill="#fff" opacity=".28"/><rect x="24" y="38" width="52" height="5" rx="2.5" fill="#2A2420" opacity=".85"/></svg>`);
+}
+const swatch = (p, tam = 46) => !p.foto_url ? `<img src="${frasco(p.cor_hex)}" alt="" style="width:${tam}px;height:${tam}px;border-radius:14px;flex:none;border:1px solid var(--line2)">` : p.foto_url
   ? `<img src="${esc(p.foto_url)}" alt="" loading="lazy" style="width:${tam}px;height:${tam}px;border-radius:14px;object-fit:cover;flex:none;border:1px solid var(--line2)">`
   : `<span style="width:${tam}px;height:${tam}px;border-radius:14px;flex:none;background:${p.cor_hex || "var(--soft)"};border:1px solid var(--line2);display:grid;place-items:center;color:var(--mute)">${p.cor_hex ? "" : IC.esmalte}</span>`;
 
@@ -53,7 +58,7 @@ async function telaEstoque() {
       ${tons.length ? `<div class="opcoes" style="margin-bottom:12px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px">${["", ...tons].map((t) => `<button type="button" data-tom="${t}" class="${st.estTom === t ? "on" : ""}" style="flex:none">${t || "Todas"}</button>`).join("")}</div>` : ""}
       <p class="pequeno" style="margin:0 4px 10px">${esm.length} cor${esm.length !== 1 ? "es" : ""} cadastrada${esm.length !== 1 ? "s" : ""} · ${esm.filter((p) => p.catalogo === "publicado").length} no site</p>
       ${filt.length ? `<div class="grade-esm">${filt.map((p) => { const d = disponib(p); return `<button class="esm" data-p="${p.id}">
-          <div class="esm-foto" style="background:${p.cor_hex || "var(--soft)"}">${p.foto_url ? `<img src="${esc(p.foto_url)}" alt="" loading="lazy">` : ""}<span class="chip ${CAT_STATUS[p.catalogo][1]}">${CAT_STATUS[p.catalogo][0]}</span></div>
+          <div class="esm-foto"><img src="${p.foto_url ? esc(p.foto_url) : frasco(p.cor_hex)}" alt="" loading="lazy"><span class="chip ${CAT_STATUS[p.catalogo][1]}">${CAT_STATUS[p.catalogo][0]}</span></div>
           <b>${esc(p.nome)}</b><small>${esc(p.marca || "Sem marca")}${p.codigo ? " · " + esc(p.codigo) : ""}</small>
           <small class="${d[1] === "cancelado" ? "neg" : ""}">${qtd(p.quantidade)} un · ${d[0]}</small></button>`; }).join("")}</div>`
         : `<div class="vazio">${IC.esmalte}<div>${esm.length ? "Nenhuma cor encontrada." : "Adicione seus esmaltes: escolha da lista os que o app já conhece e fotografe só os outros. Dá para fotografar vários de uma vez."}</div></div>`}`;
