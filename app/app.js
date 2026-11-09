@@ -1,0 +1,985 @@
+// Nay Nails Gestão — app de gestão do salão (mesma agenda do site de agendamento)
+"use strict";
+const SUPA_URL = "https://izpsmlbfponhqwzjodyf.supabase.co";
+const SUPA_KEY = "sb_publishable_AvyHVWMBYWUlw5SRiDJt3w_KH2eIhbm";
+const SITE = "https://agenda-deluxe.pages.dev/nayara/";
+const CONFIRMAR = "https://agenda-deluxe.pages.dev/confirmar?id=";
+const GOOGLE = "https://share.google/AJ7Rs87t4wpcrDhNh";
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+const TZ = "America/Sao_Paulo";
+
+// ---------- utilidades ----------
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const brl = (v) => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const hora = (d) => new Date(d).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: TZ });
+const dataCurta = (d) => new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: TZ });
+const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+const dataLonga = (d) => cap(new Date(d).toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", timeZone: TZ }));
+const diaSemana = (d) => cap(new Date(d).toLocaleDateString("pt-BR", { weekday: "long", timeZone: TZ }));
+const isoDia = (d = new Date()) => new Date(d).toLocaleDateString("en-CA", { timeZone: TZ });
+const somaDias = (iso, n) => { const d = new Date(iso + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const inicioDia = (iso) => new Date(iso + "T00:00:00-03:00").toISOString();
+const meioDia = (iso) => new Date(iso + "T12:00:00Z");
+const dur = (m) => (m < 60 ? m + " min" : Math.floor(m / 60) + "h" + (m % 60 ? String(m % 60).padStart(2, "0") : ""));
+const zapNum = (n) => { n = String(n || "").replace(/\D/g, ""); return n.length <= 11 ? "55" + n : n; };
+const fmtTel = (z) => { z = String(z || "").replace(/\D/g, "").replace(/^55(?=\d{10,11}$)/, ""); return z.length >= 10 ? `(${z.slice(0, 2)}) ${z.slice(2, -4)}-${z.slice(-4)}` : z; };
+const iniciais = (n) => String(n || "?").trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join("").toUpperCase();
+const primeiroNome = (n) => String(n || "").trim().split(/\s+/)[0];
+const STATUS = { marcado: "A confirmar", confirmado: "Confirmado", chegou: "Chegou", atendendo: "Em atendimento", concluido: "Concluído", faltou: "Não compareceu", cancelado: "Cancelado" };
+const FORMAS = { pix: "Pix", dinheiro: "Dinheiro", credito: "Cartão de crédito", debito: "Cartão de débito", outro: "Outro" };
+const SEM3 = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const SEM = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+const ATIVOS = ["marcado", "confirmado", "chegou", "atendendo"];
+
+const IC = {
+  mais: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  agenda: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>',
+  cliente: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/><path d="M19 3v4M17 5h4"/></svg>',
+  bloqueio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>',
+  dinheiro: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="2.5" y="6" width="19" height="13" rx="3"/><circle cx="12" cy="12.5" r="2.5"/></svg>',
+  zap: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm4.5 12.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.4a.5.5 0 0 0 0-.4l-.8-1.9c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.7a2.8 2.8 0 0 0 1.8-1.3 2.3 2.3 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3Z"/></svg>',
+  local: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
+  tesoura: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.1 8.1 20 20M8.1 15.9 20 4"/></svg>',
+  relogio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  sino: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10.3 20a1.9 1.9 0 0 0 3.4 0"/></svg>',
+  link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3.2-3.2a4.5 4.5 0 0 0-6.4-6.4L12 5.6"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3.2 3.2a4.5 4.5 0 0 0 6.4 6.4l1.2-1.2"/></svg>',
+  salao: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V10l8-6 8 6v11"/><path d="M9 21v-6h6v6"/></svg>',
+  sair: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4"/></svg>',
+  estrela: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>',
+  baixar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>',
+  busca: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+  calendario: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>',
+};
+
+function toast(msg, erro) {
+  const t = $("toast"); t.textContent = msg; t.className = "on" + (erro ? " erro" : "");
+  clearTimeout(t._h); t._h = setTimeout(() => (t.className = ""), 3200);
+}
+function erroMsg(e) {
+  const m = e?.message || String(e);
+  if (m.includes("ad_sem_conflito")) return "Já existe um atendimento nesse horário.";
+  if (m.includes("Invalid login")) return "E-mail ou senha incorretos.";
+  if (m.includes("Failed to fetch")) return "Sem internet. Tente de novo.";
+  return m;
+}
+async function q(promessa) { const { data, error } = await promessa; if (error) { toast(erroMsg(error), 1); throw error; } return data; }
+
+function abreZap(url) { const w = window.open(url, "_blank"); if (!w) location.href = url; }
+
+// ---------- folha (detalhes e formulários) ----------
+const pilhaFolha = [];
+function abreFolha(html, aoAbrir) {
+  $("folha-conteudo").innerHTML = html;
+  $("folha").classList.add("on"); $("fundo").classList.add("on");
+  $("folha").scrollTop = 0;
+  $("folha-conteudo").querySelectorAll("[data-fechar]").forEach((b) => (b.onclick = fechaFolha));
+  aoAbrir && aoAbrir($("folha-conteudo"));
+}
+function fechaFolha() { $("folha").classList.remove("on"); $("fundo").classList.remove("on"); if (location.hash) history.replaceState(null, "", location.pathname); }
+$("fundo").onclick = fechaFolha;
+const cabFolha = (titulo, sub) => `<div class="cab"><div class="cresce"><h2>${titulo}</h2>${sub ? `<p class="mudo" style="margin-top:4px">${sub}</p>` : ""}</div><button class="fechar" data-fechar aria-label="Fechar">✕</button></div>`;
+
+// ---------- estado ----------
+const st = { user: null, prof: null, aba: "inicio", servicos: [], agendaModo: "dia", dia: isoDia(), mes: isoDia().slice(0, 7), caixaPer: "hoje", busca: "", naoLidos: 0 };
+
+// ---------- entrar ----------
+$("l-entrar").onclick = async () => {
+  const email = $("l-email").value.trim(), password = $("l-senha").value;
+  if (!email || !password) return toast("Preencha e-mail e senha.", 1);
+  $("l-entrar").disabled = true;
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  $("l-entrar").disabled = false;
+  if (error) toast(erroMsg(error), 1);
+};
+$("l-senha").onkeydown = (e) => e.key === "Enter" && $("l-entrar").click();
+$("l-esqueci").onclick = async () => {
+  const email = $("l-email").value.trim();
+  if (!email) return toast("Escreva seu e-mail acima primeiro.", 1);
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+  toast(error ? erroMsg(error) : "Enviamos um link para criar uma nova senha no seu e-mail.", !!error);
+};
+
+sb.auth.onAuthStateChange((ev, session) => {
+  const u = session?.user || null;
+  if (ev === "PASSWORD_RECOVERY") setTimeout(novaSenha, 300);
+  if (st._pronto && u?.id === st.user?.id) return;
+  st._pronto = true; st.user = u;
+  setTimeout(iniciar, 0);
+});
+
+async function iniciar() {
+  if (!st.user) { $("v-app").classList.add("hide"); $("v-login").classList.remove("hide"); return; }
+  const { data: prof } = await sb.from("ad_profissionais").select("*").eq("id", st.user.id).maybeSingle();
+  if (!prof) { toast("Esta conta não tem um salão cadastrado.", 1); await sb.auth.signOut(); return; }
+  st.prof = prof;
+  $("v-login").classList.add("hide"); $("v-app").classList.remove("hide");
+  await carregaServicos();
+  tempoReal(); contaAvisos(); registraSW();
+  const m = location.hash.match(/ag=([0-9a-f-]{36})/);
+  vaiPara("inicio");
+  if (m) detalheAg(m[1]);
+}
+
+async function carregaServicos() { st.servicos = await q(sb.from("ad_servicos").select("*").order("nome")); }
+
+// ---------- navegação ----------
+document.querySelectorAll("#abas button").forEach((b) => (b.onclick = () => vaiPara(b.dataset.aba)));
+const TITULOS = { inicio: "Início", agenda: "Agenda", clientes: "Clientes", caixa: "Caixa", mais: "Mais" };
+function vaiPara(aba) {
+  st.aba = aba;
+  document.querySelectorAll("#abas button").forEach((b) => b.classList.toggle("on", b.dataset.aba === aba));
+  $("titulo").textContent = aba === "inicio" ? saudacao() : TITULOS[aba] || "";
+  scrollTo(0, 0);
+  return atualizaTela();
+}
+function atualizaTela() {
+  return ({ inicio: telaInicio, agenda: telaAgenda, clientes: telaClientes, caixa: telaCaixa, mais: telaMais })[st.aba]();
+}
+function saudacao() {
+  const h = Number(new Date().toLocaleTimeString("en-GB", { hour: "2-digit", timeZone: TZ }));
+  return (h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite") + ", " + primeiroNome(st.prof.nome);
+}
+const tela = (html) => { $("conteudo").innerHTML = `<div class="tela">${html}</div>`; return $("conteudo"); };
+
+// ---------- dados ----------
+async function agsEntre(deIso, ateIso) {
+  return q(sb.from("ad_agendamentos").select("*").gte("inicio", inicioDia(deIso)).lt("inicio", inicioDia(ateIso)).order("inicio"));
+}
+async function pagsEntre(deIso, ateIso) {
+  return q(sb.from("ad_pagamentos").select("*").gte("recebido_em", inicioDia(deIso)).lt("recebido_em", inicioDia(ateIso)).order("recebido_em", { ascending: false }));
+}
+async function livres(dataIso, min) {
+  const { data } = await sb.rpc("ad_horarios_livres_min", { p_slug: st.prof.slug, p_min: min, p_data: dataIso });
+  return data || [];
+}
+
+// ---------- tempo real ----------
+let canal, recarga;
+function tempoReal() {
+  if (canal) sb.removeChannel(canal);
+  canal = sb.channel("nay-gestao")
+    .on("postgres_changes", { event: "*", schema: "public", table: "ad_agendamentos", filter: `profissional_id=eq.${st.user.id}` }, () => {
+      clearTimeout(recarga); recarga = setTimeout(() => { if (!$("folha").classList.contains("on")) atualizaTela(); }, 600);
+    })
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "ad_avisos", filter: `profissional_id=eq.${st.user.id}` }, (p) => {
+      toast(p.new.titulo + " — " + p.new.corpo); contaAvisos();
+    })
+    .subscribe();
+}
+async function contaAvisos() {
+  const { count } = await sb.from("ad_avisos").select("id", { count: "exact", head: true }).eq("lido", false);
+  st.naoLidos = count || 0;
+  $("n-avisos").textContent = st.naoLidos > 9 ? "9+" : st.naoLidos;
+  $("n-avisos").classList.toggle("hide", !st.naoLidos);
+}
+
+// ---------- cartões ----------
+function cartaoAg(a, mostraData) {
+  const pago = a.pago ? ` · <span class="chip pago">Pago</span>` : "";
+  return `<div class="ag ${a.status}" data-ag="${a.id}">
+    <div class="h">${hora(a.inicio)}<small>${mostraData ? dataCurta(a.inicio) : "até " + hora(a.fim)}</small></div>
+    <div class="cresce"><div class="n">${esc(a.cliente_nome)}</div><div class="s">${esc(a.servico_nome)}</div></div>
+    <div class="d"><span class="chip ${a.status}">${STATUS[a.status]}</span><span class="v">${brl(a.preco)}</span></div>
+  </div>`;
+}
+function ligaCartoes(raiz) { raiz.querySelectorAll("[data-ag]").forEach((el) => (el.onclick = () => detalheAg(el.dataset.ag))); }
+
+// =====================================================================
+// INÍCIO
+// =====================================================================
+async function telaInicio() {
+  const hoje = isoDia(), amanha = somaDias(hoje, 1);
+  const [ags, agsAmanha, pags, avisos, livresHoje, devendo] = await Promise.all([
+    agsEntre(hoje, amanha), agsEntre(amanha, somaDias(hoje, 2)), pagsEntre(hoje, amanha),
+    q(sb.from("ad_avisos").select("*").eq("lido", false).order("criado_em", { ascending: false }).limit(3)),
+    livres(hoje, 30),
+    q(sb.from("ad_agendamentos").select("id").eq("status", "concluido").eq("pago", false)),
+  ]);
+  const ativos = ags.filter((a) => a.status !== "cancelado");
+  const agora = Date.now();
+  const proxima = ags.find((a) => ATIVOS.includes(a.status) && new Date(a.fim).getTime() > agora);
+  const aConfirmar = [...ags, ...agsAmanha].filter((a) => a.status === "marcado" && new Date(a.inicio).getTime() > agora);
+  const faturado = pags.reduce((s, p) => s + Number(p.valor), 0);
+  const cancel = ags.filter((a) => a.status === "cancelado").length;
+  const previsto = ativos.filter((a) => a.status !== "faltou").reduce((s, a) => s + Number(a.preco), 0);
+
+  const alertas = [];
+  avisos.forEach((v) => alertas.push(`<button class="item aviso-item novo" data-aviso="${v.id}" data-agid="${v.agendamento_id || ""}"><span class="ponto"></span><div class="cresce"><b>${esc(v.titulo)}</b><div class="pequeno">${esc(v.corpo)}</div></div></button>`));
+  if (aConfirmar.length) alertas.push(`<button class="item" data-ir="confirmar"><div class="ic">${IC.sino}</div><div class="cresce"><b>${aConfirmar.length} cliente${aConfirmar.length > 1 ? "s" : ""} sem confirmar</b><div class="pequeno">Hoje e amanhã. Toque para enviar o lembrete.</div></div><span class="seta">›</span></button>`);
+  if (devendo.length) alertas.push(`<button class="item" data-ir="caixa"><div class="ic">${IC.dinheiro}</div><div class="cresce"><b>${devendo.length} atendimento${devendo.length > 1 ? "s" : ""} sem pagamento registrado</b><div class="pequeno">Registre para o caixa ficar certo.</div></div><span class="seta">›</span></button>`);
+
+  const r = tela(`
+    <p class="mudo" style="margin:-4px 2px 14px">${dataLonga(new Date())}</p>
+    <div id="banner-notif"></div>
+    ${proxima ? `<div class="proxima">
+        <small>${new Date(proxima.inicio).getTime() <= agora ? "Atendendo agora" : "Próxima cliente"}</small>
+        <h3>${esc(proxima.cliente_nome)}</h3>
+        <div>${esc(proxima.servico_nome)} · <span class="hora">${hora(proxima.inicio)}</span></div>
+        <div class="acoes">
+          <a class="btn zap mini" target="_blank" rel="noopener" href="https://wa.me/${zapNum(proxima.cliente_whatsapp)}">${IC.zap}WhatsApp</a>
+          <button class="btn claro mini" data-ag="${proxima.id}">Ver detalhes</button>
+        </div></div>`
+      : `<div class="cartao rosa"><h2>${ativos.length ? "Atendimentos de hoje concluídos" : "Nenhuma cliente marcada hoje"}</h2><p class="mudo">${livresHoje.length ? `Ainda há ${livresHoje.length} horários livres hoje. Divulgue seu link de agendamento.` : "Aproveite para descansar ou organizar o salão."}</p></div>`}
+    <div class="stats">
+      <div class="stat destaque"><small>Recebido hoje</small><b>${brl(faturado)}</b><i>previsto ${brl(previsto)}</i></div>
+      <div class="stat"><small>Atendimentos</small><b>${ativos.length}</b><i>hoje</i></div>
+      <div class="stat"><small>A confirmar</small><b>${aConfirmar.length}</b><i>hoje e amanhã</i></div>
+      <div class="stat"><small>Horários livres</small><b>${livresHoje.length}</b><i>${cancel ? cancel + " cancelado" + (cancel > 1 ? "s" : "") : "hoje"}</i></div>
+    </div>
+    ${alertas.length ? `<div class="tit-linha"><h2>Avisos</h2><button data-ir="avisos">Ver todos</button></div><div class="lista">${alertas.join("")}</div>` : ""}
+    <div class="tit-linha"><h2>Atalhos</h2></div>
+    <div class="atalhos">
+      <button class="atalho" data-atalho="novo"><span>${IC.mais}</span>Novo agendamento</button>
+      <button class="atalho" data-atalho="agenda"><span>${IC.agenda}</span>Ver agenda</button>
+      <button class="atalho" data-atalho="cliente"><span>${IC.cliente}</span>Cadastrar cliente</button>
+      <button class="atalho" data-atalho="bloquear"><span>${IC.bloqueio}</span>Bloquear horário</button>
+      <button class="atalho" data-atalho="pagamento"><span>${IC.dinheiro}</span>Registrar pagamento</button>
+      <a class="atalho" href="https://wa.me/" target="_blank" rel="noopener"><span>${IC.zap}</span>Abrir WhatsApp</a>
+    </div>
+    <div class="tit-linha"><h2>Hoje</h2><button data-ir="agenda">Agenda completa</button></div>
+    ${ags.length ? ags.map((a) => cartaoAg(a)).join("") : `<div class="vazio">${IC.calendario}<div>Nenhum agendamento hoje.</div></div>`}
+  `);
+  ligaCartoes(r);
+  r.querySelectorAll("[data-aviso]").forEach((b) => (b.onclick = async () => {
+    await sb.from("ad_avisos").update({ lido: true }).eq("id", b.dataset.aviso); contaAvisos();
+    if (b.dataset.agid) detalheAg(b.dataset.agid); else telaInicio();
+  }));
+  r.querySelectorAll("[data-ir]").forEach((b) => (b.onclick = () => {
+    const ir = b.dataset.ir;
+    if (ir === "confirmar") listaConfirmar(aConfirmar);
+    else if (ir === "avisos") telaAvisos();
+    else vaiPara(ir);
+  }));
+  r.querySelectorAll("[data-atalho]").forEach((b) => (b.onclick = () => ({
+    novo: () => novoAgendamento({}), agenda: () => vaiPara("agenda"), cliente: () => editaCliente(null),
+    bloquear: () => novoBloqueio(), pagamento: () => registraPagamento(null),
+  })[b.dataset.atalho]()));
+  bannerNotificacao();
+}
+
+function listaConfirmar(lista) {
+  abreFolha(cabFolha("Clientes sem confirmar", "Toque em Lembrete para mandar a mensagem com o link de confirmação.") +
+    `<div class="lista">${lista.map((a) => `<div class="item" style="cursor:default"><div class="cresce"><b>${esc(a.cliente_nome)}</b><div class="pequeno">${dataCurta(a.inicio)} às ${hora(a.inicio)} · ${esc(a.servico_nome)}</div></div>
+      <a class="btn zap mini" target="_blank" rel="noopener" href="${linkZap(a, "lembrete")}">Lembrete</a></div>`).join("")}</div>`);
+}
+
+// =====================================================================
+// AGENDA
+// =====================================================================
+async function telaAgenda() {
+  const modos = { dia: "Dia", semana: "Semana", mes: "Mês", proximos: "Próximos" };
+  const topo = `<div class="seg">${Object.entries(modos).map(([k, v]) => `<button data-modo="${k}" class="${st.agendaModo === k ? "on" : ""}">${v}</button>`).join("")}</div>`;
+  let corpo = "";
+  const hoje = isoDia();
+
+  if (st.agendaModo === "dia") {
+    const ags = await agsEntre(st.dia, somaDias(st.dia, 1));
+    const ativos = ags.filter((a) => !["cancelado"].includes(a.status));
+    const { data: bloq } = await sb.from("ad_bloqueios").select("*").lt("inicio", inicioDia(somaDias(st.dia, 1))).gt("fim", inicioDia(st.dia)).order("inicio");
+    corpo = `<div class="navdia"><button class="redondo" data-d="-1" aria-label="Dia anterior">‹</button>
+      <div class="cresce">${st.dia === hoje ? "Hoje" : diaSemana(meioDia(st.dia))}<small>${meioDia(st.dia).toLocaleDateString("pt-BR", { day: "numeric", month: "long", timeZone: "UTC" })}</small></div>
+      <button class="redondo" data-d="1" aria-label="Próximo dia">›</button></div>
+      <div class="linha entre" style="margin-bottom:12px"><span class="mudo">${ativos.length} atendimento${ativos.length !== 1 ? "s" : ""} · ${brl(ativos.reduce((s, a) => s + Number(a.preco), 0))}</span>
+      ${st.dia !== hoje ? `<button class="link" data-hoje>Ir para hoje</button>` : ""}</div>
+      ${(bloq || []).map((b) => `<div class="ag cancelado" style="opacity:.8;cursor:default"><div class="h">${hora(b.inicio)}<small>até ${hora(b.fim)}</small></div><div><div class="n">Horário bloqueado</div><div class="s">${esc(b.motivo || "")}</div></div><div class="d"><button class="link" data-desbloq="${b.id}">Liberar</button></div></div>`).join("")}
+      ${ags.length ? ags.map((a) => cartaoAg(a)).join("") : `<div class="vazio">${IC.calendario}<div>Nenhum agendamento neste dia.</div></div>`}
+      <button class="btn ouro cheio" data-novo style="margin-top:6px">${IC.mais}Novo agendamento</button>`;
+  } else if (st.agendaModo === "semana") {
+    const ini = st.dia, fim = somaDias(st.dia, 7);
+    const ags = await agsEntre(ini, fim);
+    const dias = Array.from({ length: 7 }, (_, i) => somaDias(ini, i));
+    corpo = `<div class="navdia"><button class="redondo" data-d="-7">‹</button><div class="cresce">${dataCurta(meioDia(ini))} a ${dataCurta(meioDia(somaDias(ini, 6)))}<small>${ags.filter((a) => a.status !== "cancelado").length} atendimentos</small></div><button class="redondo" data-d="7">›</button></div>
+      <div class="semana">${dias.map((d) => { const l = ags.filter((a) => isoDia(a.inicio) === d); return `<div class="dia-sem"><h3>${d === hoje ? "Hoje" : SEM[meioDia(d).getUTCDay()]}, ${meioDia(d).getUTCDate()}<span>${l.length ? l.length + " · " + brl(l.filter((a) => a.status !== "cancelado").reduce((s, a) => s + Number(a.preco), 0)) : "livre"}</span></h3>${l.map((a) => cartaoAg(a)).join("")}</div>`; }).join("")}</div>`;
+  } else if (st.agendaModo === "mes") {
+    const [a, m] = st.mes.split("-").map(Number);
+    const primeiro = `${st.mes}-01`, prox = new Date(Date.UTC(a, m, 1)).toISOString().slice(0, 10);
+    const ags = await agsEntre(primeiro, prox);
+    const cont = {}; ags.filter((x) => x.status !== "cancelado").forEach((x) => { const d = isoDia(x.inicio); cont[d] = (cont[d] || 0) + 1; });
+    const iniSem = meioDia(primeiro).getUTCDay();
+    const nDias = new Date(Date.UTC(a, m, 0)).getUTCDate();
+    let cel = SEM3.map((s) => `<div class="cab">${s}</div>`).join("") + Array(iniSem).fill('<div></div>').join("");
+    for (let d = 1; d <= nDias; d++) { const iso = `${st.mes}-${String(d).padStart(2, "0")}`; cel += `<button data-dia="${iso}" class="${iso === hoje ? "hoje" : ""}">${d}<i>${cont[iso] ? cont[iso] + "×" : ""}</i></button>`; }
+    const nomeMes = cap(new Date(Date.UTC(a, m - 1, 15)).toLocaleDateString("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" }));
+    corpo = `<div class="navdia"><button class="redondo" data-m="-1">‹</button><div class="cresce">${nomeMes}<small>${ags.filter((x) => x.status !== "cancelado").length} atendimentos · ${brl(ags.filter((x) => x.status !== "cancelado").reduce((s, x) => s + Number(x.preco), 0))}</small></div><button class="redondo" data-m="1">›</button></div>
+      <div class="mes">${cel}</div><p class="pequeno" style="text-align:center;margin-top:10px">Toque em um dia para ver os atendimentos.</p>`;
+  } else {
+    const ags = (await agsEntre(hoje, somaDias(hoje, 45))).filter((a) => ATIVOS.includes(a.status) && new Date(a.fim) > new Date());
+    let ult = "";
+    corpo = ags.length ? ags.map((a) => { const d = isoDia(a.inicio); const cab = d !== ult ? `<h3 style="font:600 15px var(--sans);margin:16px 2px 8px">${d === hoje ? "Hoje" : dataLonga(a.inicio)}</h3>` : ""; ult = d; return cab + cartaoAg(a); }).join("")
+      : `<div class="vazio">${IC.calendario}<div>Nenhum atendimento nos próximos dias.</div></div>`;
+  }
+
+  const r = tela(topo + corpo);
+  ligaCartoes(r);
+  r.querySelectorAll("[data-modo]").forEach((b) => (b.onclick = () => { st.agendaModo = b.dataset.modo; telaAgenda(); }));
+  r.querySelectorAll("[data-d]").forEach((b) => (b.onclick = () => { st.dia = somaDias(st.dia, Number(b.dataset.d)); telaAgenda(); }));
+  r.querySelectorAll("[data-m]").forEach((b) => (b.onclick = () => { const [a, m] = st.mes.split("-").map(Number); st.mes = new Date(Date.UTC(a, m - 1 + Number(b.dataset.m), 1)).toISOString().slice(0, 7); telaAgenda(); }));
+  r.querySelectorAll("[data-dia]").forEach((b) => (b.onclick = () => { st.dia = b.dataset.dia; st.agendaModo = "dia"; telaAgenda(); }));
+  r.querySelector("[data-hoje]")?.addEventListener("click", () => { st.dia = hoje; telaAgenda(); });
+  r.querySelector("[data-novo]")?.addEventListener("click", () => novoAgendamento({ data: st.dia }));
+  r.querySelectorAll("[data-desbloq]").forEach((b) => (b.onclick = async () => {
+    if (!confirm("Liberar este horário para as clientes agendarem?")) return;
+    await q(sb.from("ad_bloqueios").delete().eq("id", b.dataset.desbloq)); toast("Horário liberado."); telaAgenda();
+  }));
+}
+
+// =====================================================================
+// DETALHE DO AGENDAMENTO
+// =====================================================================
+function mensagem(a, tipo) {
+  const n = primeiroNome(a.cliente_nome), d = dataLonga(a.inicio), h = hora(a.inicio);
+  const end = st.prof.endereco ? `\n📍 ${st.prof.endereco}` : "";
+  return ({
+    confirmacao: `Olá, ${n}! 💅 Seu horário de *${a.servico_nome}* está confirmado para *${d}* às *${h}*.${end}\n\nAté lá! Nayara Fernandes · Nails e cuidados`,
+    lembrete: `Olá, ${n}! 😊 Passando para lembrar do seu horário de *${a.servico_nome}* ${isoDia(a.inicio) === somaDias(isoDia(), 1) ? "amanhã" : "em " + d} às *${h}*.\n\nConfirme ou desmarque por aqui:\n${CONFIRMAR}${a.id}`,
+    alteracao: `Olá, ${n}! Seu horário de *${a.servico_nome}* foi alterado para *${d}* às *${h}*. Se não puder, me avise por aqui. 💗`,
+    cancelamento: `Olá, ${n}! Precisei cancelar seu horário de *${a.servico_nome}* de ${d} às ${h}. Desculpe! Você pode escolher outro horário aqui: ${SITE}`,
+    agradecimento: `Obrigada pela visita, ${n}! 💗 Foi um prazer cuidar de você. Quando quiser voltar, é só agendar: ${SITE}`,
+    avaliacao: `Oi, ${n}! Se gostou do atendimento, me ajuda muito deixar sua avaliação no Google ⭐: ${GOOGLE}\nObrigada! 💗`,
+  })[tipo];
+}
+const linkZap = (a, tipo) => `https://wa.me/${zapNum(a.cliente_whatsapp)}?text=${encodeURIComponent(mensagem(a, tipo))}`;
+
+async function detalheAg(id) {
+  const [a, pags] = await Promise.all([
+    q(sb.from("ad_agendamentos").select("*").eq("id", id).maybeSingle()),
+    q(sb.from("ad_pagamentos").select("*").eq("agendamento_id", id).order("recebido_em")),
+  ]);
+  if (!a) return toast("Agendamento não encontrado.", 1);
+  const pago = pags.reduce((s, p) => s + Number(p.valor), 0);
+  const prox = { marcado: ["confirmado", "Confirmar horário"], confirmado: ["chegou", "Cliente chegou"], chegou: ["atendendo", "Iniciar atendimento"], atendendo: ["concluido", "Finalizar atendimento"] }[a.status];
+  const passado = new Date(a.inicio) < new Date();
+  abreFolha(cabFolha(esc(a.cliente_nome), `<span class="chip ${a.status}">${STATUS[a.status]}</span>${a.pago ? ' <span class="chip pago">Pago</span>' : ""}`) + `
+    <div class="cartao">
+      <dl class="info-ag">
+        <dt>Serviço</dt><dd>${esc(a.servico_nome)}</dd>
+        <dt>Data</dt><dd>${dataLonga(a.inicio)}</dd>
+        <dt>Horário</dt><dd>${hora(a.inicio)} às ${hora(a.fim)} · ${dur(Math.round((new Date(a.fim) - new Date(a.inicio)) / 60000))}</dd>
+        <dt>Valor</dt><dd>${brl(a.preco)}</dd>
+        <dt>Recebido</dt><dd>${pago ? brl(pago) + " · " + pags.map((p) => FORMAS[p.forma]).join(", ") : "—"}</dd>
+        <dt>Telefone</dt><dd><a href="tel:+${zapNum(a.cliente_whatsapp)}">${fmtTel(a.cliente_whatsapp)}</a></dd>
+      </dl>
+      ${a.observacao ? `<p style="margin-top:12px;padding:10px 12px;background:var(--blush-2);border-radius:12px;font-size:14.5px">📝 ${esc(a.observacao)}</p>` : ""}
+    </div>
+    <div class="pilha">
+      ${prox ? `<button class="btn ouro cheio" data-st="${prox[0]}">${prox[1]}</button>` : ""}
+      ${["concluido", "atendendo", "chegou"].includes(a.status) && !a.pago ? `<button class="btn cheio" data-pagar>${IC.dinheiro}Registrar pagamento</button>` : ""}
+      <a class="btn zap cheio" target="_blank" rel="noopener" href="https://wa.me/${zapNum(a.cliente_whatsapp)}">${IC.zap}Conversar no WhatsApp</a>
+      <div class="grade2">
+        <button class="btn claro" data-msgs>Mensagens prontas</button>
+        <button class="btn claro" data-cli>Ver cliente</button>
+      </div>
+      ${ATIVOS.includes(a.status) ? `<div class="grade2"><button class="btn claro" data-remarcar>Remarcar</button>${passado ? `<button class="btn perigo" data-st="faltou">Não compareceu</button>` : `<button class="btn perigo" data-cancelar>Cancelar</button>`}</div>` : ""}
+      ${a.status === "concluido" || a.pago ? `<button class="btn claro cheio" data-pagar>${IC.dinheiro}${a.pago ? "Registrar outro pagamento" : "Registrar pagamento"}</button>` : ""}
+      ${["cancelado", "faltou"].includes(a.status) ? `<button class="btn claro cheio" data-reabrir>Reabrir agendamento</button>` : ""}
+    </div>`, (r) => {
+    r.querySelectorAll("[data-st]").forEach((b) => (b.onclick = async () => {
+      const novo = b.dataset.st;
+      if (novo === "faltou" && !confirm("Marcar que a cliente não compareceu?")) return;
+      await q(sb.from("ad_agendamentos").update({ status: novo }).eq("id", a.id));
+      toast({ confirmado: "Horário confirmado.", chegou: "Chegada registrada.", atendendo: "Atendimento iniciado.", concluido: "Atendimento finalizado.", faltou: "Falta registrada." }[novo]);
+      if (novo === "concluido") return registraPagamento(a, true);
+      detalheAg(a.id); atualizaTela();
+    }));
+    r.querySelector("[data-cancelar]")?.addEventListener("click", async () => {
+      if (!confirm("Cancelar este agendamento? O horário volta a ficar livre no site.")) return;
+      await q(sb.from("ad_agendamentos").update({ status: "cancelado" }).eq("id", a.id));
+      toast("Agendamento cancelado.");
+      if (confirm("Avisar a cliente pelo WhatsApp?")) abreZap(linkZap(a, "cancelamento"));
+      fechaFolha(); atualizaTela();
+    });
+    r.querySelector("[data-reabrir]")?.addEventListener("click", async () => {
+      const { error } = await sb.from("ad_agendamentos").update({ status: "marcado" }).eq("id", a.id);
+      if (error) return toast(erroMsg(error), 1);
+      toast("Agendamento reaberto."); detalheAg(a.id); atualizaTela();
+    });
+    r.querySelectorAll("[data-pagar]").forEach((b) => (b.onclick = () => registraPagamento(a)));
+    r.querySelector("[data-remarcar]")?.addEventListener("click", () => remarcar(a));
+    r.querySelector("[data-cli]").onclick = () => a.cliente_id ? detalheCliente(a.cliente_id) : toast("Cliente sem cadastro.", 1);
+    r.querySelector("[data-msgs]").onclick = () => mensagensProntas(a);
+  });
+}
+
+function mensagensProntas(a) {
+  const tipos = [["confirmacao", "Confirmar agendamento"], ["lembrete", "Lembrete com link de confirmação"], ["alteracao", "Avisar alteração de horário"], ["cancelamento", "Avisar cancelamento"], ["agradecimento", "Agradecer a visita"], ["avaliacao", "Pedir avaliação no Google"]];
+  abreFolha(cabFolha("Mensagens prontas", `Para ${esc(a.cliente_nome)}. Abre o WhatsApp com o texto pronto.`) +
+    `<div class="lista">${tipos.map(([t, n]) => `<a class="item" target="_blank" rel="noopener" href="${linkZap(a, t)}"><div class="ic" style="color:var(--zap)">${IC.zap}</div><div class="cresce"><b>${n}</b><div class="pequeno" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(mensagem(a, t).replace(/\*/g, "").slice(0, 70))}…</div></div><span class="seta">›</span></a>`).join("")}</div>
+    <button class="btn claro cheio" data-voltar>Voltar</button>`, (r) => (r.querySelector("[data-voltar]").onclick = () => detalheAg(a.id)));
+}
+
+// ---------- escolher dia e horário (usado em novo agendamento e remarcar) ----------
+function seletorHorario(r, minutos, dataInicial, aoMudar) {
+  const caixa = r.querySelector("[data-horario]");
+  let escolhido = null;
+  caixa.innerHTML = `<label class="f">Dia</label><input class="campo" type="date" data-data value="${dataInicial}" min="${isoDia()}">
+    <label class="f">Horário livre</label><div class="slots" data-slots><p class="pequeno" style="grid-column:1/-1">Carregando…</p></div>
+    <button class="link" data-outro style="margin-top:10px">Usar outro horário</button>
+    <div class="hide" data-manual><label class="f">Horário (fora da lista)</label><input class="campo" type="time" step="300" data-hora></div>`;
+  const carrega = async () => {
+    escolhido = null; aoMudar(null);
+    const d = caixa.querySelector("[data-data]").value; const mins = minutos();
+    const sl = caixa.querySelector("[data-slots]");
+    if (!d || !mins) { sl.innerHTML = `<p class="pequeno" style="grid-column:1/-1">Escolha o serviço e o dia.</p>`; return; }
+    sl.innerHTML = `<p class="pequeno" style="grid-column:1/-1">Carregando…</p>`;
+    const lv = await livres(d, mins);
+    sl.innerHTML = lv.length ? lv.map((t) => `<button type="button" data-t="${t}">${hora(t)}</button>`).join("") : `<p class="pequeno" style="grid-column:1/-1">Sem horários livres neste dia. Use "outro horário" se quiser encaixar.</p>`;
+    sl.querySelectorAll("button").forEach((b) => (b.onclick = () => { sl.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); escolhido = b.dataset.t; caixa.querySelector("[data-hora]").value = ""; aoMudar(escolhido); }));
+  };
+  caixa.querySelector("[data-data]").onchange = carrega;
+  caixa.querySelector("[data-outro]").onclick = () => caixa.querySelector("[data-manual]").classList.toggle("hide");
+  caixa.querySelector("[data-hora]").onchange = (e) => {
+    if (!e.target.value) return;
+    caixa.querySelectorAll("[data-slots] button").forEach((x) => x.classList.remove("on"));
+    escolhido = new Date(`${caixa.querySelector("[data-data]").value}T${e.target.value}:00-03:00`).toISOString(); aoMudar(escolhido);
+  };
+  carrega();
+  return { recarrega: carrega };
+}
+
+async function remarcar(a) {
+  const mins = Math.round((new Date(a.fim) - new Date(a.inicio)) / 60000);
+  let novo = null;
+  abreFolha(cabFolha("Remarcar", `${esc(a.cliente_nome)} · ${esc(a.servico_nome)}<br>Hoje: ${dataLonga(a.inicio)} às ${hora(a.inicio)}`) +
+    `<div class="cartao"><div data-horario></div></div><button class="btn ouro cheio" data-salvar disabled>Salvar novo horário</button>
+     <button class="btn claro cheio" data-voltar style="margin-top:10px">Voltar</button>`, (r) => {
+    seletorHorario(r, () => mins, isoDia(a.inicio), (t) => { novo = t; r.querySelector("[data-salvar]").disabled = !t; });
+    r.querySelector("[data-voltar]").onclick = () => detalheAg(a.id);
+    r.querySelector("[data-salvar]").onclick = async () => {
+      const ini = new Date(novo), fim = new Date(ini.getTime() + mins * 60000);
+      const { error } = await sb.from("ad_agendamentos").update({ inicio: ini.toISOString(), fim: fim.toISOString(), aviso_breve: false }).eq("id", a.id);
+      if (error) return toast(erroMsg(error), 1);
+      toast("Horário remarcado.");
+      const atualizado = { ...a, inicio: ini.toISOString(), fim: fim.toISOString() };
+      if (confirm("Avisar a cliente do novo horário pelo WhatsApp?")) abreZap(linkZap(atualizado, "alteracao"));
+      detalheAg(a.id); atualizaTela();
+    };
+  });
+}
+
+// =====================================================================
+// NOVO AGENDAMENTO
+// =====================================================================
+async function novoAgendamento({ data, cliente }) {
+  const clientes = await q(sb.from("ad_clientes").select("id,nome,whatsapp").order("nome"));
+  let horario = null, cli = cliente || null;
+  const servs = st.servicos.filter((s) => s.ativo);
+  abreFolha(cabFolha("Novo agendamento") + `
+    <div class="cartao">
+      <label class="f">Cliente</label>
+      <input class="campo" data-cli list="lista-clientes" placeholder="Digite o nome" value="${cli ? esc(cli.nome) : ""}" autocomplete="off">
+      <datalist id="lista-clientes">${clientes.map((c) => `<option value="${esc(c.nome)}">${fmtTel(c.whatsapp)}</option>`).join("")}</datalist>
+      <label class="f">WhatsApp da cliente</label>
+      <input class="campo" data-zap inputmode="tel" placeholder="(31) 99999-9999" value="${cli ? fmtTel(cli.whatsapp) : ""}">
+      <label class="f">Serviço</label>
+      <select class="campo" data-serv><option value="">Escolha…</option>${servs.map((s) => `<option value="${s.id}">${esc(s.nome)} · ${brl(s.preco)} · ${dur(s.duracao_min)}</option>`).join("")}</select>
+      <div data-horario></div>
+      <label class="f">Observação</label><textarea class="campo" data-obs placeholder="Opcional"></textarea>
+    </div>
+    <button class="btn ouro cheio" data-salvar>Agendar</button>`, (r) => {
+    const serv = () => servs.find((s) => s.id === r.querySelector("[data-serv]").value);
+    const sel = seletorHorario(r, () => serv()?.duracao_min, data || isoDia(), (t) => (horario = t));
+    r.querySelector("[data-serv]").onchange = () => sel.recarrega();
+    r.querySelector("[data-cli]").oninput = (e) => {
+      const c = clientes.find((x) => x.nome.toLowerCase() === e.target.value.trim().toLowerCase());
+      if (c) { cli = c; r.querySelector("[data-zap]").value = fmtTel(c.whatsapp); } else cli = null;
+    };
+    r.querySelector("[data-salvar]").onclick = async () => {
+      const nome = r.querySelector("[data-cli]").value.trim(), zap = r.querySelector("[data-zap]").value.replace(/\D/g, ""), s = serv();
+      if (nome.length < 2) return toast("Escreva o nome da cliente.", 1);
+      if (zap.length < 10) return toast("Escreva o WhatsApp com DDD.", 1);
+      if (!s) return toast("Escolha o serviço.", 1);
+      if (!horario) return toast("Escolha o horário.", 1);
+      const ini = new Date(horario);
+      const { error } = await sb.from("ad_agendamentos").insert({
+        profissional_id: st.user.id, servico_id: s.id, servico_nome: s.nome, preco: s.preco,
+        cliente_nome: nome, cliente_whatsapp: zap, cliente_id: cli?.id || null, status: "confirmado",
+        inicio: ini.toISOString(), fim: new Date(ini.getTime() + s.duracao_min * 60000).toISOString(),
+        observacao: r.querySelector("[data-obs]").value.trim() || null,
+      });
+      if (error) return toast(erroMsg(error), 1);
+      toast("Agendado!");
+      const a = { cliente_nome: nome, cliente_whatsapp: zap, servico_nome: s.nome, inicio: ini.toISOString() };
+      if (confirm("Enviar a confirmação para a cliente no WhatsApp?")) abreZap(linkZap(a, "confirmacao"));
+      fechaFolha(); st.dia = isoDia(ini); atualizaTela();
+    };
+  });
+}
+
+// =====================================================================
+// PAGAMENTOS
+// =====================================================================
+async function registraPagamento(a, depoisDeFinalizar) {
+  let pago = 0;
+  if (a) pago = (await q(sb.from("ad_pagamentos").select("valor").eq("agendamento_id", a.id))).reduce((s, p) => s + Number(p.valor), 0);
+  const sugestao = a ? Math.max(Number(a.preco) - pago, 0) : "";
+  let forma = "pix";
+  abreFolha(cabFolha("Registrar pagamento", a ? `${esc(a.cliente_nome)} · ${esc(a.servico_nome)}${pago ? `<br>Já recebido: ${brl(pago)}` : ""}` : "Recebimento avulso") + `
+    <div class="cartao">
+      <label class="f">Valor recebido (R$)</label>
+      <input class="campo" data-valor type="number" inputmode="decimal" step="0.01" min="0" value="${sugestao || ""}" style="font-size:22px;font-weight:600">
+      <label class="f">Forma de pagamento</label>
+      <div class="opcoes" data-formas>${Object.entries(FORMAS).map(([k, v]) => `<button type="button" data-f="${k}" class="${k === forma ? "on" : ""}">${v}</button>`).join("")}</div>
+      ${a ? "" : `<label class="f">Descrição</label><input class="campo" data-obs placeholder="Ex.: venda de esmalte">`}
+    </div>
+    <button class="btn ouro cheio" data-salvar>Salvar pagamento</button>
+    ${depoisDeFinalizar ? `<button class="btn claro cheio" data-depois style="margin-top:10px">Registrar depois</button>` : ""}`, (r) => {
+    r.querySelectorAll("[data-f]").forEach((b) => (b.onclick = () => { forma = b.dataset.f; r.querySelectorAll("[data-f]").forEach((x) => x.classList.toggle("on", x === b)); }));
+    r.querySelector("[data-depois]")?.addEventListener("click", () => { detalheAg(a.id); atualizaTela(); });
+    r.querySelector("[data-salvar]").onclick = async () => {
+      const valor = Number(r.querySelector("[data-valor]").value);
+      if (!(valor > 0)) return toast("Informe o valor.", 1);
+      await q(sb.from("ad_pagamentos").insert({ profissional_id: st.user.id, agendamento_id: a?.id || null, cliente_id: a?.cliente_id || null, valor, forma, observacao: r.querySelector("[data-obs]")?.value.trim() || null }));
+      if (a && pago + valor >= Number(a.preco) - 0.009) await q(sb.from("ad_agendamentos").update({ pago: true }).eq("id", a.id));
+      toast(`Pagamento de ${brl(valor)} registrado.`);
+      if (a) { if (a.status === "concluido" && confirm("Mandar mensagem de agradecimento para a cliente?")) abreZap(linkZap(a, "agradecimento")); detalheAg(a.id); }
+      else fechaFolha();
+      atualizaTela();
+    };
+  });
+}
+
+// =====================================================================
+// CLIENTES
+// =====================================================================
+async function dadosClientes() {
+  const [clientes, ags, pags] = await Promise.all([
+    q(sb.from("ad_clientes").select("*").order("nome")),
+    q(sb.from("ad_agendamentos").select("id,cliente_id,status,inicio,preco,servico_nome")),
+    q(sb.from("ad_pagamentos").select("cliente_id,valor")),
+  ]);
+  const agora = new Date();
+  return clientes.map((c) => {
+    const meus = ags.filter((a) => a.cliente_id === c.id);
+    const feitos = meus.filter((a) => a.status === "concluido").sort((x, y) => new Date(x.inicio) - new Date(y.inicio));
+    const ult = feitos[feitos.length - 1];
+    const prox = meus.filter((a) => ATIVOS.includes(a.status) && new Date(a.inicio) > agora).sort((x, y) => new Date(x.inicio) - new Date(y.inicio))[0];
+    return { ...c, ags: meus, visitas: feitos.length, ultima: ult?.inicio || null, primeira: feitos[0]?.inicio || null, proxima: prox?.inicio || null,
+      cancel: meus.filter((a) => a.status === "cancelado").length, faltas: meus.filter((a) => a.status === "faltou").length,
+      gasto: pags.filter((p) => p.cliente_id === c.id).reduce((s, p) => s + Number(p.valor), 0),
+      diasSem: ult ? Math.max(0, Math.floor((agora - new Date(ult.inicio)) / 864e5)) : null };
+  });
+}
+
+async function telaClientes() {
+  const todas = await dadosClientes();
+  const r = tela(`
+    <div class="busca">${IC.busca}<input class="campo" id="busca-cli" placeholder="Buscar por nome ou telefone" value="${esc(st.busca)}" autocomplete="off"></div>
+    <div class="seg" id="filtro-cli">
+      <button data-f="todas" class="on">Todas</button><button data-f="frequentes">Frequentes</button><button data-f="sumidas">Sumidas</button><button data-f="aniver">Aniversário</button>
+    </div>
+    <div id="lista-cli"></div>
+    <button class="btn ouro cheio" id="nova-cli">${IC.mais}Cadastrar cliente</button>`);
+  let filtro = "todas";
+  const mesAtual = isoDia().slice(5, 7);
+  const desenha = () => {
+    const t = st.busca.toLowerCase().replace(/\D/g, "") || null, n = st.busca.toLowerCase().trim();
+    let l = todas.filter((c) => !n || c.nome.toLowerCase().includes(n) || (t && c.whatsapp.includes(t)));
+    if (filtro === "frequentes") l = l.filter((c) => c.visitas >= 3).sort((a, b) => b.visitas - a.visitas);
+    if (filtro === "sumidas") l = l.filter((c) => c.diasSem !== null && c.diasSem > 45 && !c.proxima).sort((a, b) => b.diasSem - a.diasSem);
+    if (filtro === "aniver") l = l.filter((c) => c.aniversario && c.aniversario.slice(5, 7) === mesAtual).sort((a, b) => a.aniversario.slice(8) - b.aniversario.slice(8));
+    $("lista-cli").innerHTML = l.length ? `<div class="lista">${l.map((c) => `<button class="item" data-c="${c.id}"><div class="avatar">${esc(iniciais(c.nome))}</div>
+      <div class="cresce"><b>${esc(c.nome)}</b>${c.visitas >= 3 ? ' <span class="chip concluido">Frequente</span>' : ""}
+      <div class="pequeno">${c.proxima ? "Próximo: " + dataCurta(c.proxima) + " às " + hora(c.proxima) : c.ultima ? (c.diasSem === 0 ? "Última visita hoje" : `Última visita há ${c.diasSem} dia${c.diasSem !== 1 ? "s" : ""}`) : "Ainda sem visitas"}${filtro === "aniver" && c.aniversario ? " · 🎂 " + c.aniversario.slice(8) + "/" + c.aniversario.slice(5, 7) : ""}</div></div>
+      <span class="seta">›</span></button>`).join("")}</div>`
+      : `<div class="vazio">${IC.cliente}<div>${todas.length ? "Nenhuma cliente encontrada." : "As clientes que agendam pelo site aparecem aqui automaticamente."}</div></div>`;
+    $("lista-cli").querySelectorAll("[data-c]").forEach((b) => (b.onclick = () => detalheCliente(b.dataset.c)));
+  };
+  $("busca-cli").oninput = (e) => { st.busca = e.target.value; desenha(); };
+  $("filtro-cli").querySelectorAll("button").forEach((b) => (b.onclick = () => { filtro = b.dataset.f; $("filtro-cli").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); desenha(); }));
+  $("nova-cli").onclick = () => editaCliente(null);
+  desenha();
+}
+
+async function detalheCliente(id) {
+  const c = (await dadosClientes()).find((x) => x.id === id);
+  if (!c) return toast("Cliente não encontrada.", 1);
+  const hist = [...c.ags].sort((a, b) => new Date(b.inicio) - new Date(a.inicio));
+  const n = primeiroNome(c.nome);
+  const msgRetorno = `Oi, ${n}! 💗 Sentimos sua falta por aqui. Que tal cuidar das unhas essa semana? Escolha seu horário: ${SITE}`;
+  const msgAniver = `Feliz aniversário, ${n}! 🎂💅 Desejo um dia lindo e cheio de carinho. Um beijo da Nayara!`;
+  const freq = c.visitas >= 2 ? Math.round((new Date(c.ultima) - new Date(c.primeira)) / 864e5 / (c.visitas - 1)) : null;
+  abreFolha(cabFolha(esc(c.nome), `${fmtTel(c.whatsapp)}${c.email ? " · " + esc(c.email) : ""}${c.aniversario ? " · 🎂 " + c.aniversario.slice(8) + "/" + c.aniversario.slice(5, 7) : ""}`) + `
+    <div class="stats">
+      <div class="stat"><small>Visitas</small><b>${c.visitas}</b><i>${c.primeira ? "desde " + dataCurta(c.primeira) : "—"}</i></div>
+      <div class="stat"><small>Total pago</small><b>${brl(c.gasto)}</b><i>${freq ? "volta a cada ~" + freq + " dias" : ""}</i></div>
+      <div class="stat"><small>Cancelamentos</small><b>${c.cancel}</b><i>${c.faltas ? c.faltas + " falta" + (c.faltas > 1 ? "s" : "") : "sem faltas"}</i></div>
+      <div class="stat"><small>Última visita</small><b style="font-size:20px">${c.ultima ? dataCurta(c.ultima) : "—"}</b><i>${c.diasSem === null ? "" : c.diasSem === 0 ? "hoje" : "há " + c.diasSem + " dia" + (c.diasSem !== 1 ? "s" : "")}</i></div>
+    </div>
+    ${c.cancel + c.faltas >= 2 ? `<p class="cartao" style="background:var(--alerta-bg);color:var(--alerta);font-size:14.5px">⚠️ Essa cliente já cancelou ou faltou ${c.cancel + c.faltas} vezes.</p>` : ""}
+    ${c.observacao ? `<div class="cartao"><b>Anotações</b><p class="mudo" style="margin-top:4px;white-space:pre-wrap">${esc(c.observacao)}</p></div>` : ""}
+    <div class="pilha">
+      <a class="btn zap cheio" target="_blank" rel="noopener" href="https://wa.me/${zapNum(c.whatsapp)}">${IC.zap}Conversar no WhatsApp</a>
+      <button class="btn ouro cheio" data-agendar>${IC.mais}Novo agendamento</button>
+      <div class="grade2">
+        <a class="btn claro" target="_blank" rel="noopener" href="https://wa.me/${zapNum(c.whatsapp)}?text=${encodeURIComponent(msgRetorno)}">Convidar a voltar</a>
+        <a class="btn claro" target="_blank" rel="noopener" href="https://wa.me/${zapNum(c.whatsapp)}?text=${encodeURIComponent(msgAniver)}">Parabéns 🎂</a>
+      </div>
+      <button class="btn claro cheio" data-editar>Editar dados e anotações</button>
+    </div>
+    <div class="tit-linha"><h2>Histórico</h2></div>
+    ${hist.length ? hist.map((a) => cartaoAg(a, true)).join("") : `<div class="vazio">Sem atendimentos ainda.</div>`}`, (r) => {
+    r.querySelector("[data-agendar]").onclick = () => novoAgendamento({ cliente: c });
+    r.querySelector("[data-editar]").onclick = () => editaCliente(c);
+    ligaCartoes(r);
+  });
+}
+
+function editaCliente(c) {
+  abreFolha(cabFolha(c ? "Editar cliente" : "Cadastrar cliente") + `
+    <div class="cartao">
+      <label class="f">Nome completo</label><input class="campo" data-nome value="${esc(c?.nome || "")}" autocomplete="off">
+      <label class="f">WhatsApp</label><input class="campo" data-zap inputmode="tel" value="${c ? fmtTel(c.whatsapp) : ""}" placeholder="(31) 99999-9999">
+      <label class="f">E-mail</label><input class="campo" data-email type="email" value="${esc(c?.email || "")}" placeholder="Opcional">
+      <label class="f">Aniversário</label><input class="campo" data-aniver type="date" value="${c?.aniversario || ""}">
+      <label class="f">Anotações particulares</label><textarea class="campo" data-obs placeholder="Preferências, cores favoritas, cuidados…">${esc(c?.observacao || "")}</textarea>
+    </div>
+    <button class="btn ouro cheio" data-salvar>Salvar</button>`, (r) => {
+    r.querySelector("[data-salvar]").onclick = async () => {
+      const d = { nome: r.querySelector("[data-nome]").value.trim(), whatsapp: r.querySelector("[data-zap]").value.replace(/\D/g, ""),
+        email: r.querySelector("[data-email]").value.trim() || null, aniversario: r.querySelector("[data-aniver]").value || null, observacao: r.querySelector("[data-obs]").value.trim() || null };
+      if (d.nome.length < 2) return toast("Escreva o nome.", 1);
+      if (d.whatsapp.length < 10) return toast("Escreva o WhatsApp com DDD.", 1);
+      const { data, error } = c ? await sb.from("ad_clientes").update(d).eq("id", c.id).select().single()
+        : await sb.from("ad_clientes").insert({ ...d, profissional_id: st.user.id }).select().single();
+      if (error) return toast(error.message.includes("duplicate") ? "Já existe uma cliente com esse WhatsApp." : erroMsg(error), 1);
+      toast("Cliente salva."); detalheCliente(data.id); if (st.aba === "clientes") telaClientes();
+    };
+  });
+}
+
+// =====================================================================
+// CAIXA
+// =====================================================================
+async function telaCaixa() {
+  const hoje = isoDia();
+  const per = st.caixaPer;
+  const ini = per === "hoje" ? hoje : per === "semana" ? somaDias(hoje, -6) : hoje.slice(0, 8) + "01";
+  const fim = somaDias(hoje, 1);
+  const [pags, ags, pagsMesAnt] = await Promise.all([
+    pagsEntre(ini, fim), agsEntre(ini, fim),
+    per === "mes" ? (async () => { const [a, m] = hoje.split("-").map(Number); const i = new Date(Date.UTC(a, m - 2, 1)).toISOString().slice(0, 10); const d = Math.min(Number(hoje.slice(8)), new Date(Date.UTC(a, m - 1, 0)).getUTCDate()); return pagsEntre(i, somaDias(i, d)); })() : Promise.resolve(null),
+  ]);
+  const recebido = pags.reduce((s, p) => s + Number(p.valor), 0);
+  const comAg = pags.filter((p) => p.agendamento_id);
+  const atend = new Set(comAg.map((p) => p.agendamento_id)).size;
+  const ticket = atend ? comAg.reduce((s, p) => s + Number(p.valor), 0) / atend : 0;
+  const pendentes = ags.filter((a) => a.status === "concluido" && !a.pago);
+  const pendente = pendentes.reduce((s, a) => s + Number(a.preco), 0);
+  const cancel = ags.filter((a) => a.status === "cancelado");
+  const faltas = ags.filter((a) => a.status === "faltou");
+  const porForma = {}; pags.forEach((p) => (porForma[p.forma] = (porForma[p.forma] || 0) + Number(p.valor)));
+  const agPorId = Object.fromEntries(ags.map((a) => [a.id, a]));
+  const porServ = {}; comAg.forEach((p) => { const nm = agPorId[p.agendamento_id]?.servico_nome || "Outros"; porServ[nm] = (porServ[nm] || 0) + Number(p.valor); });
+  const maxF = Math.max(1, ...Object.values(porForma)), maxS = Math.max(1, ...Object.values(porServ));
+  const ant = pagsMesAnt ? pagsMesAnt.reduce((s, p) => s + Number(p.valor), 0) : null;
+  const variacao = ant ? Math.round(((recebido - ant) / ant) * 100) : null;
+  const rot = { hoje: "hoje", semana: "nos últimos 7 dias", mes: "neste mês" }[per];
+
+  const r = tela(`
+    <div class="seg" id="per"><button data-p="hoje" class="${per === "hoje" ? "on" : ""}">Hoje</button><button data-p="semana" class="${per === "semana" ? "on" : ""}">7 dias</button><button data-p="mes" class="${per === "mes" ? "on" : ""}">Mês</button></div>
+    <div class="stats">
+      <div class="stat destaque"><small>Recebido ${rot}</small><b>${brl(recebido)}</b><i>${variacao !== null ? (variacao >= 0 ? "▲ " : "▼ ") + Math.abs(variacao) + "% vs. mesmo período do mês passado" : pags.length + " pagamento" + (pags.length !== 1 ? "s" : "")}</i></div>
+      <div class="stat"><small>A receber</small><b>${brl(pendente)}</b><i>${pendentes.length} atendido${pendentes.length !== 1 ? "s" : ""} sem pagar</i></div>
+      <div class="stat"><small>Ticket médio</small><b>${brl(ticket)}</b><i>por atendimento</i></div>
+      <div class="stat"><small>Cancelamentos</small><b>${cancel.length}</b><i>${faltas.length} falta${faltas.length !== 1 ? "s" : ""} · ${brl([...cancel, ...faltas].reduce((s, a) => s + Number(a.preco), 0))}</i></div>
+    </div>
+    ${pendentes.length ? `<div class="tit-linha"><h2>A receber</h2></div>${pendentes.map((a) => cartaoAg(a, true)).join("")}` : ""}
+    <div class="cartao"><h2>Por forma de pagamento</h2>${Object.keys(porForma).length ? Object.entries(porForma).sort((a, b) => b[1] - a[1]).map(([f, v]) => `<div style="margin-top:12px"><div class="linha entre"><span>${FORMAS[f]}</span><b>${brl(v)}</b></div><div class="barra-h"><span style="width:${(v / maxF) * 100}%"></span></div></div>`).join("") : `<p class="mudo">Nenhum pagamento registrado ${rot}.</p>`}</div>
+    <div class="cartao"><h2>Serviços que mais faturaram</h2>${Object.keys(porServ).length ? Object.entries(porServ).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([s, v]) => `<div style="margin-top:12px"><div class="linha entre"><span class="cresce" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s)}</span><b>${brl(v)}</b></div><div class="barra-h"><span style="width:${(v / maxS) * 100}%"></span></div></div>`).join("") : `<p class="mudo">Aparece aqui quando houver pagamentos de atendimentos.</p>`}</div>
+    <div class="tit-linha"><h2>Recebimentos</h2></div>
+    ${pags.length ? `<div class="lista">${pags.map((p) => { const a = agPorId[p.agendamento_id]; return `<div class="item" ${a ? `data-ag="${a.id}"` : 'style="cursor:default"'}><div class="ic">${IC.dinheiro}</div><div class="cresce"><b>${a ? esc(a.cliente_nome) : esc(p.observacao || "Recebimento avulso")}</b><div class="pequeno">${FORMAS[p.forma]} · ${dataCurta(p.recebido_em)} ${hora(p.recebido_em)}${a ? " · " + esc(a.servico_nome) : ""}</div></div><b>${brl(p.valor)}</b></div>`; }).join("")}</div>` : `<div class="vazio">${IC.dinheiro}<div>Os pagamentos registrados aparecem aqui.</div></div>`}
+    <button class="btn ouro cheio" id="pag-avulso">${IC.mais}Registrar recebimento avulso</button>`);
+  ligaCartoes(r);
+  $("per").querySelectorAll("button").forEach((b) => (b.onclick = () => { st.caixaPer = b.dataset.p; telaCaixa(); }));
+  $("pag-avulso").onclick = () => registraPagamento(null);
+}
+
+// =====================================================================
+// MAIS
+// =====================================================================
+function telaMais() {
+  const itens = [
+    ["servicos", IC.tesoura, "Serviços e preços", "Adicionar, editar, mudar preço e duração"],
+    ["horarios", IC.relogio, "Horários e folgas", "Dias de trabalho, intervalos, feriados e férias"],
+    ["notificacoes", IC.sino, "Notificações", "Avisos no celular de novos agendamentos"],
+    ["chegar", IC.local, "Como chegar", "Endereço, mapa e compartilhar localização"],
+    ["site", IC.link, "Site de agendamento", "Copiar e divulgar seu link"],
+    ["salao", IC.salao, "Dados do salão", "Nome, WhatsApp, Instagram e endereço"],
+    ["instalar", IC.baixar, "Instalar o app no celular", "Ícone na tela inicial, abre como aplicativo"],
+    ["senha", IC.estrela, "Trocar senha", ""],
+    ["sair", IC.sair, "Sair", ""],
+  ];
+  const r = tela(`<div class="lista">${itens.map(([k, ic, t, s]) => `<button class="item" data-m="${k}"><div class="ic">${ic}</div><div class="cresce"><b>${t}</b>${s ? `<div class="pequeno">${s}</div>` : ""}</div><span class="seta">›</span></button>`).join("")}</div>
+    <p class="pequeno" style="text-align:center;margin-top:20px">Nay Nails Gestão · versão 1.0<br>Mesma agenda do site de agendamento</p>`);
+  r.querySelectorAll("[data-m]").forEach((b) => (b.onclick = () => ({
+    servicos: telaServicos, horarios: telaHorarios, notificacoes: telaNotificacoes, chegar: comoChegar, site: telaSite, salao: dadosSalao, instalar: instrucoesInstalar, senha: novaSenha,
+    sair: async () => { if (confirm("Sair do app?")) { await sb.auth.signOut(); location.reload(); } },
+  })[b.dataset.m]()));
+}
+
+// ---------- serviços ----------
+async function telaServicos() {
+  await carregaServicos();
+  abreFolha(cabFolha("Serviços e preços", "As mudanças aparecem no site na hora.") +
+    `<div class="lista">${st.servicos.map((s) => `<button class="item" data-s="${s.id}" style="${s.ativo ? "" : "opacity:.5"}"><div class="cresce"><b>${esc(s.nome)}</b><div class="pequeno">${brl(s.preco)} · ${dur(s.duracao_min)}${s.ativo ? "" : " · oculto no site"}</div></div><span class="seta">›</span></button>`).join("")}</div>
+    <button class="btn ouro cheio" data-novo>${IC.mais}Adicionar serviço</button>`, (r) => {
+    r.querySelectorAll("[data-s]").forEach((b) => (b.onclick = () => editaServico(st.servicos.find((s) => s.id === b.dataset.s))));
+    r.querySelector("[data-novo]").onclick = () => editaServico(null);
+  });
+}
+function editaServico(s) {
+  const durs = [15, 20, 30, 40, 45, 60, 75, 90, 120, 150, 180];
+  abreFolha(cabFolha(s ? "Editar serviço" : "Novo serviço") + `
+    <div class="cartao">
+      <label class="f">Nome</label><input class="campo" data-nome value="${esc(s?.nome || "")}">
+      <label class="f">Descrição (aparece no site)</label><textarea class="campo" data-desc maxlength="200" placeholder="Opcional">${esc(s?.descricao || "")}</textarea>
+      <div class="grade2">
+        <div><label class="f">Preço a partir de (R$)</label><input class="campo" data-preco type="number" inputmode="decimal" step="0.01" min="0" value="${s?.preco ?? ""}"></div>
+        <div><label class="f">Duração</label><select class="campo" data-dur>${durs.map((d) => `<option value="${d}" ${(s?.duracao_min || 60) === d ? "selected" : ""}>${dur(d)}</option>`).join("")}${s && !durs.includes(s.duracao_min) ? `<option value="${s.duracao_min}" selected>${dur(s.duracao_min)}</option>` : ""}</select></div>
+      </div>
+      <div class="interruptor" style="margin-top:8px"><span>Mostrar no site</span><input type="checkbox" data-ativo ${s?.ativo === false ? "" : "checked"}></div>
+    </div>
+    <button class="btn ouro cheio" data-salvar>Salvar</button>
+    ${s ? `<button class="btn perigo cheio" data-excluir style="margin-top:10px">Excluir serviço</button>` : ""}`, (r) => {
+    r.querySelector("[data-salvar]").onclick = async () => {
+      const d = { nome: r.querySelector("[data-nome]").value.trim(), descricao: r.querySelector("[data-desc]").value.trim() || null, preco: Number(r.querySelector("[data-preco]").value || 0), duracao_min: Number(r.querySelector("[data-dur]").value), ativo: r.querySelector("[data-ativo]").checked };
+      if (!d.nome) return toast("Escreva o nome do serviço.", 1);
+      await q(s ? sb.from("ad_servicos").update(d).eq("id", s.id) : sb.from("ad_servicos").insert({ ...d, profissional_id: st.user.id }));
+      toast("Serviço salvo."); telaServicos();
+    };
+    r.querySelector("[data-excluir]")?.addEventListener("click", async () => {
+      if (!confirm("Excluir este serviço? Os atendimentos antigos continuam guardados.")) return;
+      await q(sb.from("ad_servicos").delete().eq("id", s.id)); toast("Serviço excluído."); telaServicos();
+    });
+  });
+}
+
+// ---------- horários, folgas e bloqueios ----------
+async function telaHorarios() {
+  const [hs, bloq] = await Promise.all([
+    q(sb.from("ad_horarios").select("*").order("inicio")),
+    q(sb.from("ad_bloqueios").select("*").gte("fim", new Date().toISOString()).order("inicio")),
+  ]);
+  let edit = hs.map((h) => ({ dia_semana: h.dia_semana, inicio: h.inicio.slice(0, 5), fim: h.fim.slice(0, 5) }));
+  const desenha = (r) => {
+    r.querySelector("[data-semana]").innerHTML = [1, 2, 3, 4, 5, 6, 0].map((d) => {
+      const f = edit.map((h, i) => ({ ...h, i })).filter((h) => h.dia_semana === d);
+      return `<div style="padding:12px 0;border-bottom:1px solid var(--linha)"><div class="linha entre"><b>${SEM[d]}</b><button class="link" data-add="${d}">${f.length ? "+ intervalo" : "Trabalhar"}</button></div>
+        ${f.length ? f.map((h) => `<div class="linha" style="margin-top:8px"><input class="campo" type="time" value="${h.inicio}" data-i="${h.i}" data-k="inicio"><span>às</span><input class="campo" type="time" value="${h.fim}" data-i="${h.i}" data-k="fim"><button class="fechar" data-rm="${h.i}" aria-label="Remover" style="width:36px;height:36px;border-radius:50%;border:0;background:var(--nude);flex:none">✕</button></div>`).join("") : `<p class="pequeno" style="margin-top:4px">Folga</p>`}</div>`;
+    }).join("");
+    r.querySelectorAll("[data-add]").forEach((b) => (b.onclick = () => { edit.push({ dia_semana: +b.dataset.add, inicio: edit.find((h) => h.dia_semana === +b.dataset.add) ? "14:00" : "09:00", fim: "18:00" }); desenha(r); }));
+    r.querySelectorAll("[data-rm]").forEach((b) => (b.onclick = () => { edit.splice(+b.dataset.rm, 1); desenha(r); }));
+    r.querySelectorAll("input[data-i]").forEach((inp) => (inp.onchange = () => (edit[+inp.dataset.i][inp.dataset.k] = inp.value)));
+  };
+  abreFolha(cabFolha("Horários e folgas", "O site só mostra horários dentro destes períodos.") + `
+    <div class="cartao"><h2>Semana de trabalho</h2><p class="pequeno">Para ter intervalo de almoço, use dois períodos no mesmo dia (ex.: 9h às 12h e 13h às 18h).</p><div data-semana></div>
+      <button class="btn ouro cheio" data-salvar style="margin-top:14px">Salvar horários</button></div>
+    <div class="tit-linha"><h2>Folgas e bloqueios</h2><button data-bloq>+ Bloquear</button></div>
+    ${bloq.length ? `<div class="lista">${bloq.map((b) => `<div class="item" style="cursor:default"><div class="ic">${IC.bloqueio}</div><div class="cresce"><b>${esc(b.motivo || "Bloqueado")}</b><div class="pequeno">${dataCurta(b.inicio)} ${hora(b.inicio)} até ${dataCurta(b.fim)} ${hora(b.fim)}</div></div><button class="link" data-lib="${b.id}">Liberar</button></div>`).join("")}</div>` : `<p class="mudo" style="margin:0 2px 14px">Nenhum bloqueio futuro. Use para folgas, feriados, férias ou compromissos.</p>`}`, (r) => {
+    desenha(r);
+    r.querySelector("[data-salvar]").onclick = async () => {
+      if (edit.some((h) => !h.inicio || !h.fim || h.fim <= h.inicio)) return toast("Confira: o fim precisa ser depois do início.", 1);
+      await q(sb.from("ad_horarios").delete().eq("profissional_id", st.user.id));
+      if (edit.length) await q(sb.from("ad_horarios").insert(edit.map((h) => ({ ...h, profissional_id: st.user.id }))));
+      toast("Horários salvos. O site já foi atualizado.");
+    };
+    r.querySelector("[data-bloq]").onclick = () => novoBloqueio();
+    r.querySelectorAll("[data-lib]").forEach((b) => (b.onclick = async () => { await q(sb.from("ad_bloqueios").delete().eq("id", b.dataset.lib)); toast("Liberado."); telaHorarios(); }));
+  });
+}
+
+function novoBloqueio() {
+  const tipos = { folga: "Folga (dia inteiro)", horario: "Horário específico", ferias: "Férias ou vários dias", feriado: "Feriado" };
+  let tipo = "horario";
+  abreFolha(cabFolha("Bloquear horário", "Nesse período o site não mostra horários para as clientes.") + `
+    <div class="cartao">
+      <div class="opcoes" data-tipos>${Object.entries(tipos).map(([k, v]) => `<button type="button" data-t="${k}" class="${k === tipo ? "on" : ""}">${v}</button>`).join("")}</div>
+      <label class="f">${"Dia"}</label><input class="campo" type="date" data-de value="${isoDia()}" min="${isoDia()}">
+      <div data-ate class="hide"><label class="f">Até o dia</label><input class="campo" type="date" data-ate-d value="${somaDias(isoDia(), 7)}" min="${isoDia()}"></div>
+      <div data-horas class="grade2"><div><label class="f">Das</label><input class="campo" type="time" data-h1 value="12:00"></div><div><label class="f">Até</label><input class="campo" type="time" data-h2 value="13:00"></div></div>
+      <label class="f">Motivo</label><input class="campo" data-motivo placeholder="Ex.: almoço, médico, viagem">
+    </div>
+    <button class="btn ouro cheio" data-salvar>Bloquear</button>`, (r) => {
+    const ajusta = () => { r.querySelector("[data-ate]").classList.toggle("hide", tipo !== "ferias"); r.querySelector("[data-horas]").classList.toggle("hide", tipo !== "horario"); };
+    r.querySelectorAll("[data-t]").forEach((b) => (b.onclick = () => { tipo = b.dataset.t; r.querySelectorAll("[data-t]").forEach((x) => x.classList.toggle("on", x === b)); ajusta(); }));
+    ajusta();
+    r.querySelector("[data-salvar]").onclick = async () => {
+      const de = r.querySelector("[data-de]").value;
+      let ini, fim;
+      if (tipo === "horario") { ini = `${de}T${r.querySelector("[data-h1]").value}:00-03:00`; fim = `${de}T${r.querySelector("[data-h2]").value}:00-03:00`; }
+      else { const ate = tipo === "ferias" ? r.querySelector("[data-ate-d]").value : de; ini = `${de}T00:00:00-03:00`; fim = `${somaDias(ate, 1)}T00:00:00-03:00`; }
+      if (new Date(fim) <= new Date(ini)) return toast("Confira as datas e os horários.", 1);
+      const motivo = r.querySelector("[data-motivo]").value.trim() || tipos[tipo].replace(/ \(.*\)/, "");
+      await q(sb.from("ad_bloqueios").insert({ profissional_id: st.user.id, inicio: new Date(ini).toISOString(), fim: new Date(fim).toISOString(), motivo }));
+      const conflitos = (await agsEntre(isoDia(ini), somaDias(isoDia(new Date(new Date(fim) - 1)), 1))).filter((a) => ATIVOS.includes(a.status) && new Date(a.inicio) < new Date(fim) && new Date(a.fim) > new Date(ini));
+      toast("Horário bloqueado.");
+      if (conflitos.length) abreFolha(cabFolha("Atenção", `Já existem ${conflitos.length} cliente(s) marcadas nesse período. Remarque ou avise:`) + conflitos.map((a) => cartaoAg(a, true)).join(""), ligaCartoes);
+      else fechaFolha();
+      atualizaTela();
+    };
+  });
+}
+
+// ---------- notificações ----------
+function b64(s) { const p = "=".repeat((4 - (s.length % 4)) % 4); const b = atob((s + p).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from([...b].map((c) => c.charCodeAt(0))); }
+let swReg = null;
+async function registraSW() {
+  if (!("serviceWorker" in navigator)) return;
+  try { swReg = await navigator.serviceWorker.register("sw.js"); } catch (e) { console.warn(e); }
+}
+const suportaPush = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+const ehIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
+const instalado = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+async function inscricaoAtual() { if (!swReg) await registraSW(); return swReg ? swReg.pushManager.getSubscription() : null; }
+
+async function ativaNotificacoes() {
+  if (!suportaPush()) {
+    if (ehIOS() && !instalado()) return instrucoesInstalar(true);
+    return toast("Este navegador não aceita notificações. Use o Chrome no Android ou instale o app no iPhone.", 1);
+  }
+  const perm = await Notification.requestPermission();
+  if (perm !== "granted") return toast("Permita as notificações nas configurações do celular para receber os avisos.", 1);
+  const { data: chave } = await sb.rpc("ad_push_chave");
+  if (!chave) return toast("Não foi possível preparar as notificações. Tente de novo.", 1);
+  if (!swReg) await registraSW();
+  await navigator.serviceWorker.ready;
+  let sub = await swReg.pushManager.getSubscription();
+  if (!sub) sub = await swReg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(chave) });
+  const j = sub.toJSON();
+  const { error } = await sb.from("ad_push").upsert({ endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth }, { onConflict: "endpoint" });
+  if (error) return toast(erroMsg(error), 1);
+  toast("Notificações ativadas neste celular!");
+  return true;
+}
+
+async function bannerNotificacao() {
+  const el = $("banner-notif"); if (!el) return;
+  const sub = suportaPush() ? await inscricaoAtual() : null;
+  if (sub && Notification.permission === "granted") { el.innerHTML = ""; return; }
+  el.innerHTML = `<div class="cartao rosa linha"><div class="cresce"><b>Receba os avisos no celular</b><div class="pequeno">Saiba na hora quando uma cliente agendar ou cancelar.</div></div><button class="btn ouro mini" id="b-ativar">Ativar</button></div>`;
+  $("b-ativar").onclick = async () => { if (await ativaNotificacoes()) bannerNotificacao(); };
+}
+
+async function telaNotificacoes() {
+  const sub = suportaPush() ? await inscricaoAtual() : null;
+  let prefs = { novo: true, cancelado: true, confirmado: true, breve: true, resumo: true };
+  if (sub) { const { data } = await sb.from("ad_push").select("prefs").eq("endpoint", sub.endpoint).maybeSingle(); if (data?.prefs) prefs = { ...prefs, ...data.prefs }; }
+  const nomes = { novo: "Novo agendamento pelo site", cancelado: "Cliente cancelou", confirmado: "Cliente confirmou presença", breve: "Atendimento começa em 30 minutos", resumo: "Resumo do dia (7h30)" };
+  const ativo = sub && Notification.permission === "granted";
+  abreFolha(cabFolha("Notificações", ativo ? "Ativadas neste celular ✅" : "Ainda não ativadas neste celular") + `
+    ${ativo ? "" : `<div class="cartao rosa"><p style="margin-bottom:12px">Ative para receber os avisos mesmo com o app fechado.</p><button class="btn ouro cheio" data-ativar>Ativar notificações</button>${ehIOS() && !instalado() ? `<p class="pequeno" style="margin-top:10px">No iPhone, primeiro instale o app na tela inicial (Mais › Instalar o app).</p>` : ""}</div>`}
+    <div class="cartao"><h2>Quero receber</h2>${Object.entries(nomes).map(([k, v]) => `<label class="interruptor"><span>${v}</span><input type="checkbox" data-p="${k}" ${prefs[k] !== false ? "checked" : ""} ${ativo ? "" : "disabled"}></label>`).join("")}</div>
+    ${ativo ? `<button class="btn claro cheio" data-teste>Enviar notificação de teste</button>` : ""}
+    <button class="btn claro cheio" data-avisos style="margin-top:10px">Ver todos os avisos</button>`, (r) => {
+    r.querySelector("[data-ativar]")?.addEventListener("click", async () => { if (await ativaNotificacoes()) telaNotificacoes(); });
+    r.querySelectorAll("[data-p]").forEach((c) => (c.onchange = async () => {
+      prefs[c.dataset.p] = c.checked;
+      await q(sb.from("ad_push").update({ prefs }).eq("endpoint", sub.endpoint)); toast("Preferência salva.");
+    }));
+    r.querySelector("[data-teste]")?.addEventListener("click", async () => {
+      const { data, error } = await sb.functions.invoke("ad-push", { body: { acao: "teste" } });
+      toast(error ? "Não foi possível enviar o teste." : data?.enviados ? "Teste enviado! Deve chegar em instantes." : "Nenhum celular inscrito. Ative de novo.", !!error || !data?.enviados);
+    });
+    r.querySelector("[data-avisos]").onclick = telaAvisos;
+  });
+}
+
+async function telaAvisos() {
+  const avisos = await q(sb.from("ad_avisos").select("*").order("criado_em", { ascending: false }).limit(60));
+  await sb.from("ad_avisos").update({ lido: true }).eq("lido", false);
+  contaAvisos();
+  abreFolha(cabFolha("Avisos") + (avisos.length ? `<div class="lista">${avisos.map((v) => `<button class="item ${v.lido ? "" : "aviso-item novo"}" data-agid="${v.agendamento_id || ""}">${v.lido ? "" : '<span class="ponto"></span>'}<div class="cresce"><b>${esc(v.titulo)}</b><div class="pequeno">${esc(v.corpo)}</div><div class="pequeno" style="margin-top:2px">${dataCurta(v.criado_em)} ${hora(v.criado_em)}</div></div></button>`).join("")}</div>`
+    : `<div class="vazio">${IC.sino}<div>Nenhum aviso ainda. Quando uma cliente agendar pelo site, aparece aqui.</div></div>`), (r) => {
+    r.querySelectorAll("[data-agid]").forEach((b) => (b.onclick = () => b.dataset.agid && detalheAg(b.dataset.agid)));
+  });
+}
+$("b-sino").onclick = telaAvisos;
+
+// ---------- como chegar ----------
+function comoChegar() {
+  const end = st.prof.endereco || "";
+  const enc = encodeURIComponent(end);
+  const maps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent("Nayara Fernandes Nails, " + end)}`;
+  const msg = `📍 *${st.prof.nome}*\n${end}\n\nGoogle Maps: ${maps}\nWaze: https://waze.com/ul?q=${enc}&navigate=yes`;
+  abreFolha(cabFolha("Como chegar", esc(end) || "Cadastre o endereço em Dados do salão") + `
+    <div class="cartao" style="padding:0;overflow:hidden"><iframe title="Mapa" loading="lazy" style="width:100%;aspect-ratio:4/3;border:0;display:block" src="https://maps.google.com/maps?q=${encodeURIComponent("Nayara Fernandes Nails, " + end)}&z=16&hl=pt-BR&output=embed"></iframe></div>
+    <div class="pilha">
+      <div class="grade2"><a class="btn claro" target="_blank" rel="noopener" href="${maps}">Google Maps</a><a class="btn claro" target="_blank" rel="noopener" href="https://waze.com/ul?q=${enc}&navigate=yes">Waze</a></div>
+      <a class="btn zap cheio" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msg)}">${IC.zap}Enviar localização pelo WhatsApp</a>
+      <div class="grade2"><button class="btn claro" data-copiar>Copiar endereço</button><button class="btn claro" data-compart>Compartilhar</button></div>
+    </div>`, (r) => {
+    r.querySelector("[data-copiar]").onclick = () => copiar(end, "Endereço copiado.");
+    r.querySelector("[data-compart]").onclick = () => compartilhar({ title: st.prof.nome, text: msg.replace(/\*/g, "") });
+  });
+}
+async function copiar(t, ok) { try { await navigator.clipboard.writeText(t); toast(ok); } catch { prompt("Copie:", t); } }
+async function compartilhar(d) { if (navigator.share) { try { await navigator.share(d); } catch {} } else copiar(d.url || d.text, "Copiado para colar onde quiser."); }
+
+// ---------- site ----------
+function telaSite() {
+  const txt = `💅 Agende seu horário com a ${primeiroNome(st.prof.nome)} em menos de um minuto: ${SITE}`;
+  abreFolha(cabFolha("Site de agendamento", "As clientes escolhem o serviço e o horário sozinhas. Tudo cai aqui no app.") + `
+    <div class="cartao"><input class="campo" readonly value="${SITE}" onclick="this.select()"></div>
+    <div class="pilha">
+      <a class="btn ouro cheio" target="_blank" rel="noopener" href="${SITE}">Abrir o site</a>
+      <div class="grade2"><button class="btn claro" data-copiar>Copiar link</button><button class="btn claro" data-compart>Compartilhar</button></div>
+      <a class="btn zap cheio" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(txt)}">${IC.zap}Divulgar no WhatsApp</a>
+      <p class="pequeno">Dica: coloque o link na bio do Instagram e no status do WhatsApp.</p>
+    </div>`, (r) => {
+    r.querySelector("[data-copiar]").onclick = () => copiar(SITE, "Link copiado.");
+    r.querySelector("[data-compart]").onclick = () => compartilhar({ title: "Agende seu horário", text: txt, url: SITE });
+  });
+}
+
+// ---------- dados do salão ----------
+function dadosSalao() {
+  const p = st.prof;
+  abreFolha(cabFolha("Dados do salão", "Aparecem no site de agendamento.") + `
+    <div class="cartao">
+      <label class="f">Nome</label><input class="campo" data-nome value="${esc(p.nome)}">
+      <label class="f">O que faz</label><input class="campo" data-prof value="${esc(p.profissao || "")}">
+      <label class="f">WhatsApp do salão</label><input class="campo" data-zap inputmode="tel" value="${fmtTel(p.whatsapp)}">
+      <label class="f">Instagram (sem @)</label><input class="campo" data-insta value="${esc(p.instagram || "")}">
+      <label class="f">Endereço</label><textarea class="campo" data-end>${esc(p.endereco || "")}</textarea>
+    </div>
+    <button class="btn ouro cheio" data-salvar>Salvar</button>`, (r) => {
+    r.querySelector("[data-salvar]").onclick = async () => {
+      const d = { nome: r.querySelector("[data-nome]").value.trim(), profissao: r.querySelector("[data-prof]").value.trim(), whatsapp: zapNum(r.querySelector("[data-zap]").value),
+        instagram: r.querySelector("[data-insta]").value.replace(/^@/, "").trim() || null, endereco: r.querySelector("[data-end]").value.trim() || null };
+      if (d.nome.length < 2) return toast("Escreva o nome.", 1);
+      st.prof = await q(sb.from("ad_profissionais").update(d).eq("id", st.user.id).select().single());
+      toast("Dados salvos."); fechaFolha();
+    };
+  });
+}
+
+// ---------- instalar e senha ----------
+function instrucoesInstalar(paraNotificar) {
+  const passos = ehIOS()
+    ? ["Abra este app no <b>Safari</b>.", "Toque no botão <b>Compartilhar</b> (quadrado com seta para cima).", "Escolha <b>Adicionar à Tela de Início</b> e toque em <b>Adicionar</b>.", "Abra o app pelo novo ícone <b>Nay Nails</b> e ative as notificações."]
+    : ["Abra este app no <b>Chrome</b>.", "Toque nos <b>três pontinhos</b> no canto de cima.", "Escolha <b>Instalar app</b> ou <b>Adicionar à tela inicial</b>.", "Abra pelo novo ícone <b>Nay Nails</b>."];
+  abreFolha(cabFolha("Instalar o app", paraNotificar ? "No iPhone, as notificações só funcionam com o app instalado na tela inicial." : "Fica com ícone próprio e abre como aplicativo.") +
+    `<div class="cartao"><ol style="padding-left:20px;line-height:1.7">${passos.map((p) => `<li>${p}</li>`).join("")}</ol></div>
+    ${window._promptInstalar ? `<button class="btn ouro cheio" data-inst>Instalar agora</button>` : ""}`, (r) => {
+    r.querySelector("[data-inst]")?.addEventListener("click", async () => { window._promptInstalar.prompt(); window._promptInstalar = null; fechaFolha(); });
+  });
+}
+window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); window._promptInstalar = e; });
+
+function novaSenha() {
+  abreFolha(cabFolha("Nova senha") + `<div class="cartao"><label class="f">Nova senha (mínimo 8 caracteres)</label><input class="campo" type="password" data-s autocomplete="new-password"></div><button class="btn ouro cheio" data-salvar>Salvar senha</button>`, (r) => {
+    r.querySelector("[data-salvar]").onclick = async () => {
+      const s = r.querySelector("[data-s]").value;
+      if (s.length < 8) return toast("Use pelo menos 8 caracteres.", 1);
+      const { error } = await sb.auth.updateUser({ password: s });
+      if (error) return toast(erroMsg(error), 1);
+      toast("Senha alterada."); fechaFolha();
+    };
+  });
+}
+
+// ao voltar para o app, atualiza
+document.addEventListener("visibilitychange", () => { if (!document.hidden && st.prof && !$("folha").classList.contains("on")) { atualizaTela(); contaAvisos(); } });
+// toque na notificação com o app aberto
+navigator.serviceWorker?.addEventListener("message", (e) => { if (e.data?.agendamento) detalheAg(e.data.agendamento); else if (e.data?.abrir === "avisos") telaAvisos(); });
