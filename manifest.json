@@ -2,7 +2,7 @@
   "name": "Agenda Deluxe",
   "short_name": "Agenda Deluxe",
   "description": "Agendamento online, lembretes no WhatsApp e controle de pagamentos.",
-  "start_url": "./index.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#faf7f2",

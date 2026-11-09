@@ -17,7 +17,7 @@ Agenda online para profissionais autônomos (manicure, barbeiro, cabeleireira, p
 Site estático: não precisa de build.
 
 ## Hospedagem
-- **Site:** Cloudflare Pages conectado a este repositório (branch `main`, sem build, pasta raiz). Também publicado no GitHub Pages.
+- **Site:** https://agenda-deluxe.pages.dev (Cloudflare Pages, conta do N Detail, conectado a este repositório; publica sozinho a cada push na `main`). Cópia também no GitHub Pages.
 - **Backend:** Supabase (banco + Edge Functions `ad-assinar` e `ad-mp-webhook`).
 
 ## Cobrança

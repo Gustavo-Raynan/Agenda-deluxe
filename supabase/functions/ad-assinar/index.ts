@@ -4,7 +4,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 const MP = "https://api.mercadopago.com";
 const PRECO = Number(Deno.env.get("AD_PRECO_MENSAL") ?? "20");
-const APP_URL = Deno.env.get("AD_APP_URL") ?? "https://gustavo-raynan.github.io/Agenda-deluxe/";
+const APP_URL = Deno.env.get("AD_APP_URL") ?? "https://agenda-deluxe.pages.dev/";
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
