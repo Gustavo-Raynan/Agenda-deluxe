@@ -27,13 +27,16 @@
   <img src="../nayara/logo.jpg" alt="Nayara Fernandes, Nails e cuidados">
   <h1>Nay Nails Gestão</h1>
   <p class="mudo" style="margin-top:6px">Sua agenda, suas clientes e o caixa do salão, no celular.</p>
-  <div class="cartao">
+  <div class="cartao" id="l-cartao">
+    <h2 id="l-titulo-form" style="font-size:19px;margin-bottom:4px">Entrar</h2>
     <label class="f" for="l-email">E-mail</label>
-    <input class="campo" id="l-email" type="email" autocomplete="email" inputmode="email">
+    <input class="campo" id="l-email" type="email" autocomplete="username" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false">
     <label class="f" for="l-senha">Senha</label>
-    <input class="campo" id="l-senha" type="password" autocomplete="current-password">
+    <div style="position:relative"><input class="campo" id="l-senha" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" style="padding-right:84px">
+      <button type="button" class="link" id="l-ver" style="position:absolute;right:14px;top:50%;transform:translateY(-50%)">Mostrar</button></div>
     <button class="btn ouro cheio" id="l-entrar" style="margin-top:18px">Entrar</button>
     <button class="link" id="l-esqueci" style="display:block;margin:12px auto 0">Esqueci minha senha</button>
+    <button class="btn cheio" id="l-criar" style="margin-top:14px">Primeiro acesso? Criar minha conta</button>
   </div>
 </section>
 

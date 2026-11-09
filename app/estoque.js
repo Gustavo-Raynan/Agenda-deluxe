@@ -130,7 +130,7 @@ async function fichaProduto(id) {
     r.querySelector("[data-editar]").onclick = () => editaProduto(p);
     r.querySelector("[data-acabou]")?.addEventListener("click", async () => {
       if (!confirm(`Marcar "${p.nome}" como acabado? No site ela fica "indisponível temporariamente".`)) return;
-      await q(sb.from("ad_movimentos").insert({ profissional_id: st.user.id, produto_id: p.id, tipo: "ajuste", quantidade: 0, motivo: "Acabou" }));
+      await q(sb.from("ad_movimentos").insert({ profissional_id: st.prof.id, produto_id: p.id, tipo: "ajuste", quantidade: 0, motivo: "Acabou" }));
       toast("Cor marcada como acabada."); fichaProduto(p.id); if (st.aba === "estoque") telaEstoque();
     });
     r.querySelectorAll("[data-cat]").forEach((b) => (b.onclick = async () => {
@@ -158,9 +158,9 @@ function movimento(p, tipo) {
       const n = Number(r.querySelector("[data-q]").value);
       if (!(n >= 0) || (tipo !== "ajuste" && !(n > 0))) return toast("Informe a quantidade.", 1);
       const custo = Number(r.querySelector("[data-custo]")?.value || 0) || null;
-      await q(sb.from("ad_movimentos").insert({ profissional_id: st.user.id, produto_id: p.id, tipo, quantidade: n, custo, motivo }));
+      await q(sb.from("ad_movimentos").insert({ profissional_id: st.prof.id, produto_id: p.id, tipo, quantidade: n, custo, motivo }));
       if (tipo === "compra" && custo && r.querySelector("[data-desp]").checked)
-        await q(sb.from("ad_lancamentos").insert({ profissional_id: st.user.id, tipo: "saida", valor: custo, categoria: p.categoria === "Esmaltes" ? "Compra de esmaltes" : "Compra de materiais", descricao: `${p.nome} (${qtd(n)} ${p.unidade})`, data: isoDia() }));
+        await q(sb.from("ad_lancamentos").insert({ profissional_id: st.prof.id, tipo: "saida", valor: custo, categoria: p.categoria === "Esmaltes" ? "Compra de esmaltes" : "Compra de materiais", descricao: `${p.nome} (${qtd(n)} ${p.unidade})`, data: isoDia() }));
       toast("Estoque atualizado."); fichaProduto(p.id); if (st.aba === "estoque") telaEstoque();
     };
   });
@@ -228,8 +228,8 @@ function editaProduto(p, catInicial) {
         let id = p?.id;
         if (p) await q(sb.from("ad_produtos").update(d).eq("id", p.id));
         else {
-          const novo = await q(sb.from("ad_produtos").insert({ ...d, profissional_id: st.user.id, quantidade: 0, catalogo: "revisao" }).select().single()); id = novo.id;
-          const n = Number(g("q") || 0); if (n > 0) await q(sb.from("ad_movimentos").insert({ profissional_id: st.user.id, produto_id: id, tipo: "compra", quantidade: n, motivo: "Cadastro" }));
+          const novo = await q(sb.from("ad_produtos").insert({ ...d, profissional_id: st.prof.id, quantidade: 0, catalogo: "revisao" }).select().single()); id = novo.id;
+          const n = Number(g("q") || 0); if (n > 0) await q(sb.from("ad_movimentos").insert({ profissional_id: st.prof.id, produto_id: id, tipo: "compra", quantidade: n, motivo: "Cadastro" }));
         }
         toast("Salvo."); fichaProduto(id); if (st.aba === "estoque") telaEstoque();
       } catch { bt.disabled = false; bt.textContent = "Salvar"; }
@@ -295,7 +295,7 @@ function tonalidadeDe(hex) {
 }
 async function enviaFoto(canvas) {
   const blob = await new Promise((ok) => canvas.toBlob(ok, "image/webp", 0.82));
-  const nome = `${st.user.id}/${crypto.randomUUID()}.webp`;
+  const nome = `${st.prof.id}/${crypto.randomUUID()}.webp`;
   const { error } = await sb.storage.from("ad-fotos").upload(nome, blob, { contentType: "image/webp", cacheControl: "31536000" });
   if (error) { toast("Não foi possível enviar a foto: " + error.message, 1); throw error; }
   return sb.storage.from("ad-fotos").getPublicUrl(nome).data.publicUrl;
@@ -421,10 +421,10 @@ function revisaItens(itens) {
         try {
           const foto = await enviaFoto(it.canvas);
           const nome = g("nome") || `${g("tom")} ${feitos + 1}`;
-          const novo = await q(sb.from("ad_produtos").insert({ profissional_id: st.user.id, categoria: "Esmaltes", nome, marca: g("marca") || null, codigo: g("cod") || null,
+          const novo = await q(sb.from("ad_produtos").insert({ profissional_id: st.prof.id, categoria: "Esmaltes", nome, marca: g("marca") || null, codigo: g("cod") || null,
             tonalidade: g("tom"), acabamento: g("acab"), cor_hex: g("hex"), foto_url: foto, quantidade: 0, minimo: 1, catalogo: pub ? "publicado" : "revisao" }).select().single());
           const n = Number(g("q") || 0);
-          if (n > 0) await q(sb.from("ad_movimentos").insert({ profissional_id: st.user.id, produto_id: novo.id, tipo: "compra", quantidade: n, motivo: "Cadastro por foto" }));
+          if (n > 0) await q(sb.from("ad_movimentos").insert({ profissional_id: st.prof.id, produto_id: novo.id, tipo: "compra", quantidade: n, motivo: "Cadastro por foto" }));
           feitos++;
         } catch { /* segue para os próximos */ }
       }

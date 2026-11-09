@@ -30,7 +30,9 @@ async function chaves() {
 
 async function enviar(userId: string, aviso: { id?: string; tipo: string; titulo: string; corpo: string; agendamento_id?: string | null }) {
   await chaves();
-  const { data: subs } = await admin.from("ad_push").select("*").eq("user_id", userId);
+  const { data: eq } = await admin.from("ad_equipe").select("user_id").eq("profissional_id", userId).not("user_id", "is", null);
+  const ids = [userId, ...(eq ?? []).map((e: { user_id: string }) => e.user_id)];
+  const { data: subs } = await admin.from("ad_push").select("*").in("user_id", ids);
   let enviados = 0;
   for (const s of subs ?? []) {
     if (s.prefs && s.prefs[aviso.tipo] === false) continue;

@@ -61,7 +61,11 @@ function toast(msg, erro) {
 function erroMsg(e) {
   const m = e?.message || String(e);
   if (m.includes("ad_sem_conflito")) return "Já existe um atendimento nesse horário.";
-  if (m.includes("Invalid login")) return "E-mail ou senha incorretos.";
+  if (m.includes("Invalid login")) return "E-mail ou senha incorretos. Se nunca entrou, toque em \"Primeiro acesso\".";
+  if (m.includes("Email not confirmed")) return "Confirme seu e-mail pelo link que enviamos e tente de novo.";
+  if (m.includes("already registered")) return "Esse e-mail já tem conta. Entre ou use \"Esqueci minha senha\".";
+  if (/weak|Password should/i.test(m)) return "Senha fraca. Use pelo menos 8 caracteres, misturando letras e números.";
+  if (m.includes("valid email") || m.includes("invalid format")) return "Confira o e-mail digitado.";
   if (m.includes("Failed to fetch")) return "Sem internet. Tente de novo.";
   return m;
 }
@@ -90,11 +94,32 @@ $("l-entrar").onclick = async () => {
   const email = $("l-email").value.trim(), password = $("l-senha").value;
   if (!email || !password) return toast("Preencha e-mail e senha.", 1);
   $("l-entrar").disabled = true;
+  if (modoCriar) {
+    if (password.length < 8) { $("l-entrar").disabled = false; return toast("A senha precisa ter pelo menos 8 caracteres.", 1); }
+    const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.origin + location.pathname } });
+    $("l-entrar").disabled = false;
+    if (error) return toast(erroMsg(error), 1);
+    if (data.user && data.user.identities && data.user.identities.length === 0) return toast("Esse e-mail já tem conta. Toque em \"Já tenho conta\" e entre, ou use \"Esqueci minha senha\".", 1);
+    if (!data.session) return toast("Conta criada! Abra o e-mail que enviamos para confirmar e depois entre aqui.");
+    return;
+  }
   const { error } = await sb.auth.signInWithPassword({ email, password });
   $("l-entrar").disabled = false;
   if (error) toast(erroMsg(error), 1);
 };
-$("l-senha").onkeydown = (e) => e.key === "Enter" && $("l-entrar").click();
+$("l-senha").addEventListener("keydown", (e) => { if (e.key === "Enter") $("l-entrar").click(); });
+$("l-email").addEventListener("keydown", (e) => { if (e.key === "Enter") $("l-senha").focus(); });
+let modoCriar = false;
+$("l-criar").onclick = () => {
+  modoCriar = !modoCriar;
+  $("l-titulo-form").textContent = modoCriar ? "Criar minha conta" : "Entrar";
+  $("l-entrar").textContent = modoCriar ? "Criar conta" : "Entrar";
+  $("l-criar").textContent = modoCriar ? "Já tenho conta — entrar" : "Primeiro acesso? Criar minha conta";
+  $("l-senha").autocomplete = modoCriar ? "new-password" : "current-password";
+  $("l-senha").placeholder = modoCriar ? "Crie uma senha (mínimo 8 caracteres)" : "";
+  $("l-esqueci").classList.toggle("hide", modoCriar);
+};
+$("l-ver").onclick = () => { const i = $("l-senha"); i.type = i.type === "password" ? "text" : "password"; $("l-ver").textContent = i.type === "password" ? "Mostrar" : "Ocultar"; };
 $("l-esqueci").onclick = async () => {
   const email = $("l-email").value.trim();
   if (!email) return toast("Escreva seu e-mail acima primeiro.", 1);
@@ -110,10 +135,20 @@ sb.auth.onAuthStateChange((ev, session) => {
   setTimeout(iniciar, 0);
 });
 
+function semAcesso() {
+  $("v-app").classList.add("hide"); $("v-login").classList.remove("hide");
+  $("l-cartao").innerHTML = `<h2 style="font-size:19px">Conta criada ✓</h2>
+    <p class="mudo" style="margin-top:8px">Você entrou como <b style="color:var(--ink)">${esc(st.user.email)}</b>, mas este e-mail ainda não tem acesso ao salão.</p>
+    <p class="mudo" style="margin-top:8px">Peça para quem administra o app liberar este e-mail em <b style="color:var(--ink)">Mais › Quem pode acessar</b>. Depois é só abrir o app de novo.</p>
+    <button class="btn ouro cheio" style="margin-top:16px" onclick="location.reload()">Já liberaram, tentar de novo</button>
+    <button class="link" style="display:block;margin:12px auto 0" onclick="sb.auth.signOut().then(()=>location.reload())">Entrar com outro e-mail</button>`;
+}
+
 async function iniciar() {
   if (!st.user) { $("v-app").classList.add("hide"); $("v-login").classList.remove("hide"); return; }
-  const { data: prof } = await sb.from("ad_profissionais").select("*").eq("id", st.user.id).maybeSingle();
-  if (!prof) { toast("Esta conta não tem um salão cadastrado.", 1); await sb.auth.signOut(); return; }
+  const { data: salao } = await sb.rpc("ad_meu_salao");
+  const { data: prof } = salao ? await sb.from("ad_profissionais").select("*").eq("id", salao).maybeSingle() : { data: null };
+  if (!prof) { semAcesso(); return; }
   st.prof = prof;
   $("b-perfil").textContent = iniciais(prof.nome);
   $("v-login").classList.add("hide"); $("v-app").classList.remove("hide");
@@ -188,10 +223,10 @@ let canal, recarga;
 function tempoReal() {
   if (canal) sb.removeChannel(canal);
   canal = sb.channel("nay-gestao")
-    .on("postgres_changes", { event: "*", schema: "public", table: "ad_agendamentos", filter: `profissional_id=eq.${st.user.id}` }, () => {
+    .on("postgres_changes", { event: "*", schema: "public", table: "ad_agendamentos", filter: `profissional_id=eq.${st.prof.id}` }, () => {
       clearTimeout(recarga); recarga = setTimeout(() => { if (!$("folha").classList.contains("on")) atualizaTela(); }, 600);
     })
-    .on("postgres_changes", { event: "INSERT", schema: "public", table: "ad_avisos", filter: `profissional_id=eq.${st.user.id}` }, (p) => {
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "ad_avisos", filter: `profissional_id=eq.${st.prof.id}` }, (p) => {
       toast(p.new.titulo + " — " + p.new.corpo); contaAvisos();
       const sino = $("b-sino"); sino.classList.remove("toca"); void sino.offsetWidth; sino.classList.add("toca");
     })
@@ -585,7 +620,7 @@ async function novoAgendamento({ data, cliente }) {
       if (!horario) return toast("Escolha o horário.", 1);
       const ini = new Date(horario);
       const { error } = await sb.from("ad_agendamentos").insert({
-        profissional_id: st.user.id, servico_id: s.id, servico_nome: s.nome, preco: s.preco,
+        profissional_id: st.prof.id, servico_id: s.id, servico_nome: s.nome, preco: s.preco,
         cliente_nome: nome, cliente_whatsapp: zap, cliente_id: cli?.id || null, status: "confirmado",
         inicio: ini.toISOString(), fim: new Date(ini.getTime() + s.duracao_min * 60000).toISOString(),
         observacao: r.querySelector("[data-obs]").value.trim() || null,
@@ -622,7 +657,7 @@ async function registraPagamento(a, depoisDeFinalizar) {
     r.querySelector("[data-salvar]").onclick = async () => {
       const valor = Number(r.querySelector("[data-valor]").value);
       if (!(valor > 0)) return toast("Informe o valor.", 1);
-      await q(sb.from("ad_pagamentos").insert({ profissional_id: st.user.id, agendamento_id: a?.id || null, cliente_id: a?.cliente_id || null, valor, forma, observacao: r.querySelector("[data-obs]")?.value.trim() || null }));
+      await q(sb.from("ad_pagamentos").insert({ profissional_id: st.prof.id, agendamento_id: a?.id || null, cliente_id: a?.cliente_id || null, valor, forma, observacao: r.querySelector("[data-obs]")?.value.trim() || null }));
       if (a && pago + valor >= Number(a.preco) - 0.009) await q(sb.from("ad_agendamentos").update({ pago: true }).eq("id", a.id));
       toast(`Pagamento de ${brl(valor)} registrado. ✨`); festa();
       if (a) { if (a.status === "concluido" && confirm("Mandar mensagem de agradecimento para a cliente?")) abreZap(linkZap(a, "agradecimento")); detalheAg(a.id); }
@@ -734,7 +769,7 @@ function editaCliente(c) {
       if (d.nome.length < 2) return toast("Escreva o nome.", 1);
       if (d.whatsapp.length < 10) return toast("Escreva o WhatsApp com DDD.", 1);
       const { data, error } = c ? await sb.from("ad_clientes").update(d).eq("id", c.id).select().single()
-        : await sb.from("ad_clientes").insert({ ...d, profissional_id: st.user.id }).select().single();
+        : await sb.from("ad_clientes").insert({ ...d, profissional_id: st.prof.id }).select().single();
       if (error) return toast(error.message.includes("duplicate") ? "Já existe uma cliente com esse WhatsApp." : erroMsg(error), 1);
       toast("Cliente salva."); detalheCliente(data.id); if (st.aba === "clientes") telaClientes();
     };
@@ -878,7 +913,7 @@ function novaDespesa() {
       const valor = Number(r.querySelector("[data-valor]").value);
       if (!(valor > 0)) return toast("Informe o valor.", 1);
       const dt = r.querySelector("[data-data]").value || isoDia();
-      await q(sb.from("ad_lancamentos").insert({ profissional_id: st.user.id, tipo: "saida", valor, categoria: cat, descricao: r.querySelector("[data-desc]").value.trim() || cat, data: dt, pago: jaPaga, vencimento: jaPaga ? null : dt }));
+      await q(sb.from("ad_lancamentos").insert({ profissional_id: st.prof.id, tipo: "saida", valor, categoria: cat, descricao: r.querySelector("[data-desc]").value.trim() || cat, data: dt, pago: jaPaga, vencimento: jaPaga ? null : dt }));
       toast(jaPaga ? `Despesa de ${brl(valor)} registrada.` : `Conta de ${brl(valor)} anotada. Aviso quando estiver perto de vencer.`); fechaFolha(); atualizaTela();
     };
   });
@@ -890,7 +925,7 @@ function editaMeta() {
     <button class="btn prim cheio" data-salvar>Salvar meta</button>`, (r) => {
     r.querySelector("[data-salvar]").onclick = async () => {
       const v = Number(r.querySelector("[data-meta]").value) || null;
-      st.prof = await q(sb.from("ad_profissionais").update({ meta_mensal: v }).eq("id", st.user.id).select().single());
+      st.prof = await q(sb.from("ad_profissionais").update({ meta_mensal: v }).eq("id", st.prof.id).select().single());
       toast("Meta salva."); fechaFolha(); atualizaTela();
     };
   });
@@ -944,6 +979,7 @@ function telaMais() {
     ["chegar", IC.local, "Como chegar", "Endereço, mapa e compartilhar localização"],
     ["site", IC.link, "Site de agendamento", "Copiar e divulgar seu link"],
     ["salao", IC.salao, "Dados do salão", "Nome, WhatsApp, Instagram e endereço"],
+    ...(st.prof.id === st.user.id ? [["equipe", IC.cliente, "Quem pode acessar", "Liberar o app para outro e-mail"]] : []),
     ["seguranca", IC.cadeado, "Senha do app e biometria", travaCfg() ? "Ativada neste celular" : "Proteja o app com uma senha de números"],
     ["aparencia", IC.lua, "Aparência", temaAtual() === "claro" ? "Tema claro" : "Tema escuro"],
     ["tutorial", IC.estrela, "Tutorial do app", "Veja de novo como usar cada parte"],
@@ -954,9 +990,30 @@ function telaMais() {
   const r = tela(`<div class="lista">${itens.map(([k, ic, t, s]) => `<button class="item" data-m="${k}"><div class="ic">${ic}</div><div class="cresce"><b>${t}</b>${s ? `<div class="pequeno">${s}</div>` : ""}</div><span class="seta">›</span></button>`).join("")}</div>
     <p class="pequeno" style="text-align:center;margin-top:20px">Nay Nails Gestão · versão 1.0<br>Mesma agenda do site de agendamento</p>`);
   r.querySelectorAll("[data-m]").forEach((b) => (b.onclick = () => ({
-    estoque: () => vaiPara("estoque"), relatorios: telaRelatorios, servicos: telaServicos, horarios: telaHorarios, notificacoes: telaNotificacoes, chegar: comoChegar, site: telaSite, salao: dadosSalao, instalar: instrucoesInstalar, senha: novaSenha, seguranca: telaSeguranca, aparencia: telaAparencia, automacoes: telaAutomacoes, tutorial: () => mostraTutorial(),
+    estoque: () => vaiPara("estoque"), relatorios: telaRelatorios, equipe: telaEquipe, servicos: telaServicos, horarios: telaHorarios, notificacoes: telaNotificacoes, chegar: comoChegar, site: telaSite, salao: dadosSalao, instalar: instrucoesInstalar, senha: novaSenha, seguranca: telaSeguranca, aparencia: telaAparencia, automacoes: telaAutomacoes, tutorial: () => mostraTutorial(),
     sair: async () => { if (confirm("Sair do app?")) { await sb.auth.signOut(); location.reload(); } },
   })[b.dataset.m]()));
+}
+
+// ---------- quem pode acessar ----------
+async function telaEquipe() {
+  const lista = await q(sb.from("ad_equipe").select("*").eq("profissional_id", st.prof.id).order("criado_em"));
+  abreFolha(cabFolha("Quem pode acessar", "Libere o app para outra pessoa. Ela cria a conta com o próprio e-mail em \"Primeiro acesso\" e vê a mesma agenda.") + `
+    <div class="lista"><div class="item" style="cursor:default"><div class="ic">${IC.cliente}</div><div class="cresce"><b>${esc(st.user.email)}</b><div class="pequeno">Você · administradora</div></div></div>
+    ${lista.map((e) => `<div class="item" style="cursor:default"><div class="ic">${IC.cliente}</div><div class="cresce"><b>${esc(e.email)}</b><div class="pequeno">${e.user_id ? "Já entrou no app" : "Ainda não entrou"}</div></div><button class="btn mini" data-tira="${esc(e.email)}">Remover</button></div>`).join("")}</div>
+    <div class="cartao"><label class="f">E-mail da pessoa</label><input class="campo" data-email type="email" inputmode="email" autocomplete="off" placeholder="nome@gmail.com"></div>
+    <button class="btn prim cheio" data-add>Liberar acesso</button>`, (r) => {
+    r.querySelector("[data-add]").onclick = async () => {
+      const email = r.querySelector("[data-email]").value.trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return toast("Confira o e-mail.", 1);
+      await q(sb.from("ad_equipe").insert({ profissional_id: st.prof.id, email }));
+      toast("Acesso liberado para " + email); telaEquipe();
+    };
+    r.querySelectorAll("[data-tira]").forEach((b) => (b.onclick = async () => {
+      if (!confirm(`Tirar o acesso de ${b.dataset.tira}?`)) return;
+      await q(sb.from("ad_equipe").delete().eq("profissional_id", st.prof.id).eq("email", b.dataset.tira)); toast("Acesso removido."); telaEquipe();
+    }));
+  });
 }
 
 // ---------- serviços ----------
@@ -986,7 +1043,7 @@ function editaServico(s) {
     r.querySelector("[data-salvar]").onclick = async () => {
       const d = { nome: r.querySelector("[data-nome]").value.trim(), descricao: r.querySelector("[data-desc]").value.trim() || null, preco: Number(r.querySelector("[data-preco]").value || 0), duracao_min: Number(r.querySelector("[data-dur]").value), ativo: r.querySelector("[data-ativo]").checked };
       if (!d.nome) return toast("Escreva o nome do serviço.", 1);
-      await q(s ? sb.from("ad_servicos").update(d).eq("id", s.id) : sb.from("ad_servicos").insert({ ...d, profissional_id: st.user.id }));
+      await q(s ? sb.from("ad_servicos").update(d).eq("id", s.id) : sb.from("ad_servicos").insert({ ...d, profissional_id: st.prof.id }));
       toast("Serviço salvo."); telaServicos();
     };
     r.querySelector("[data-excluir]")?.addEventListener("click", async () => {
@@ -1021,8 +1078,8 @@ async function telaHorarios() {
     desenha(r);
     r.querySelector("[data-salvar]").onclick = async () => {
       if (edit.some((h) => !h.inicio || !h.fim || h.fim <= h.inicio)) return toast("Confira: o fim precisa ser depois do início.", 1);
-      await q(sb.from("ad_horarios").delete().eq("profissional_id", st.user.id));
-      if (edit.length) await q(sb.from("ad_horarios").insert(edit.map((h) => ({ ...h, profissional_id: st.user.id }))));
+      await q(sb.from("ad_horarios").delete().eq("profissional_id", st.prof.id));
+      if (edit.length) await q(sb.from("ad_horarios").insert(edit.map((h) => ({ ...h, profissional_id: st.prof.id }))));
       toast("Horários salvos. O site já foi atualizado.");
     };
     r.querySelector("[data-bloq]").onclick = () => novoBloqueio();
@@ -1052,7 +1109,7 @@ function novoBloqueio() {
       else { const ate = tipo === "ferias" ? r.querySelector("[data-ate-d]").value : de; ini = `${de}T00:00:00-03:00`; fim = `${somaDias(ate, 1)}T00:00:00-03:00`; }
       if (new Date(fim) <= new Date(ini)) return toast("Confira as datas e os horários.", 1);
       const motivo = r.querySelector("[data-motivo]").value.trim() || tipos[tipo].replace(/ \(.*\)/, "");
-      await q(sb.from("ad_bloqueios").insert({ profissional_id: st.user.id, inicio: new Date(ini).toISOString(), fim: new Date(fim).toISOString(), motivo }));
+      await q(sb.from("ad_bloqueios").insert({ profissional_id: st.prof.id, inicio: new Date(ini).toISOString(), fim: new Date(fim).toISOString(), motivo }));
       const conflitos = (await agsEntre(isoDia(ini), somaDias(isoDia(new Date(new Date(fim) - 1)), 1))).filter((a) => ATIVOS.includes(a.status) && new Date(a.inicio) < new Date(fim) && new Date(a.fim) > new Date(ini));
       toast("Horário bloqueado.");
       if (conflitos.length) abreFolha(cabFolha("Atenção", `Já existem ${conflitos.length} cliente(s) marcadas nesse período. Remarque ou avise:`) + conflitos.map((a) => cartaoAg(a, true)).join(""), ligaCartoes);
@@ -1190,7 +1247,7 @@ function dadosSalao() {
       const d = { nome: r.querySelector("[data-nome]").value.trim(), profissao: r.querySelector("[data-prof]").value.trim(), whatsapp: zapNum(r.querySelector("[data-zap]").value),
         instagram: r.querySelector("[data-insta]").value.replace(/^@/, "").trim() || null, endereco: r.querySelector("[data-end]").value.trim() || null };
       if (d.nome.length < 2) return toast("Escreva o nome.", 1);
-      st.prof = await q(sb.from("ad_profissionais").update(d).eq("id", st.user.id).select().single());
+      st.prof = await q(sb.from("ad_profissionais").update(d).eq("id", st.prof.id).select().single());
       toast("Dados salvos."); fechaFolha();
     };
   });
@@ -1427,7 +1484,7 @@ async function telaAutomacoes() {
     <p class="pequeno" style="margin-top:12px">Também automático: avisos de novo agendamento, cancelamento, confirmação e 30 minutos antes de cada cliente, e clientes cadastradas sozinhas quando agendam pelo site.</p>`, (r) => {
     r.querySelectorAll("[data-a]").forEach((c) => (c.onchange = async () => {
       a[c.dataset.a] = c.checked;
-      st.prof = await q(sb.from("ad_profissionais").update({ automacoes: a }).eq("id", st.user.id).select().single());
+      st.prof = await q(sb.from("ad_profissionais").update({ automacoes: a }).eq("id", st.prof.id).select().single());
       toast(c.checked ? "Automação ligada." : "Automação desligada.");
     }));
     r.querySelector("[data-lembretes]").onclick = lembretesEmSequencia;
@@ -1443,7 +1500,7 @@ async function telaFeriados() {
     <div class="cartao">${lista.map(([d, n]) => `<label class="interruptor"><span><b>${n}</b><span class="pequeno" style="display:block">${diaSemana(meioDia(d))}, ${meioDia(d).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })}${ja.has(d) ? " · já bloqueado" : ""}</span></span><input type="checkbox" data-d="${d}" data-n="${esc(n)}" ${ja.has(d) ? "checked disabled" : "checked"}></label>`).join("")}</div>
     <button class="btn prim cheio" data-salvar>Bloquear os marcados</button>`, (r) => {
     r.querySelector("[data-salvar]").onclick = async () => {
-      const marcados = [...r.querySelectorAll("[data-d]:checked:not(:disabled)")].map((c) => ({ profissional_id: st.user.id, inicio: inicioDia(c.dataset.d), fim: inicioDia(somaDias(c.dataset.d, 1)), motivo: "Feriado: " + c.dataset.n }));
+      const marcados = [...r.querySelectorAll("[data-d]:checked:not(:disabled)")].map((c) => ({ profissional_id: st.prof.id, inicio: inicioDia(c.dataset.d), fim: inicioDia(somaDias(c.dataset.d, 1)), motivo: "Feriado: " + c.dataset.n }));
       if (!marcados.length) return toast("Nenhum feriado novo marcado.", 1);
       await q(sb.from("ad_bloqueios").insert(marcados));
       toast(`${marcados.length} feriado${marcados.length > 1 ? "s bloqueados" : " bloqueado"}.`); festa(); fechaFolha(); atualizaTela();
