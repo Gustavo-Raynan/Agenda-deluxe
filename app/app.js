@@ -294,9 +294,9 @@ async function contaAvisos() {
 // ---------- cartões ----------
 function cartaoAg(a, mostraData) {
   const pago = a.pago ? ` · <span class="chip pago">Pago</span>` : "";
-  return `<div class="ag ${a.status}" data-ag="${a.id}">
+  return `<div class="ag ${a.status}" data-ag="${a.id}" style="--cs:${corServico(a)}">
     <div class="h">${hora(a.inicio)}<small>${mostraData ? dataCurta(a.inicio) : "até " + hora(a.fim)}</small></div>
-    <div class="cresce"><div class="n">${esc(a.cliente_nome)}</div><div class="s">${esc(a.servico_nome)}</div></div>
+    <div class="cresce"><div class="n">${esc(a.cliente_nome)}${a.atrasou ? ' <span class="chip faltou" style="font-size:10.5px">Atrasou</span>' : ""}</div><div class="s"><i class="bola" style="background:${corServico(a)}"></i>${esc(a.servico_nome)}</div></div>
     <div class="d"><span class="chip ${a.status}">${STATUS[a.status]}</span><span class="v">${brl(a.preco)}</span></div>
   </div>`;
 }
@@ -319,12 +319,23 @@ async function telaInicio() {
     q(sb.from("ad_agendamentos").select("id").gte("criado_em", new Date(Date.now() - 864e5).toISOString()).neq("status", "cancelado")),
     q(sb.from("ad_lancamentos").select("id,valor,vencimento").eq("tipo", "saida").eq("pago", false).lte("vencimento", somaDias(hoje, 7))),
   ]);
+  const [proximos, atendMes, pags7, clis] = await Promise.all([
+    q(sb.from("ad_agendamentos").select("*").in("status", ATIVOS).gte("fim", new Date().toISOString()).order("inicio").limit(3)),
+    q(sb.from("ad_agendamentos").select("cliente_id,cliente_whatsapp").eq("status", "concluido").gte("inicio", meioDia(iniMes).toISOString())),
+    pagsEntre(somaDias(hoje, -6), amanha),
+    q(sb.from("ad_clientes").select("id,nome,whatsapp,aniversario,foto_url").not("aniversario", "is", null)),
+  ]);
+  const clientesMes = new Set(atendMes.map((a) => a.cliente_id || a.cliente_whatsapp)).size;
+  const pendenteValor = devendo.reduce((s, a) => s + Number(a.preco), 0);
+  const dias7 = Array.from({ length: 7 }, (_, i) => somaDias(hoje, i - 6)).map((d) => ({ d, v: pags7.filter((p) => isoDia(new Date(p.recebido_em)) === d).reduce((s, p) => s + Number(p.valor), 0) }));
+  const mx7 = Math.max(1, ...dias7.map((x) => x.v));
+  const aniv = clis.filter((c) => c.aniversario).map((c) => { const [, mm, dd] = c.aniversario.split("-"); let alvo = `${hoje.slice(0, 4)}-${mm}-${dd}`; if (alvo < hoje) alvo = `${Number(hoje.slice(0, 4)) + 1}-${mm}-${dd}`; return { ...c, alvo, falta: Math.round((meioDia(alvo) - meioDia(hoje)) / 864e5) }; })
+    .filter((c) => c.falta <= 7).sort((x, y) => x.falta - y.falta);
   const recMes = pagsMes.reduce((s, p) => s + Number(p.valor), 0);
   const gastoMes = despMes.filter((l) => l.pago !== false).reduce((s, l) => s + Number(l.valor), 0);
   const estq = resumoEstoque(prods);
   const ativos = ags.filter((a) => a.status !== "cancelado");
   const agora = Date.now();
-  const proxima = ags.find((a) => ATIVOS.includes(a.status) && new Date(a.fim).getTime() > agora);
   const aConfirmar = [...ags, ...agsAmanha].filter((a) => a.status === "marcado" && new Date(a.inicio).getTime() > agora);
   const faturado = pags.reduce((s, p) => s + Number(p.valor), 0);
   const cancel = ags.filter((a) => a.status === "cancelado").length;
@@ -359,18 +370,14 @@ async function telaInicio() {
         <button data-ir="agenda"><b>${livresHoje.length}</b><small>horários livres</small></button>
       </div>
     </div>
-    ${proxima ? `<div class="proxima">
-        <div class="linha" style="align-items:flex-start">
-          <div class="cresce"><small>${new Date(proxima.inicio).getTime() <= agora ? "Atendendo agora" : "Próxima cliente"}</small>
-            <h3>${esc(proxima.cliente_nome)}</h3>
-            <div class="mudo">${esc(proxima.servico_nome)} · ${brl(proxima.preco)}</div></div>
-          <div class="prox-hora">${hora(proxima.inicio)}</div>
-        </div>
-        <div class="acoes">
-          <a class="btn zap mini" target="_blank" rel="noopener" href="https://wa.me/${zapNum(proxima.cliente_whatsapp)}">${IC.zap}WhatsApp</a>
-          <button class="btn mini" data-ag="${proxima.id}">Ver detalhes</button>
-        </div></div>`
-      : `<div class="cartao calmo"><b>${ativos.length ? "Atendimentos de hoje concluídos ✨" : "Nenhuma cliente marcada hoje"}</b><p class="mudo" style="margin-top:2px">${livresHoje.length ? `Ainda há ${livresHoje.length} horários livres. Divulgue seu link.` : "Aproveite para descansar ou organizar o salão."}</p></div>`}
+    ${proximos.length ? `<div class="tit-linha"><h2>Próximas clientes</h2><button data-ir="agenda">Agenda</button></div>
+      <div class="proximas">${proximos.map((a, k) => { const agoraAt = new Date(a.inicio).getTime() <= agora; const dia = isoDia(new Date(a.inicio));
+        return `<div class="prox-item ${k === 0 ? "primeira" : ""}" data-ag="${a.id}" style="--cs:${corServico(a)}">
+          <div class="prox-hora">${hora(a.inicio)}<small>${agoraAt ? "agora" : dia === hoje ? "hoje" : dia === amanha ? "amanhã" : dataCurta(a.inicio)}</small></div>
+          <div class="cresce"><b>${esc(a.cliente_nome)}</b><div class="pequeno">${esc(a.servico_nome)} · ${brl(a.preco)}</div></div>
+          ${k === 0 ? `<a class="btn zap mini" target="_blank" rel="noopener" href="https://wa.me/${zapNum(a.cliente_whatsapp)}" data-parar>${IC.zap}</a>` : `<span class="chip ${a.status}">${STATUS[a.status]}</span>`}
+        </div>`; }).join("")}</div>`
+      : `<div class="cartao calmo"><b>Nenhuma cliente marcada por agora</b><p class="mudo" style="margin-top:2px">${livresHoje.length ? `Ainda há ${livresHoje.length} horários livres hoje. Divulgue seu link.` : "Aproveite para descansar ou organizar o salão."}</p></div>`}
     <div class="cartao mes-resumo" data-ir="caixa">
       <div class="linha entre"><h2 style="margin:0">Este mês</h2><span class="seta">›</span></div>
       <div class="mes-nums">
@@ -378,20 +385,22 @@ async function telaInicio() {
         <div><small>Despesas</small><b>${brl(gastoMes)}</b></div>
         <div><small>Lucro</small><b class="${recMes - gastoMes < 0 ? "neg" : "ouro-t"}">${brl(recMes - gastoMes)}</b></div>
       </div>
+      <div class="mes-nums" style="margin-top:10px">
+        <div><small>Clientes atendidas</small><b>${clientesMes}</b></div>
+        <div><small>A receber</small><b class="${pendenteValor ? "neg" : ""}">${brl(pendenteValor)}</b></div>
+        <div><small>Contas a pagar</small><b>${brl(contas.reduce((s, l) => s + Number(l.valor), 0))}</b></div>
+      </div>
       ${metaHtml}
     </div>
+    <div class="cartao semana" data-ir="caixa">
+      <div class="linha entre"><h2 style="margin:0">Últimos 7 dias</h2><b class="ouro-t">${brl(dias7.reduce((s, x) => s + x.v, 0))}</b></div>
+      <div class="mini-graf">${dias7.map((x) => `<div><span style="height:${Math.max(3, (x.v / mx7) * 100)}%" class="${x.d === hoje ? "hoje" : ""}" title="${brl(x.v)}"></span><small>${x.d === hoje ? "hoje" : new Date(x.d + "T12:00:00Z").toLocaleDateString("pt-BR", { weekday: "short", timeZone: "UTC" }).replace(".", "").slice(0, 3)}</small></div>`).join("")}</div>
+    </div>
+    ${aniv.length ? `<div class="cartao"><h2>🎂 Aniversariantes</h2>${aniv.map((c) => `<div class="linha" style="gap:10px;padding:8px 0;border-top:1px solid var(--line)">${avatarCli(c, 36)}<div class="cresce"><b>${esc(c.nome)}</b><div class="pequeno">${c.falta === 0 ? "Hoje!" : c.falta === 1 ? "Amanhã" : `Em ${c.falta} dias`} · ${c.aniversario.slice(8)}/${c.aniversario.slice(5, 7)}</div></div><a class="btn claro mini" target="_blank" rel="noopener" href="https://wa.me/${zapNum(c.whatsapp)}?text=${encodeURIComponent(`Feliz aniversário, ${primeiroNome(c.nome)}! 🎂💅 Desejo um dia lindo.${fid().ativo && fid().aniversario ? " Seu presente: " + fid().aniversario + "." : ""} Um beijo da Nayara!`)}">Parabéns</a></div>`).join("")}</div>` : ""}
     ${alertas.length ? `<div class="tit-linha"><h2>Avisos</h2><button data-ir="avisos">Ver todos</button></div><div class="lista">${alertas.join("")}</div>` : ""}
     <div id="banner-notif"></div>
-    <div class="tit-linha"><h2>Atalhos</h2></div>
-    <div class="atalhos">
-      <button class="atalho" data-atalho="novo"><span>${IC.mais}</span>Agendar</button>
-      <button class="atalho" data-atalho="clientes"><span>${IC.cliente}</span>Clientes</button>
-      <button class="atalho" data-atalho="financeiro"><span>${IC.dinheiro}</span>Financeiro</button>
-      <button class="atalho" data-atalho="esmaltes"><span>${IC.esmalte}</span>Esmaltes</button>
-      <button class="atalho" data-atalho="estoque"><span>${IC.caixa}</span>Estoque</button>
-      <button class="atalho" data-atalho="compras"><span>${IC.carrinho}</span>Compras</button>
-      <button class="atalho" data-atalho="relatorios"><span>${IC.grafico}</span>Relatórios</button>
-      <button class="atalho" data-atalho="config"><span>${IC.engrenagem}</span>Ajustes</button>
+    <div class="tit-linha"><h2>Atalhos</h2><button id="ed-atalhos">Editar</button></div>
+    <div class="atalhos">${htmlAtalhos()}
     </div>
     <div class="tit-linha"><h2>Hoje</h2><button data-ir="agenda">Agenda completa</button></div>
     ${ags.length ? ags.map((a) => cartaoAg(a)).join("") : `<div class="vazio">${IC.calendario}<div>Nenhum agendamento hoje.</div></div>`}
@@ -410,11 +419,9 @@ async function telaInicio() {
     else if (ir === "estoque") { st.estSeg = estq.baixos.some((p) => p.categoria !== "Esmaltes") ? "produtos" : "esmaltes"; vaiPara("estoque"); }
     else vaiPara(ir);
   }));
-  r.querySelectorAll("[data-atalho]").forEach((b) => (b.onclick = () => ({
-    novo: () => novoAgendamento({}), agenda: () => vaiPara("agenda"), clientes: () => vaiPara("clientes"), financeiro: () => vaiPara("caixa"),
-    estoque: () => { st.estSeg = "produtos"; vaiPara("estoque"); }, esmaltes: () => { st.estSeg = "esmaltes"; vaiPara("estoque"); },
-    relatorios: telaRelatorios, compras: () => registraCompra(), config: () => vaiPara("mais"),
-  })[b.dataset.atalho]()));
+  r.querySelectorAll("[data-atalho]").forEach((b) => (b.onclick = () => ATALHOS[b.dataset.atalho][2]()));
+  $("ed-atalhos").onclick = editaAtalhos;
+  r.querySelectorAll("[data-parar]").forEach((x) => x.addEventListener("click", (e) => e.stopPropagation()));
   bannerNotificacao();
 }
 
@@ -553,6 +560,7 @@ async function detalheAg(id) {
         <button class="btn claro" data-msgs>Mensagens prontas</button>
         <button class="btn claro" data-cli>Ver cliente</button>
       </div>
+      ${ATIVOS.includes(a.status) || a.status === "concluido" ? `<div class="grade2">${!a.pago ? `<button class="btn claro" data-sinal>${a.sinal ? "Sinal: " + brl(a.sinal) : "Registrar sinal"}</button>` : ""}<button class="btn claro" data-atraso>${a.atrasou ? "Tirar atraso" : "Marcar atraso"}</button></div>` : ""}
       ${ATIVOS.includes(a.status) ? `<div class="grade2"><button class="btn claro" data-remarcar>Remarcar</button>${passado ? `<button class="btn perigo" data-st="faltou">Não compareceu</button>` : `<button class="btn perigo" data-cancelar>Cancelar</button>`}</div>` : ""}
       ${a.status === "concluido" || a.pago ? `<button class="btn claro cheio" data-pagar>${IC.dinheiro}${a.pago ? "Registrar outro pagamento" : "Registrar pagamento"}</button>` : ""}
       ${["cancelado", "faltou"].includes(a.status) ? `<button class="btn claro cheio" data-reabrir>Reabrir agendamento</button>` : ""}
@@ -578,6 +586,8 @@ async function detalheAg(id) {
       toast("Agendamento reaberto."); detalheAg(a.id); atualizaTela();
     });
     r.querySelectorAll("[data-pagar]").forEach((b) => (b.onclick = () => registraPagamento(a)));
+    r.querySelector("[data-sinal]")?.addEventListener("click", () => registraPagamento(a, false, true));
+    r.querySelector("[data-atraso]")?.addEventListener("click", async () => { await q(sb.from("ad_agendamentos").update({ atrasou: !a.atrasou }).eq("id", a.id)); toast(a.atrasou ? "Atraso removido." : "Atraso registrado."); detalheAg(a.id); atualizaTela(); });
     r.querySelector("[data-remarcar]")?.addEventListener("click", () => remarcar(a));
     r.querySelector("[data-cli]").onclick = () => a.cliente_id ? detalheCliente(a.cliente_id) : toast("Cliente sem cadastro.", 1);
     r.querySelector("[data-msgs]").onclick = () => mensagensProntas(a);
@@ -692,27 +702,31 @@ async function novoAgendamento({ data, cliente }) {
 // =====================================================================
 // PAGAMENTOS
 // =====================================================================
-async function registraPagamento(a, depoisDeFinalizar) {
+async function registraPagamento(a, depoisDeFinalizar, ehSinal) {
   let pago = 0;
   if (a) pago = (await q(sb.from("ad_pagamentos").select("valor").eq("agendamento_id", a.id))).reduce((s, p) => s + Number(p.valor), 0);
-  const sugestao = a ? Math.max(Number(a.preco) - pago, 0) : "";
+  const sugestao = ehSinal ? "" : a ? Math.max(Number(a.preco) - pago, 0) : "";
   let forma = "pix";
-  abreFolha(cabFolha("Registrar pagamento", a ? `${esc(a.cliente_nome)} · ${esc(a.servico_nome)}${pago ? `<br>Já recebido: ${brl(pago)}` : ""}` : "Recebimento avulso") + `
+  abreFolha(cabFolha(ehSinal ? "Registrar sinal" : "Registrar pagamento", a ? `${esc(a.cliente_nome)} · ${esc(a.servico_nome)}${pago ? `<br>Já recebido: ${brl(pago)}` : ""}` : "Recebimento avulso") + `
     <div class="cartao">
       <label class="f">Valor recebido (R$)</label>
       <input class="campo" data-valor type="number" inputmode="decimal" step="0.01" min="0" value="${sugestao || ""}" style="font-size:22px;font-weight:600">
       <label class="f">Forma de pagamento</label>
       <div class="opcoes" data-formas>${Object.entries(FORMAS).map(([k, v]) => `<button type="button" data-f="${k}" class="${k === forma ? "on" : ""}">${v}</button>`).join("")}</div>
+      <p class="pequeno" data-taxa style="margin-top:8px"></p>
       ${a ? "" : `<label class="f">Descrição</label><input class="campo" data-obs placeholder="Ex.: venda de esmalte">`}
     </div>
     <button class="btn ouro cheio" data-salvar>Salvar pagamento</button>
     ${depoisDeFinalizar ? `<button class="btn claro cheio" data-depois style="margin-top:10px">Registrar depois</button>` : ""}`, (r) => {
-    r.querySelectorAll("[data-f]").forEach((b) => (b.onclick = () => { forma = b.dataset.f; r.querySelectorAll("[data-f]").forEach((x) => x.classList.toggle("on", x === b)); }));
+    const mostraTaxa = () => { const v = Number(r.querySelector("[data-valor]").value || 0), p = taxaPct(forma); r.querySelector("[data-taxa]").textContent = p && v ? `Taxa da maquininha (${String(p).replace(".", ",")}%): ${brl(v * p / 100)} · fica ${brl(v - v * p / 100)}` : ""; };
+    r.querySelectorAll("[data-f]").forEach((b) => (b.onclick = () => { forma = b.dataset.f; r.querySelectorAll("[data-f]").forEach((x) => x.classList.toggle("on", x === b)); mostraTaxa(); }));
+    r.querySelector("[data-valor]").addEventListener("input", mostraTaxa); mostraTaxa();
     r.querySelector("[data-depois]")?.addEventListener("click", () => { detalheAg(a.id); atualizaTela(); });
     r.querySelector("[data-salvar]").onclick = async () => {
       const valor = Number(r.querySelector("[data-valor]").value);
       if (!(valor > 0)) return toast("Informe o valor.", 1);
-      await q(sb.from("ad_pagamentos").insert({ profissional_id: st.prof.id, agendamento_id: a?.id || null, cliente_id: a?.cliente_id || null, valor, forma, observacao: r.querySelector("[data-obs]")?.value.trim() || null }));
+      await q(sb.from("ad_pagamentos").insert({ profissional_id: st.prof.id, agendamento_id: a?.id || null, cliente_id: a?.cliente_id || null, valor, forma, taxa: Math.round(valor * taxaPct(forma)) / 100, observacao: ehSinal ? "Sinal" : r.querySelector("[data-obs]")?.value.trim() || null }));
+      if (ehSinal) await q(sb.from("ad_agendamentos").update({ sinal: Number(a.sinal || 0) + valor }).eq("id", a.id));
       if (a && pago + valor >= Number(a.preco) - 0.009) await q(sb.from("ad_agendamentos").update({ pago: true }).eq("id", a.id));
       toast(`Pagamento de ${brl(valor)} registrado. ✨`); festa();
       if (a) { if (a.status === "concluido" && confirm("Mandar mensagem de agradecimento para a cliente?")) abreZap(linkZap(a, "agradecimento")); detalheAg(a.id); }
@@ -740,7 +754,8 @@ async function dadosClientes() {
     return { ...c, ags: meus, visitas: feitos.length, ultima: ult?.inicio || null, primeira: feitos[0]?.inicio || null, proxima: prox?.inicio || null,
       cancel: meus.filter((a) => a.status === "cancelado").length, faltas: meus.filter((a) => a.status === "faltou").length,
       gasto: pags.filter((p) => p.cliente_id === c.id).reduce((s, p) => s + Number(p.valor), 0),
-      diasSem: ult ? Math.max(0, Math.floor((agora - new Date(ult.inicio)) / 864e5)) : null };
+      diasSem: ult ? Math.max(0, Math.floor((agora - new Date(ult.inicio)) / 864e5)) : null,
+      favoritos: Object.entries(feitos.reduce((m, a) => ((m[a.servico_nome] = (m[a.servico_nome] || 0) + 1), m), {})).sort((x, y) => y[1] - x[1]).slice(0, 2).map((x) => x[0]) };
   });
 }
 
@@ -749,7 +764,7 @@ async function telaClientes() {
   const r = tela(`
     <div class="busca">${IC.busca}<input class="campo" id="busca-cli" placeholder="Buscar por nome ou telefone" value="${esc(st.busca)}" autocomplete="off"></div>
     <div class="seg" id="filtro-cli">
-      <button data-f="todas" class="on">Todas</button><button data-f="frequentes">Frequentes</button><button data-f="sumidas">Sumidas</button><button data-f="aniver">Aniversário</button>
+      <button data-f="todas" class="on">Todas</button><button data-f="vip">VIP</button><button data-f="frequentes">Frequentes</button><button data-f="novas">Novas</button><button data-f="sumidas">Inativas</button><button data-f="aniver">Aniver.</button>
     </div>
     <div id="lista-cli"></div>
     <button class="btn ouro cheio" id="nova-cli">${IC.mais}Cadastrar cliente</button>`);
@@ -759,13 +774,16 @@ async function telaClientes() {
     const t = st.busca.toLowerCase().replace(/\D/g, "") || null, n = st.busca.toLowerCase().trim();
     let l = todas.filter((c) => !n || c.nome.toLowerCase().includes(n) || (t && c.whatsapp.includes(t)));
     if (filtro === "frequentes") l = l.filter((c) => c.visitas >= 3).sort((a, b) => b.visitas - a.visitas);
-    if (filtro === "sumidas") l = l.filter((c) => c.diasSem !== null && c.diasSem > 45 && !c.proxima).sort((a, b) => b.diasSem - a.diasSem);
+    if (filtro === "sumidas") l = l.filter((c) => c.diasSem !== null && c.diasSem >= 30 && !c.proxima).sort((a, b) => b.diasSem - a.diasSem);
+    if (filtro === "vip") l = l.filter((c) => c.vip);
+    if (filtro === "novas") l = l.filter((c) => c.visitas <= 1 && (Date.now() - new Date(c.criado_em)) / 864e5 <= 30);
     if (filtro === "aniver") l = l.filter((c) => c.aniversario && c.aniversario.slice(5, 7) === mesAtual).sort((a, b) => a.aniversario.slice(8) - b.aniversario.slice(8));
-    $("lista-cli").innerHTML = l.length ? `<div class="lista">${l.map((c) => `<button class="item" data-c="${c.id}"><div class="avatar">${esc(iniciais(c.nome))}</div>
-      <div class="cresce"><b>${esc(c.nome)}</b>${c.visitas >= 3 ? ' <span class="chip concluido">Frequente</span>' : ""}
+    $("lista-cli").innerHTML = (filtro === "sumidas" && l.length ? `<p class="pequeno" style="margin:0 4px 8px">Clientes há 30 dias ou mais sem voltar e sem horário marcado. Toque em "Convidar" para mandar uma mensagem pronta.</p>` : "") + (l.length ? `<div class="lista">${l.map((c) => `<button class="item" data-c="${c.id}">${avatarCli(c)}
+      <div class="cresce"><b>${esc(c.nome)}</b>${c.vip ? ' <span class="chip vip">VIP</span>' : ""}${c.visitas >= 3 ? ' <span class="chip concluido">Frequente</span>' : ""}
       <div class="pequeno">${c.proxima ? "Próximo: " + dataCurta(c.proxima) + " às " + hora(c.proxima) : c.ultima ? (c.diasSem === 0 ? "Última visita hoje" : `Última visita há ${c.diasSem} dia${c.diasSem !== 1 ? "s" : ""}`) : "Ainda sem visitas"}${filtro === "aniver" && c.aniversario ? " · 🎂 " + c.aniversario.slice(8) + "/" + c.aniversario.slice(5, 7) : ""}</div></div>
-      <span class="seta">›</span></button>`).join("")}</div>`
-      : `<div class="vazio">${IC.cliente}<div>${todas.length ? "Nenhuma cliente encontrada." : "As clientes que agendam pelo site aparecem aqui automaticamente."}</div></div>`;
+      ${filtro === "sumidas" ? `<a class="btn zap mini" target="_blank" rel="noopener" data-parar href="https://wa.me/${zapNum(c.whatsapp)}?text=${encodeURIComponent(msgVolta(c))}">Convidar</a>` : '<span class="seta">›</span>'}</button>`).join("")}</div>`
+      : `<div class="vazio">${IC.cliente}<div>${todas.length ? "Nenhuma cliente nesta lista." : "As clientes que agendam pelo site aparecem aqui automaticamente."}</div></div>`);
+    $("lista-cli").querySelectorAll("[data-parar]").forEach((x) => x.addEventListener("click", (e) => e.stopPropagation()));
     $("lista-cli").querySelectorAll("[data-c]").forEach((b) => (b.onclick = () => detalheCliente(b.dataset.c)));
   };
   $("busca-cli").oninput = (e) => { st.busca = e.target.value; desenha(); };
@@ -774,15 +792,20 @@ async function telaClientes() {
   desenha();
 }
 
+function msgVolta(c) {
+  const n = primeiroNome(c.nome), fav = c.favoritos?.[0];
+  return `Oi, ${n}! 💗 Faz um tempinho que você não vem${c.diasSem ? ` (${c.diasSem} dias!)` : ""}. Bora deixar as unhas lindas de novo${fav ? ` com ${fav.toLowerCase()}` : ""}? Escolha seu horário aqui: ${SITE}`;
+}
 async function detalheCliente(id) {
   const c = (await dadosClientes()).find((x) => x.id === id);
   if (!c) return toast("Cliente não encontrada.", 1);
   const hist = [...c.ags].sort((a, b) => new Date(b.inicio) - new Date(a.inicio));
   const n = primeiroNome(c.nome);
-  const msgRetorno = `Oi, ${n}! 💗 Sentimos sua falta por aqui. Que tal cuidar das unhas essa semana? Escolha seu horário: ${SITE}`;
+  const msgRetorno = msgVolta(c);
   const msgAniver = `Feliz aniversário, ${n}! 🎂💅 Desejo um dia lindo e cheio de carinho. Um beijo da Nayara!`;
   const freq = c.visitas >= 2 ? Math.round((new Date(c.ultima) - new Date(c.primeira)) / 864e5 / (c.visitas - 1)) : null;
-  abreFolha(cabFolha(esc(c.nome), `${fmtTel(c.whatsapp)}${c.email ? " · " + esc(c.email) : ""}${c.aniversario ? " · 🎂 " + c.aniversario.slice(8) + "/" + c.aniversario.slice(5, 7) : ""}`) + `
+  abreFolha(`<div class="cli-topo">${avatarCli(c, 64)}<div class="cresce">${cabFolha(esc(c.nome) + (c.vip ? ' <span class="chip vip">VIP</span>' : ""), `${fmtTel(c.whatsapp)}${c.email ? " · " + esc(c.email) : ""}${c.aniversario ? " · 🎂 " + c.aniversario.slice(8) + "/" + c.aniversario.slice(5, 7) : ""}`)}</div></div>` + `
+    ${c.proxima || c.favoritos.length || c.indicada_por ? `<div class="cartao calmo">${c.proxima ? `<div>📅 Próximo: <b>${dataCurta(c.proxima)} às ${hora(c.proxima)}</b></div>` : ""}${c.favoritos.length ? `<div style="margin-top:4px">💅 Gosta de: <b>${c.favoritos.map(esc).join(", ")}</b></div>` : ""}${c.indicada_por ? `<div style="margin-top:4px">🤝 Indicada por: <b>${esc(c.indicada_por)}</b></div>` : ""}</div>` : ""}
     <div class="stats">
       <div class="stat"><small>Visitas</small><b>${c.visitas}</b><i>${c.primeira ? "desde " + dataCurta(c.primeira) : "—"}</i></div>
       <div class="stat"><small>Total pago</small><b>${brl(c.gasto)}</b><i>${freq ? "volta a cada ~" + freq + " dias" : ""}</i></div>
@@ -790,6 +813,7 @@ async function detalheCliente(id) {
       <div class="stat"><small>Última visita</small><b style="font-size:20px">${c.ultima ? dataCurta(c.ultima) : "—"}</b><i>${c.diasSem === null ? "" : c.diasSem === 0 ? "hoje" : "há " + c.diasSem + " dia" + (c.diasSem !== 1 ? "s" : "")}</i></div>
     </div>
     ${c.cancel + c.faltas >= 2 ? `<p class="cartao" style="background:var(--alerta-bg);color:var(--alerta);font-size:14.5px">⚠️ Essa cliente já cancelou ou faltou ${c.cancel + c.faltas} vezes.</p>` : ""}
+    ${htmlFidelidade(c)}
     ${c.observacao ? `<div class="cartao"><b>Anotações</b><p class="mudo" style="margin-top:4px;white-space:pre-wrap">${esc(c.observacao)}</p></div>` : ""}
     <div class="pilha">
       <a class="btn zap cheio" target="_blank" rel="noopener" href="https://wa.me/${zapNum(c.whatsapp)}">${IC.zap}Conversar no WhatsApp</a>
@@ -798,12 +822,14 @@ async function detalheCliente(id) {
         <a class="btn claro" target="_blank" rel="noopener" href="https://wa.me/${zapNum(c.whatsapp)}?text=${encodeURIComponent(msgRetorno)}">Convidar a voltar</a>
         <a class="btn claro" target="_blank" rel="noopener" href="https://wa.me/${zapNum(c.whatsapp)}?text=${encodeURIComponent(msgAniver)}">Parabéns 🎂</a>
       </div>
-      <button class="btn claro cheio" data-editar>Editar dados e anotações</button>
+      <div class="grade2"><button class="btn claro" data-vip>${c.vip ? "Tirar do VIP" : "⭐ Marcar como VIP"}</button><button class="btn claro" data-editar>Editar dados</button></div>
     </div>
     <div class="tit-linha"><h2>Histórico</h2></div>
     ${hist.length ? hist.map((a) => cartaoAg(a, true)).join("") : `<div class="vazio">Sem atendimentos ainda.</div>`}`, (r) => {
     r.querySelector("[data-agendar]").onclick = () => novoAgendamento({ cliente: c });
     r.querySelector("[data-editar]").onclick = () => editaCliente(c);
+    r.querySelector("[data-vip]").onclick = async () => { await q(sb.from("ad_clientes").update({ vip: !c.vip }).eq("id", c.id)); toast(c.vip ? "Cliente tirada do VIP." : "Cliente marcada como VIP ⭐"); detalheCliente(c.id); };
+    r.querySelector("[data-resgatar]")?.addEventListener("click", async () => { if (await resgataFid(c)) detalheCliente(c.id); });
     ligaCartoes(r);
   });
 }
@@ -811,18 +837,24 @@ async function detalheCliente(id) {
 function editaCliente(c) {
   abreFolha(cabFolha(c ? "Editar cliente" : "Cadastrar cliente") + `
     <div class="cartao">
+      <div class="linha" style="gap:12px;margin-bottom:6px"><div data-prev>${c ? avatarCli(c, 64) : `<div class="avatar" style="width:64px;height:64px">${IC.camera}</div>`}</div><label class="btn mini" style="cursor:pointer">${IC.camera}Foto<input type="file" accept="image/*" data-foto hidden></label></div>
       <label class="f">Nome completo</label><input class="campo" data-nome value="${esc(c?.nome || "")}" autocomplete="off">
       <label class="f">WhatsApp</label><input class="campo" data-zap inputmode="tel" value="${c ? fmtTel(c.whatsapp) : ""}" placeholder="(31) 99999-9999">
       <label class="f">E-mail</label><input class="campo" data-email type="email" value="${esc(c?.email || "")}" placeholder="Opcional">
       <label class="f">Aniversário</label><input class="campo" data-aniver type="date" value="${c?.aniversario || ""}">
+      <label class="f">Indicada por</label><input class="campo" data-ind value="${esc(c?.indicada_por || "")}" placeholder="Nome de quem indicou (opcional)">
+      <label class="interruptor" style="margin-top:8px"><span>Cliente VIP</span><input type="checkbox" data-vip ${c?.vip ? "checked" : ""}></label>
       <label class="f">Anotações particulares</label><textarea class="campo" data-obs placeholder="Preferências, cores favoritas, cuidados…">${esc(c?.observacao || "")}</textarea>
     </div>
     <button class="btn ouro cheio" data-salvar>Salvar</button>`, (r) => {
+    let foto = null;
+    r.querySelector("[data-foto]").onchange = (e) => { foto = e.target.files[0]; if (foto) r.querySelector("[data-prev]").innerHTML = `<img src="${URL.createObjectURL(foto)}" class="avatar" style="width:64px;height:64px;object-fit:cover;padding:0">`; };
     r.querySelector("[data-salvar]").onclick = async () => {
-      const d = { nome: r.querySelector("[data-nome]").value.trim(), whatsapp: r.querySelector("[data-zap]").value.replace(/\D/g, ""),
+      const d = { nome: r.querySelector("[data-nome]").value.trim(), whatsapp: r.querySelector("[data-zap]").value.replace(/\D/g, ""), vip: r.querySelector("[data-vip]").checked, indicada_por: r.querySelector("[data-ind]").value.trim() || null,
         email: r.querySelector("[data-email]").value.trim() || null, aniversario: r.querySelector("[data-aniver]").value || null, observacao: r.querySelector("[data-obs]").value.trim() || null };
       if (d.nome.length < 2) return toast("Escreva o nome.", 1);
       if (d.whatsapp.length < 10) return toast("Escreva o WhatsApp com DDD.", 1);
+      if (foto) { try { d.foto_url = await fotoCliente(foto); } catch { return; } }
       const { data, error } = c ? await sb.from("ad_clientes").update(d).eq("id", c.id).select().single()
         : await sb.from("ad_clientes").insert({ ...d, profissional_id: st.prof.id }).select().single();
       if (error) return toast(error.message.includes("duplicate") ? "Já existe uma cliente com esse WhatsApp." : erroMsg(error), 1);
@@ -850,7 +882,15 @@ async function telaCaixa() {
   const aPagar = await q(sb.from("ad_lancamentos").select("*").eq("tipo", "saida").eq("pago", false).order("vencimento"));
   const recebido = pags.reduce((s, p) => s + Number(p.valor), 0);
   const despesas = desp.reduce((s, l) => s + Number(l.valor), 0);
-  const lucro = recebido - despesas;
+  // Lucro real: bruto − taxas da maquininha − material gasto nos atendimentos − despesas.
+  // Se o custo de material por serviço estiver cadastrado, as compras de material não entram de novo (evita contar duas vezes).
+  const usaCustoServ = st.servicos.some((x) => Number(x.custo_material) > 0);
+  const taxas = pags.reduce((s, p) => s + Number(p.taxa || 0), 0);
+  const materiais = usaCustoServ ? ags.filter((a) => a.status === "concluido").reduce((s, a) => s + custoServico(a), 0) : 0;
+  const COMPRA = ["Compra de esmaltes", "Compra de materiais"];
+  const despOper = usaCustoServ ? desp.filter((l) => !COMPRA.includes(l.categoria)).reduce((s, l) => s + Number(l.valor), 0) : despesas;
+  const fixas = desp.filter((l) => l.fixa).reduce((s, l) => s + Number(l.valor), 0);
+  const lucro = recebido - taxas - materiais - despOper;
   const comAg = pags.filter((p) => p.agendamento_id);
   const atend = new Set(comAg.map((p) => p.agendamento_id)).size;
   const ticket = atend ? comAg.reduce((s, p) => s + Number(p.valor), 0) / atend : 0;
@@ -872,13 +912,13 @@ async function telaCaixa() {
   const r = tela(`
     <div class="seg" id="per"><button data-p="hoje" class="${per === "hoje" ? "on" : ""}">Hoje</button><button data-p="semana" class="${per === "semana" ? "on" : ""}">7 dias</button><button data-p="mes" class="${per === "mes" ? "on" : ""}">Mês</button></div>
     <div class="hero">
-      <div class="l">Lucro ${rot}</div>
+      <div class="l">Lucro real ${rot}</div>
       <div class="v">${brl(lucro)}</div>
-      <div class="sub">${variacao !== null ? (variacao >= 0 ? "▲ " : "▼ ") + Math.abs(variacao) + "% de recebimentos vs. o mesmo período do mês passado" : "Recebido menos despesas"}</div>
+      <div class="sub">${variacao !== null ? (variacao >= 0 ? "▲ " : "▼ ") + Math.abs(variacao) + "% de recebimentos vs. o mesmo período do mês passado" : "O que sobrou de verdade"}</div>
       <div class="hstats">
-        <div><small>Recebido</small><b>${brl(recebido)}</b></div>
-        <div><small>Despesas</small><b>${brl(despesas)}</b></div>
-        <div><small>${per === "mes" ? "Ainda vem" : "A receber"}</small><b>${brl(per === "mes" ? aindaVem : pendente)}</b></div>
+        <div><small>Faturamento bruto</small><b>${brl(recebido)}</b></div>
+        <div><small>Taxas + material</small><b>${brl(taxas + materiais)}</b></div>
+        <div><small>Despesas</small><b>${brl(despOper)}</b></div>
       </div>
       ${per === "mes" ? `<div class="meta">${meta ? `<small><span>Meta do mês: ${brl(meta)}</span><span>${pctMeta}%</span></small><div class="barra"><span style="width:${pctMeta}%"></span></div>` : ""}
         <small style="margin-top:8px"><span>Previsão do mês (recebido + agendado): <b>${brl(recebido + aindaVem)}</b></span></small></div>` : ""}
@@ -887,10 +927,19 @@ async function telaCaixa() {
       <button class="btn prim" id="pag-avulso">${IC.mais}Recebimento</button>
       <button class="btn" id="nova-desp">${IC.mais}Despesa</button>
     </div>
+    <div class="cartao calmo conta">
+      <div class="linha entre"><span>Faturamento bruto</span><b>${brl(recebido)}</b></div>
+      <div class="linha entre"><span>− Taxas da maquininha</span><span>${brl(taxas)}</span></div>
+      ${usaCustoServ ? `<div class="linha entre"><span>− Material dos atendimentos</span><span>${brl(materiais)}</span></div>` : ""}
+      <div class="linha entre"><span>− Despesas${fixas ? ` (fixas ${brl(fixas)})` : ""}</span><span>${brl(despOper)}</span></div>
+      <div class="linha entre total"><b>= Lucro real</b><b class="${lucro < 0 ? "neg" : "ouro-t"}">${brl(lucro)}</b></div>
+      ${!usaCustoServ || !taxaPct("credito") ? `<button class="link" id="b-taxas" style="margin-top:8px">${!taxaPct("credito") ? "Cadastrar taxa da maquininha" : ""}${!taxaPct("credito") && !usaCustoServ ? " e " : ""}${!usaCustoServ ? "custo de material por serviço" : ""} ›</button>` : `<p class="pequeno" style="margin-top:6px">Compras de esmalte e material não entram aqui, porque o custo já vem de cada atendimento.</p>`}
+    </div>
     <div class="stats">
       <div class="stat"><small>A receber</small><b>${brl(pendente)}</b><i>${pendentes.length} atendido${pendentes.length !== 1 ? "s" : ""} sem pagar</i></div>
       <div class="stat"><small>Ticket médio</small><b>${brl(ticket)}</b><i>por atendimento</i></div>
       <div class="stat"><small>Cancelamentos</small><b>${cancel.length}</b><i>${faltas.length} falta${faltas.length !== 1 ? "s" : ""}</i></div>
+      <div class="stat"><small>${per === "mes" ? "Ainda vem no mês" : "Atendimentos"}</small><b>${per === "mes" ? brl(aindaVem) : atend}</b><i>${per === "mes" ? "já agendado" : rot}</i></div>
       <div class="stat"><small>Perdido com faltas</small><b>${brl([...cancel, ...faltas].reduce((s, a) => s + Number(a.preco), 0))}</b><i>${rot}</i></div>
     </div>
     ${per === "mes" ? `<button class="btn cheio" id="b-meta" style="margin-bottom:12px">${meta ? "Mudar a meta do mês" : "Definir uma meta para o mês"}</button>` : ""}
@@ -912,6 +961,7 @@ async function telaCaixa() {
   $("nova-desp").onclick = $("nova-desp2").onclick = novaDespesa;
   $("b-meta")?.addEventListener("click", editaMeta);
   $("b-relat").onclick = telaRelatorios;
+  $("b-taxas")?.addEventListener("click", telaTaxas);
   r.querySelectorAll("[data-pagou]").forEach((b) => (b.onclick = async () => { await q(sb.from("ad_lancamentos").update({ pago: true, data: isoDia() }).eq("id", b.dataset.pagou)); toast("Conta paga e lançada nas despesas."); telaCaixa(); }));
   r.querySelectorAll("[data-del-desp]").forEach((b) => (b.onclick = async () => { if (!confirm("Apagar esta despesa?")) return; await q(sb.from("ad_lancamentos").delete().eq("id", b.dataset.delDesp)); toast("Despesa apagada."); telaCaixa(); }));
   dicas().then((h) => { if ($("dicas")) $("dicas").innerHTML = h; });
@@ -926,28 +976,49 @@ async function telaRelatorios() {
   const fimTudo = new Date(Date.UTC(a0, m0, 1)).toISOString().slice(0, 10);
   const [pags, desp, ags] = await Promise.all([
     pagsEntre(meses[0], fimTudo),
-    q(sb.from("ad_lancamentos").select("valor,data,categoria").eq("tipo", "saida").eq("pago", true).gte("data", meses[0]).lt("data", fimTudo)),
+    q(sb.from("ad_lancamentos").select("valor,data,categoria,fixa").eq("tipo", "saida").eq("pago", true).gte("data", meses[0]).lt("data", fimTudo)),
     agsEntre(meses[0], fimTudo),
   ]);
   const chaveMes = (iso) => iso.slice(0, 7);
   const dados = meses.map((m) => {
     const k = chaveMes(m);
-    const rec = pags.filter((p) => isoDia(new Date(p.recebido_em)).slice(0, 7) === k).reduce((s, p) => s + Number(p.valor), 0);
+    const pm = pags.filter((p) => isoDia(new Date(p.recebido_em)).slice(0, 7) === k);
+    const rec = pm.reduce((s, p) => s + Number(p.valor), 0), tx = pm.reduce((s, p) => s + Number(p.taxa || 0), 0);
     const gas = desp.filter((l) => l.data.slice(0, 7) === k).reduce((s, l) => s + Number(l.valor), 0);
     const at = ags.filter((a) => isoDia(new Date(a.inicio)).slice(0, 7) === k && a.status === "concluido").length;
-    return { k, nome: new Date(m + "T12:00:00Z").toLocaleDateString("pt-BR", { month: "short", timeZone: "UTC" }).replace(".", ""), rec, gas, lucro: rec - gas, at };
+    return { k, nome: new Date(m + "T12:00:00Z").toLocaleDateString("pt-BR", { month: "short", timeZone: "UTC" }).replace(".", ""), rec, gas: gas + tx, lucro: rec - gas - tx, at };
   });
   const mx = Math.max(1, ...dados.map((d) => Math.max(d.rec, d.gas)));
   const tot = dados.reduce((s, d) => ({ rec: s.rec + d.rec, gas: s.gas + d.gas, at: s.at + d.at }), { rec: 0, gas: 0, at: 0 });
   const melhor = [...dados].sort((x, y) => y.lucro - x.lucro)[0];
+  // fluxo de caixa do mês atual, semana a semana
+  const mesAtual = hoje.slice(0, 7);
+  const semanas = [1, 8, 15, 22, 29].map((d0) => { const ini = `${mesAtual}-${String(d0).padStart(2, "0")}`, fimS = d0 === 29 ? `${mesAtual}-31` : `${mesAtual}-${String(d0 + 6).padStart(2, "0")}`;
+    const ent = pags.filter((p) => { const d = isoDia(new Date(p.recebido_em)); return d >= ini && d <= fimS; }).reduce((s, p) => s + Number(p.valor) - Number(p.taxa || 0), 0);
+    const sai = desp.filter((l) => l.data >= ini && l.data <= fimS).reduce((s, l) => s + Number(l.valor), 0);
+    return { rot: `${d0}–${d0 === 29 ? "fim" : d0 + 6}`, ent, sai }; });
+  let saldo = 0; semanas.forEach((w) => (w.saldo = saldo += w.ent - w.sai));
+  // lucro estimado por serviço (preço − material − taxa média)
+  const txMedia = pags.reduce((s, p) => s + Number(p.valor), 0) ? pags.reduce((s, p) => s + Number(p.taxa || 0), 0) / pags.reduce((s, p) => s + Number(p.valor), 0) : 0;
+  const porServ = st.servicos.filter((x) => x.ativo !== false).map((x) => { const n = ags.filter((a) => a.status === "concluido" && (a.servico_id === x.id || a.servico_nome === x.nome)).length;
+    const lu = Number(x.preco) - Number(x.custo_material || 0) - Number(x.preco) * txMedia; return { x, n, lu, total: lu * n }; }).sort((a, b) => b.total - a.total || b.lu - a.lu);
   abreFolha(cabFolha("Relatórios", "Últimos 6 meses, com os dados reais do salão.") + `
+    <button class="btn cheio nao-imprime" data-pdf style="margin-bottom:12px">${IC.baixar}Salvar relatório em PDF</button>
     <div class="cartao"><h2>Faturamento × despesas</h2>
       <div class="grafico">${dados.map((d) => `<div class="g-col"><div class="g-barras"><span class="g-rec" style="height:${(d.rec / mx) * 100}%" title="${brl(d.rec)}"></span><span class="g-gas" style="height:${(d.gas / mx) * 100}%" title="${brl(d.gas)}"></span></div><small>${d.nome}</small></div>`).join("")}</div>
       <div class="linha" style="gap:14px;margin-top:10px"><span class="pequeno"><i class="g-leg" style="background:var(--acc)"></i>Recebido</span><span class="pequeno"><i class="g-leg" style="background:var(--red)"></i>Despesas</span></div>
     </div>
     <div class="resumo-val"><div><small>Recebido (6 meses)</small><b class="pos">${brl(tot.rec)}</b></div><div><small>Despesas</small><b class="neg">${brl(tot.gas)}</b></div><div><small>Lucro líquido</small><b>${brl(tot.rec - tot.gas)}</b></div></div>
     <div class="resumo-val"><div><small>Atendimentos</small><b>${tot.at}</b></div><div><small>Ticket médio</small><b>${brl(tot.at ? tot.rec / tot.at : 0)}</b></div><div><small>Melhor mês</small><b style="font-size:14px">${melhor.lucro > 0 ? melhor.nome : "—"}</b></div></div>
-    <div class="cartao"><h2>Mês a mês</h2>${dados.slice().reverse().map((d) => `<div class="linha entre" style="padding:8px 0;border-top:1px solid var(--line)"><span style="text-transform:capitalize">${d.nome}</span><span class="pequeno">${d.at} atend.</span><b class="${d.lucro < 0 ? "neg" : ""}">${brl(d.lucro)}</b></div>`).join("")}</div>`);
+    <div class="cartao"><h2>Fluxo de caixa deste mês</h2><p class="pequeno" style="margin:2px 0 6px">Entradas (já sem taxas) e saídas, semana a semana, com o saldo acumulado.</p>
+      <div class="linha entre pequeno" style="padding:6px 0"><span style="width:56px">Dias</span><span>Entrou</span><span>Saiu</span><b>Saldo</b></div>
+      ${semanas.map((w) => `<div class="linha entre" style="padding:7px 0;border-top:1px solid var(--line)"><span style="width:56px">${w.rot}</span><span class="pos">${brl(w.ent)}</span><span class="neg">${brl(w.sai)}</span><b class="${w.saldo < 0 ? "neg" : ""}">${brl(w.saldo)}</b></div>`).join("")}</div>
+    <div class="cartao"><h2>Lucro por serviço</h2><p class="pequeno" style="margin:2px 0 6px">Preço menos material e taxa média. Cadastre o custo em Mais › Taxas e custos.</p>
+      ${porServ.map((p) => `<div class="linha" style="gap:10px;padding:7px 0;border-top:1px solid var(--line)"><span class="bola" style="background:${p.x.cor || "var(--acc)"}"></span><span class="cresce">${esc(p.x.nome)}<br><small class="mudo">${p.n} feito${p.n !== 1 ? "s" : ""} em 6 meses · ${brl(p.lu)} por atendimento</small></span><b>${brl(p.total)}</b></div>`).join("")}</div>
+    <div class="cartao"><h2>Mês a mês</h2>${dados.slice().reverse().map((d) => `<div class="linha entre" style="padding:8px 0;border-top:1px solid var(--line)"><span style="text-transform:capitalize">${d.nome}</span><span class="pequeno">${d.at} atend.</span><b class="${d.lucro < 0 ? "neg" : ""}">${brl(d.lucro)}</b></div>`).join("")}</div>
+    <p class="pequeno" style="text-align:center">Gerado em ${dataLonga(new Date())} · Nay Nails Gestão</p>`, (r) => {
+    r.querySelector("[data-pdf]").onclick = () => salvaPDF("Relatório Nay Nails " + hoje.slice(0, 7));
+  });
 }
 
 function novaDespesa() {
@@ -958,17 +1029,20 @@ function novaDespesa() {
       <label class="f">Valor (R$)</label><input class="campo" data-valor type="number" inputmode="decimal" step="0.01" min="0" style="font-size:22px;font-weight:700">
       <label class="f">Tipo</label><div class="opcoes" data-cats>${cats.map((c) => `<button type="button" data-c="${c}" class="${c === cat ? "on" : ""}">${c}</button>`).join("")}</div>
       <label class="f">Descrição</label><input class="campo" data-desc placeholder="Ex.: esmaltes, lixas, algodão">
+      <label class="f">Tipo</label><div class="seg" data-tipo style="margin:0 0 4px"><button type="button" data-fx="0" class="on">Variável</button><button type="button" data-fx="1">Fixa (todo mês)</button></div>
       <label class="f">Situação</label><div class="seg" data-sit style="margin:0"><button type="button" data-pg="1" class="on">Já paguei</button><button type="button" data-pg="0">Conta a pagar</button></div>
       <label class="f" data-rot-data>Data do pagamento</label><input class="campo" data-data type="date" value="${isoDia()}">
     </div>
     <button class="btn prim cheio" data-salvar>Salvar despesa</button>`, (r) => {
+    let fixa = false;
+    r.querySelectorAll("[data-fx]").forEach((b) => (b.onclick = () => { fixa = b.dataset.fx === "1"; r.querySelectorAll("[data-fx]").forEach((x) => x.classList.toggle("on", x === b)); }));
     r.querySelectorAll("[data-pg]").forEach((b) => (b.onclick = () => { jaPaga = b.dataset.pg === "1"; r.querySelectorAll("[data-pg]").forEach((x) => x.classList.toggle("on", x === b)); r.querySelector("[data-rot-data]").textContent = jaPaga ? "Data do pagamento" : "Vencimento"; }));
     r.querySelectorAll("[data-c]").forEach((b) => (b.onclick = () => { cat = b.dataset.c; r.querySelectorAll("[data-c]").forEach((x) => x.classList.toggle("on", x === b)); }));
     r.querySelector("[data-salvar]").onclick = async () => {
       const valor = Number(r.querySelector("[data-valor]").value);
       if (!(valor > 0)) return toast("Informe o valor.", 1);
       const dt = r.querySelector("[data-data]").value || isoDia();
-      await q(sb.from("ad_lancamentos").insert({ profissional_id: st.prof.id, tipo: "saida", valor, categoria: cat, descricao: r.querySelector("[data-desc]").value.trim() || cat, data: dt, pago: jaPaga, vencimento: jaPaga ? null : dt }));
+      await q(sb.from("ad_lancamentos").insert({ profissional_id: st.prof.id, tipo: "saida", valor, categoria: cat, descricao: r.querySelector("[data-desc]").value.trim() || cat, data: dt, pago: jaPaga, vencimento: jaPaga ? null : dt, fixa }));
       toast(jaPaga ? `Despesa de ${brl(valor)} registrada.` : `Conta de ${brl(valor)} anotada. Aviso quando estiver perto de vencer.`); fechaFolha(); atualizaTela();
     };
   });
@@ -1024,28 +1098,38 @@ async function dicas() {
 // MAIS
 // =====================================================================
 function telaMais() {
-  const itens = [
-    ["estoque", IC.caixa, "Estoque e esmaltes", "Catálogo de cores por foto, produtos, compras"],
-    ["relatorios", IC.grafico, "Relatórios", "Faturamento, despesas e lucro dos últimos meses"],
-    ["servicos", IC.tesoura, "Serviços e preços", "Adicionar, editar, mudar preço e duração"],
-    ["horarios", IC.relogio, "Horários e folgas", "Dias de trabalho, intervalos, feriados e férias"],
-    ["automacoes", IC.relogio, "Automações", "Finalizar sozinho, avisos às 18h, aniversários, feriados"],
-    ["notificacoes", IC.sino, "Notificações", "Avisos no celular de novos agendamentos"],
-    ["chegar", IC.local, "Como chegar", "Endereço, mapa e compartilhar localização"],
-    ["site", IC.link, "Site de agendamento", "Copiar e divulgar seu link"],
-    ["salao", IC.salao, "Dados do salão", "Nome, WhatsApp, Instagram e endereço"],
-    ...(st.prof.id === st.user.id ? [["equipe", IC.cliente, "Quem pode acessar", "Liberar o app para outro e-mail"]] : []),
-    ["seguranca", IC.cadeado, "Senha do app e biometria", travaCfg() ? "Ativada neste celular" : "Proteja o app com uma senha de números"],
-    ["aparencia", IC.lua, "Aparência", temaAtual() === "claro" ? "Tema claro" : "Tema escuro"],
-    ["tutorial", IC.estrela, "Tutorial do app", "Veja de novo como usar cada parte"],
-    ["instalar", IC.baixar, "Instalar o app no celular", "Ícone na tela inicial, abre como aplicativo"],
-    ["senha", IC.estrela, "Trocar senha da conta", "A senha do e-mail de login"],
-    ["sair", IC.sair, "Sair", ""],
+  const grupos = [
+    ["Salão", [
+      ["servicos", IC.tesoura, "Serviços e preços", "Preço, duração, cor na agenda e custo"],
+      ["horarios", IC.relogio, "Horários e folgas", "Dias de trabalho, almoço, feriados e férias"],
+      ["site", IC.link, "Site de agendamento", "Copiar e divulgar seu link"],
+      ["salao", IC.salao, "Dados do salão", "Nome, WhatsApp, Instagram e endereço"],
+      ["chegar", IC.local, "Como chegar", "Endereço, mapa e compartilhar localização"],
+    ]],
+    ["Gestão", [
+      ["estoque", IC.caixa, "Estoque e esmaltes", "Esmaltes, produtos, compras e alertas"],
+      ["relatorios", IC.grafico, "Relatórios", "Lucro real, fluxo de caixa, meses e PDF"],
+      ["taxas", IC.dinheiro, "Taxas e custos", "Maquininha e material de cada serviço"],
+      ["fidelidade", IC.estrela, "Fidelidade", fid().ativo ? `A cada ${fid().a_cada} atendimentos: ${fid().recompensa}` : "Cartão fidelidade, aniversário e indicação"],
+    ]],
+    ["Automação e avisos", [
+      ["automacoes", IC.relogio, "Automações", "Finalizar sozinho, avisos às 18h, aniversários"],
+      ["notificacoes", IC.sino, "Notificações", "Avisos no celular de novos agendamentos"],
+    ]],
+    ["App e conta", [
+      ...(st.prof.id === st.user.id ? [["equipe", IC.cliente, "Quem pode acessar", "Liberar o app para outro e-mail"]] : []),
+      ["seguranca", IC.cadeado, "Senha do app e biometria", travaCfg() ? "Ativada neste celular" : "Proteja o app com uma senha de números"],
+      ["aparencia", IC.lua, "Aparência", "Tema, cor de destaque e letra"],
+      ["tutorial", IC.estrela, "Tutorial do app", "Veja de novo como usar cada parte"],
+      ["instalar", IC.baixar, "Instalar o app no celular", "Ícone na tela inicial, abre como aplicativo"],
+      ["senha", IC.estrela, "Trocar senha da conta", "A senha do e-mail de login"],
+      ["sair", IC.sair, "Sair", ""],
+    ]],
   ];
-  const r = tela(`<div class="lista">${itens.map(([k, ic, t, s]) => `<button class="item" data-m="${k}"><div class="ic">${ic}</div><div class="cresce"><b>${t}</b>${s ? `<div class="pequeno">${s}</div>` : ""}</div><span class="seta">›</span></button>`).join("")}</div>
-    <p class="pequeno" style="text-align:center;margin-top:20px">Nay Nails Gestão · versão 1.0<br>Mesma agenda do site de agendamento</p>`);
+  const r = tela(grupos.map(([g, itens]) => `<div class="tit-linha"><h2>${g}</h2></div><div class="lista">${itens.map(([k, ic, t, s]) => `<button class="item" data-m="${k}"><div class="ic">${ic}</div><div class="cresce"><b>${t}</b>${s ? `<div class="pequeno">${esc(s)}</div>` : ""}</div><span class="seta">›</span></button>`).join("")}</div>`).join("") + `
+    <p class="pequeno" style="text-align:center;margin-top:20px">Nay Nails Gestão · versão 1.1<br>Mesma agenda do site de agendamento</p>`);
   r.querySelectorAll("[data-m]").forEach((b) => (b.onclick = () => ({
-    estoque: () => vaiPara("estoque"), relatorios: telaRelatorios, equipe: telaEquipe, servicos: telaServicos, horarios: telaHorarios, notificacoes: telaNotificacoes, chegar: comoChegar, site: telaSite, salao: dadosSalao, instalar: instrucoesInstalar, senha: novaSenha, seguranca: telaSeguranca, aparencia: telaAparencia, automacoes: telaAutomacoes, tutorial: () => mostraTutorial(),
+    estoque: () => vaiPara("estoque"), relatorios: telaRelatorios, taxas: telaTaxas, fidelidade: telaFidelidade, equipe: telaEquipe, servicos: telaServicos, horarios: telaHorarios, notificacoes: telaNotificacoes, chegar: comoChegar, site: telaSite, salao: dadosSalao, instalar: instrucoesInstalar, senha: novaSenha, seguranca: telaSeguranca, aparencia: telaAparencia, automacoes: telaAutomacoes, tutorial: () => mostraTutorial(),
     sair: async () => { if (confirm("Sair do app?")) { await sb.auth.signOut(); location.reload(); } },
   })[b.dataset.m]()));
 }
@@ -1075,7 +1159,7 @@ async function telaEquipe() {
 async function telaServicos() {
   await carregaServicos();
   abreFolha(cabFolha("Serviços e preços", "As mudanças aparecem no site na hora.") +
-    `<div class="lista">${st.servicos.map((s) => `<button class="item" data-s="${s.id}" style="${s.ativo ? "" : "opacity:.5"}"><div class="cresce"><b>${esc(s.nome)}</b><div class="pequeno">${brl(s.preco)} · ${dur(s.duracao_min)}${s.ativo ? "" : " · oculto no site"}</div></div><span class="seta">›</span></button>`).join("")}</div>
+    `<div class="lista">${st.servicos.map((s) => `<button class="item" data-s="${s.id}" style="${s.ativo ? "" : "opacity:.5"}"><span class="bola" style="background:${s.cor || "var(--acc)"}"></span><div class="cresce"><b>${esc(s.nome)}</b><div class="pequeno">${brl(s.preco)} · ${dur(s.duracao_min)}${Number(s.custo_material) ? " · lucro " + brl(s.preco - s.custo_material) : ""}${s.ativo ? "" : " · oculto no site"}</div></div><span class="seta">›</span></button>`).join("")}</div>
     <button class="btn ouro cheio" data-novo>${IC.mais}Adicionar serviço</button>`, (r) => {
     r.querySelectorAll("[data-s]").forEach((b) => (b.onclick = () => editaServico(st.servicos.find((s) => s.id === b.dataset.s))));
     r.querySelector("[data-novo]").onclick = () => editaServico(null);
@@ -1091,15 +1175,24 @@ function editaServico(s) {
         <div><label class="f">Preço a partir de (R$)</label><input class="campo" data-preco type="number" inputmode="decimal" step="0.01" min="0" value="${s?.preco ?? ""}"></div>
         <div><label class="f">Duração</label><select class="campo" data-dur>${durs.map((d) => `<option value="${d}" ${(s?.duracao_min || 60) === d ? "selected" : ""}>${dur(d)}</option>`).join("")}${s && !durs.includes(s.duracao_min) ? `<option value="${s.duracao_min}" selected>${dur(s.duracao_min)}</option>` : ""}</select></div>
       </div>
+      <div class="grade2">
+        <div><label class="f">Custo de material (R$)</label><input class="campo" data-custo type="number" inputmode="decimal" step="0.01" min="0" value="${Number(s?.custo_material) || ""}" placeholder="0"></div>
+        <div><label class="f">Lucro estimado</label><div class="campo" data-lucro style="background:var(--soft)"></div></div>
+      </div>
+      <label class="f">Cor na agenda</label><div class="cores-serv">${CORES_SERV.map((c) => `<button type="button" data-cor="${c}" class="${(s?.cor || CORES_SERV[0]) === c ? "on" : ""}" style="background:${c}" aria-label="Cor"></button>`).join("")}</div>
       <div class="interruptor" style="margin-top:8px"><span>Mostrar no site</span><input type="checkbox" data-ativo ${s?.ativo === false ? "" : "checked"}></div>
     </div>
     <button class="btn ouro cheio" data-salvar>Salvar</button>
     ${s ? `<button class="btn perigo cheio" data-excluir style="margin-top:10px">Excluir serviço</button>` : ""}`, (r) => {
+    let cor = s?.cor || CORES_SERV[0];
+    r.querySelectorAll("[data-cor]").forEach((b) => (b.onclick = () => { cor = b.dataset.cor; r.querySelectorAll("[data-cor]").forEach((x) => x.classList.toggle("on", x === b)); }));
+    const lucro = () => { const p = Number(r.querySelector("[data-preco]").value || 0), c = Number(r.querySelector("[data-custo]").value || 0); r.querySelector("[data-lucro]").textContent = brl(p - c); };
+    r.querySelector("[data-preco]").oninput = r.querySelector("[data-custo]").oninput = lucro; lucro();
     r.querySelector("[data-salvar]").onclick = async () => {
-      const d = { nome: r.querySelector("[data-nome]").value.trim(), descricao: r.querySelector("[data-desc]").value.trim() || null, preco: Number(r.querySelector("[data-preco]").value || 0), duracao_min: Number(r.querySelector("[data-dur]").value), ativo: r.querySelector("[data-ativo]").checked };
+      const d = { nome: r.querySelector("[data-nome]").value.trim(), descricao: r.querySelector("[data-desc]").value.trim() || null, preco: Number(r.querySelector("[data-preco]").value || 0), duracao_min: Number(r.querySelector("[data-dur]").value), ativo: r.querySelector("[data-ativo]").checked, cor, custo_material: Number(r.querySelector("[data-custo]").value || 0) };
       if (!d.nome) return toast("Escreva o nome do serviço.", 1);
       await q(s ? sb.from("ad_servicos").update(d).eq("id", s.id) : sb.from("ad_servicos").insert({ ...d, profissional_id: st.prof.id }));
-      toast("Serviço salvo."); telaServicos();
+      toast("Serviço salvo."); await carregaServicos(); telaServicos();
     };
     r.querySelector("[data-excluir]")?.addEventListener("click", async () => {
       if (!confirm("Excluir este serviço? Os atendimentos antigos continuam guardados.")) return;
@@ -1476,12 +1569,6 @@ function temaAtual() { return localStorage.getItem("nay.tema2") || "claro"; }
 function aplicaTema(t) {
   localStorage.setItem("nay.tema2", t); document.documentElement.dataset.tema = t;
   document.querySelector('meta[name="theme-color"]').content = t === "claro" ? "#F6F2EC" : "#121110";
-}
-function telaAparencia() {
-  abreFolha(cabFolha("Aparência") + `<div class="lista">
-    ${[["escuro", "Escuro (oficial)", "Preto esverdeado com detalhes em dourado champagne"], ["claro", "Claro", "Verde-sálvia claro com dourado"]].map(([k, n, d]) => `<button class="item" data-t="${k}"><div class="ic">${k === "escuro" ? IC.lua : IC.estrela}</div><div class="cresce"><b>${n}</b><div class="pequeno">${d}</div></div>${temaAtual() === k ? '<span class="chip confirmado">Em uso</span>' : ""}</button>`).join("")}</div>`, (r) => {
-    r.querySelectorAll("[data-t]").forEach((b) => (b.onclick = () => { aplicaTema(b.dataset.t); telaAparencia(); if (st.aba === "mais") telaMais(); }));
-  });
 }
 
 
