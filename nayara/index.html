@@ -204,6 +204,51 @@ header .cta::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:4
 .barra.on .in{animation:surge .35s both}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important}.rv{opacity:1;transform:none}.particula,.confete{display:none}}
 
+
+/* catálogo de cores */
+.cat-busca{position:relative;margin-top:14px}
+.cat-busca input{padding-left:42px!important}
+.cat-busca svg{position:absolute;left:14px;top:50%;width:18px;height:18px;transform:translateY(-50%);color:var(--m)}
+.cat-tons{display:flex;gap:8px;overflow-x:auto;margin:12px -16px 0;padding:2px 16px 6px;scrollbar-width:none}
+.cat-tons::-webkit-scrollbar{display:none}
+.cat-tons button{flex:none;padding:8px 14px;border-radius:99px;border:1px solid var(--b2);background:var(--field);color:var(--t);font:500 14px var(--font);cursor:pointer;display:flex;align-items:center;gap:6px}
+.cat-tons button i{width:12px;height:12px;border-radius:50%;display:inline-block;border:1px solid #ffffff30}
+.cat-tons button.on{background:var(--ouro);color:#1B1608;border-color:transparent}
+.cat-sel{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.cat-sel select{width:100%;padding:12px;background:var(--field);color:var(--t);border:1px solid var(--b2);border-radius:14px;font:15px var(--font);-webkit-appearance:none;appearance:none}
+.cores{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:14px}
+@media(min-width:460px){.cores{grid-template-columns:repeat(3,1fr)}}
+.cor{position:relative;background:var(--field);border:1px solid var(--b);border-radius:18px;padding:7px 7px 10px;text-align:left;color:var(--t);font:inherit;cursor:pointer;transition:border-color .15s,transform .1s;animation:sobeCor .45s ease both}
+.cor:active{transform:scale(.97)}
+.cor.on{border-color:var(--g);box-shadow:0 0 0 2px #C9A86A55}
+.cor.off{opacity:.45}
+.cor .ft{aspect-ratio:1;border-radius:13px;overflow:hidden;margin-bottom:7px;background:#333}
+.cor .ft img{width:100%;height:100%;object-fit:cover;display:block}
+.cor b{display:block;font-size:14px;font-weight:600;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cor small{display:block;font-size:12px;color:var(--m);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st{display:inline-block;margin-top:4px;font-size:11px;padding:2px 8px;border-radius:99px;background:#75A98722;color:#9CCBAA}
+.st.poucas{background:#D5A85C22;color:#E3BE7E}.st.indisponivel{background:#C8757522;color:#E59A9A}
+.cor .fav{position:absolute;right:12px;top:12px;width:34px;height:34px;border-radius:50%;background:#0009;color:#fff;font-size:17px;display:grid;place-items:center;cursor:pointer;backdrop-filter:blur(4px)}
+.cor .fav.on{color:#F28B9B}
+.cor .papel{position:absolute;left:12px;top:12px;background:var(--ouro);color:#1B1608;font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px}
+@keyframes sobeCor{from{opacity:0;transform:translateY(12px)}}
+.mais-cores{width:100%;margin-top:12px;padding:13px;border-radius:14px;border:1px solid var(--b2);background:transparent;color:var(--gt);font:500 15px var(--font);cursor:pointer}
+.escolhidas{display:flex;flex-direction:column;gap:8px}
+.escolhida{display:flex;align-items:center;gap:10px;background:var(--field);border:1px solid var(--b);border-radius:14px;padding:8px}
+.escolhida img,.escolhida .bol{width:42px;height:42px;border-radius:10px;object-fit:cover;flex:none}
+.escolhida div{flex:1;min-width:0}.escolhida div b{display:block;font-size:14px;font-weight:600}.escolhida div small{color:var(--m);font-size:12px}
+.escolhida button{border:0;background:none;color:var(--m);font-size:18px;cursor:pointer;padding:6px}
+.check{display:flex;gap:10px;align-items:center;margin-top:10px;font-size:14.5px;cursor:pointer}
+.check input{width:20px;height:20px;accent-color:#C9A86A}
+.modal{position:fixed;inset:0;z-index:60;background:#000a;display:flex;align-items:flex-end;justify-content:center;animation:fadeM .2s ease}
+.modal .cx{width:100%;max-width:520px;max-height:92vh;overflow:auto;background:var(--card);border:1px solid var(--b2);border-radius:24px 24px 0 0;padding:16px 16px calc(18px + var(--safe));animation:sobeM .28s cubic-bezier(.2,.8,.2,1)}
+.modal .cx img{width:100%;max-height:42vh;object-fit:cover;border-radius:16px;display:block}
+.modal h3{font:600 20px var(--font);margin-top:12px}.modal p{color:var(--m);font-size:14px}
+.papeis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.papeis button{padding:13px 8px;border-radius:14px;border:1px solid var(--b2);background:var(--field);color:var(--t);font:500 14px var(--font);cursor:pointer}
+.papeis button.on{background:var(--ouro);color:#1B1608;border-color:transparent}
+@keyframes fadeM{from{opacity:0}}@keyframes sobeM{from{transform:translateY(40px);opacity:.4}}
+.modal.hide{display:none}
 </style>
 </head>
 <body>
@@ -229,12 +274,29 @@ header .cta::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:4
   <div id="lista"><p class="note">Carregando serviços…</p></div>
 </section>
 
+<section id="catalogo" class="hide">
+  <h2>Nosso catálogo de cores</h2>
+  <p class="sub">Veja as cores que temos no salão. Toque em uma cor para escolher para o seu atendimento ou salvar nas favoritas.</p>
+  <div class="cat-busca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="catBusca" type="search" placeholder="Buscar cor, marca ou código" autocomplete="off" enterkeyhint="search"></div>
+  <div class="cat-tons" id="catTons"></div>
+  <div class="cat-sel"><select id="catMarca" aria-label="Marca"></select><select id="catAcab" aria-label="Acabamento"></select></div>
+  <div class="cores" id="cores"></div>
+  <button type="button" class="mais-cores hide" id="maisCores">Ver mais cores</button>
+</section>
+
 <section id="agendar">
   <h2>Agendamento</h2>
   <p class="etapa">Escolha o dia</p>
   <div class="dias" id="dias"></div>
   <p class="etapa" id="lbHora">Escolha o horário</p>
   <div class="slots" id="slots" role="group" aria-labelledby="lbHora"><p class="note">Escolha um serviço para ver os horários livres.</p></div>
+
+  <div id="blocoCores" class="hide">
+    <p class="etapa">Cores <small style="color:var(--m);font-weight:400">(opcional)</small></p>
+    <div class="escolhidas" id="escolhidas"></div>
+    <button type="button" class="mais-cores" id="irCatalogo" style="margin-top:8px">Escolher cores no catálogo</button>
+    <label class="check"><input type="checkbox" id="noSalao"> Prefiro escolher a cor no salão</label>
+  </div>
 
   <p class="etapa">Seus dados</p>
   <label class="f" for="nome" style="margin-top:0">Seu nome</label><input id="nome" autocomplete="name" placeholder="Nome completo" enterkeyhint="next">
@@ -291,6 +353,7 @@ header .cta::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:4
 <footer><span class="marca">Nayara Fernandes · Nails e cuidados</span><br>Lagoa Santa - MG<br><a id="rodapeInsta" target="_blank" rel="noopener">@nayfernandes.nails</a></footer>
 </main>
 
+<div class="modal hide" id="modalCor" role="dialog" aria-modal="true"><div class="cx" id="modalCx"></div></div>
 <div class="barra" id="barra" aria-hidden="true"><div class="in">
   <div class="tx" id="barraTx"></div>
   <button type="button" id="barraBtn">Continuar</button>
@@ -314,7 +377,12 @@ const dur = (m) => (m < 60 ? m + " min" : Math.floor(m / 60) + "h" + (m % 60 ? S
 const fmtTel = (z) => { z = String(z).replace(/\D/g, "").replace(/^55(?=\d{10,11}$)/, ""); return z.length >= 10 ? `(${z.slice(0, 2)}) ${z.slice(2, -4)}-${z.slice(-4)}` : z; };
 const vai = (el, bloco = "start") => el.scrollIntoView({ behavior: "smooth", block: bloco });
 
-const st = { pag: null, serv: null, dia: null, hora: null, ag: null };
+const st = { pag: null, serv: null, dia: null, hora: null, ag: null, cat: [], cores: [], tom: "", ver: 12 };
+const PAPEIS = ["Cor principal", "Cor secundária", "Decoração", "Referência de acabamento"];
+const TONS_HEX = { Vermelhos: "#B3262E", Vinhos: "#5E1A2A", Rosas: "#E58FA8", Nudes: "#D8B49B", Marrons: "#6B4232", Brancos: "#F4F1EA", Pretos: "#141414", Cinzas: "#8C8C8C", Azuis: "#2F5FA8", Verdes: "#3D7A4E", Roxos: "#6B3F8F", Laranjas: "#E2733A", Amarelos: "#E8C547", Glitter: "#C9B27A", Metalizados: "#A7A9AC", Perolados: "#EDE3D6", Translúcidos: "#E9E4DE", Outros: "#777" };
+const favs = new Set((() => { try { return JSON.parse(localStorage.getItem("nay_favs") || "[]"); } catch { return []; } })());
+const salvaFavs = () => { try { localStorage.setItem("nay_favs", JSON.stringify([...favs])); } catch {} };
+const ST_COR = { disponivel: "Disponível", poucas: "Poucas unidades", indisponivel: "Indisponível" };
 
 // "Seg a Sex · 09:00 às 18:00"
 function resumoHorarios(hs) {
@@ -354,6 +422,82 @@ async function carregar() {
     carregaSlots(); atualiza();
   }));
   desenhaDias();
+  carregaCatalogo();
+}
+
+// ---------- catálogo de cores ----------
+async function carregaCatalogo() {
+  const { data, error } = await sb.rpc("ad_catalogo", { p_slug: SLUG });
+  if (error || !data || !data.length) return;
+  st.cat = data.map((c) => ({ ...c, cor_hex: c.cor_hex || c.cor, foto_url: c.foto_url || c.foto }));
+  st.cores = st.cores.filter((x) => data.some((c) => c.id === x.id && c.status !== "indisponivel"));
+  $("catalogo").classList.remove("hide"); $("blocoCores").classList.remove("hide");
+  const tons = [...new Set(data.map((c) => c.tonalidade).filter(Boolean))];
+  const marcas = [...new Set(data.map((c) => c.marca).filter(Boolean))].sort();
+  const acabs = [...new Set(data.map((c) => c.acabamento).filter(Boolean))].sort();
+  $("catTons").innerHTML = [`<button type="button" data-t="" class="on">Todas</button>`, `<button type="button" data-t="♥">♥ Favoritas</button>`,
+    ...tons.map((t) => `<button type="button" data-t="${esc(t)}"><i style="background:${TONS_HEX[t] || "#777"}"></i>${esc(t)}</button>`)].join("");
+  $("catMarca").innerHTML = `<option value="">Marcas</option>` + marcas.map((m) => `<option>${esc(m)}</option>`).join("");
+  $("catAcab").innerHTML = `<option value="">Acabamentos</option>` + acabs.map((m) => `<option>${esc(m)}</option>`).join("");
+  st.tom = "";
+  $("catTons").onclick = (e) => { const b = e.target.closest("button"); if (!b) return; st.tom = b.dataset.t; st.ver = 12; $("catTons").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); desenhaCores(); };
+  $("catMarca").onchange = $("catAcab").onchange = () => { st.ver = 12; desenhaCores(); };
+  let t; $("catBusca").oninput = () => { clearTimeout(t); t = setTimeout(() => { st.ver = 12; desenhaCores(); }, 200); };
+  $("maisCores").onclick = () => { st.ver += 12; desenhaCores(); };
+  $("irCatalogo").onclick = () => vai($("catalogo"));
+  $("noSalao").onchange = () => { if ($("noSalao").checked) { st.cores = []; desenhaCores(); } desenhaEscolhidas(); };
+  desenhaCores(); desenhaEscolhidas();
+}
+const semAc = (x) => String(x || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+function desenhaCores() {
+  const b = semAc($("catBusca").value), m = $("catMarca").value, a = $("catAcab").value;
+  const lista = st.cat.filter((c) => (!st.tom || (st.tom === "♥" ? favs.has(c.id) : c.tonalidade === st.tom)) && (!m || c.marca === m) && (!a || c.acabamento === a) && (!b || semAc([c.nome, c.marca, c.codigo, c.linha, c.tonalidade].join(" ")).includes(b)));
+  $("cores").innerHTML = lista.length ? lista.slice(0, st.ver).map((c, i) => {
+    const ch = st.cores.find((x) => x.id === c.id);
+    return `<div class="cor ${ch ? "on" : ""} ${c.status === "indisponivel" ? "off" : ""}" data-id="${c.id}" role="button" tabindex="0" style="animation-delay:${(i % 12) * 0.03}s">
+      <div class="ft" style="background:${esc(c.cor_hex || "#444")}">${c.foto_url ? `<img src="${esc(c.foto_url)}" alt="${esc(c.nome)}" loading="lazy">` : ""}</div>
+      ${ch ? `<span class="papel">${esc(ch.papel.replace("Referência de acabamento", "Acabamento"))}</span>` : ""}
+      <button type="button" class="fav ${favs.has(c.id) ? "on" : ""}" data-fav="${c.id}" aria-label="Favoritar" style="border:0">${favs.has(c.id) ? "♥" : "♡"}</button>
+      <b>${esc(c.nome)}</b><small>${esc(c.marca || "")}${c.codigo ? " · " + esc(c.codigo) : ""}${c.acabamento ? " · " + esc(c.acabamento) : ""}</small>
+      <span class="st ${c.status}">${ST_COR[c.status]}</span></div>`;
+  }).join("") : `<p class="note" style="grid-column:1/-1">${st.tom === "♥" ? "Você ainda não tem favoritas. Toque no ♡ de uma cor para salvar." : "Nenhuma cor encontrada."}</p>`;
+  $("maisCores").classList.toggle("hide", lista.length <= st.ver);
+  $("cores").querySelectorAll(".cor").forEach((el) => (el.onclick = (e) => {
+    const f = e.target.closest("[data-fav]");
+    if (f) { e.stopPropagation(); favs.has(f.dataset.fav) ? favs.delete(f.dataset.fav) : favs.add(f.dataset.fav); salvaFavs(); desenhaCores(); return; }
+    abreCor(st.cat.find((c) => c.id === el.dataset.id));
+  }));
+}
+function abreCor(c) {
+  const atual = st.cores.find((x) => x.id === c.id);
+  const off = c.status === "indisponivel";
+  $("modalCx").innerHTML = `${c.foto_url ? `<img src="${esc(c.foto_url)}" alt="">` : `<div style="height:160px;border-radius:16px;background:${esc(c.cor_hex || "#444")}"></div>`}
+    <h3>${esc(c.nome)}</h3><p>${[c.marca, c.codigo && "cód. " + c.codigo, c.linha, c.tonalidade, c.acabamento].filter(Boolean).map(esc).join(" · ")}</p>
+    <span class="st ${c.status}" style="font-size:12px;padding:3px 10px">${ST_COR[c.status]}</span>
+    ${off ? `<p style="margin-top:12px">Essa cor acabou temporariamente. Escolha outra ou salve nas favoritas.</p>` : `<p style="margin-top:14px;color:var(--t);font-weight:500">Usar esta cor como:</p>
+    <div class="papeis">${PAPEIS.map((p) => `<button type="button" data-p="${p}" class="${atual?.papel === p ? "on" : ""}">${p}</button>`).join("")}</div>`}
+    <div class="papeis">
+      <button type="button" data-favm>${favs.has(c.id) ? "♥ Nas favoritas" : "♡ Favoritar"}</button>
+      ${atual ? `<button type="button" data-tirar>Tirar da escolha</button>` : `<button type="button" data-fechar>Fechar</button>`}
+    </div>`;
+  $("modalCor").classList.remove("hide");
+  const fecha = () => $("modalCor").classList.add("hide");
+  $("modalCor").onclick = (e) => { if (e.target === $("modalCor")) fecha(); };
+  $("modalCx").querySelectorAll("[data-p]").forEach((b) => (b.onclick = () => {
+    st.cores = st.cores.filter((x) => x.id !== c.id && x.papel !== b.dataset.p);
+    st.cores.push({ id: c.id, papel: b.dataset.p });
+    $("noSalao").checked = false; fecha(); desenhaCores(); desenhaEscolhidas();
+  }));
+  $("modalCx").querySelector("[data-favm]").onclick = () => { favs.has(c.id) ? favs.delete(c.id) : favs.add(c.id); salvaFavs(); abreCor(c); desenhaCores(); };
+  $("modalCx").querySelector("[data-tirar]")?.addEventListener("click", () => { st.cores = st.cores.filter((x) => x.id !== c.id); fecha(); desenhaCores(); desenhaEscolhidas(); });
+  $("modalCx").querySelector("[data-fechar]")?.addEventListener("click", fecha);
+}
+function desenhaEscolhidas() {
+  const ord = st.cores.slice().sort((a, b) => PAPEIS.indexOf(a.papel) - PAPEIS.indexOf(b.papel));
+  $("escolhidas").innerHTML = ord.map((x) => { const c = st.cat.find((k) => k.id === x.id); if (!c) return "";
+    return `<div class="escolhida">${c.foto_url ? `<img src="${esc(c.foto_url)}" alt="">` : `<span class="bol" style="background:${esc(c.cor_hex || "#444")}"></span>`}<div><b>${esc(c.nome)}</b><small>${esc(x.papel)}${c.marca ? " · " + esc(c.marca) : ""}</small></div><button type="button" data-tira="${c.id}" aria-label="Remover">✕</button></div>`; }).join("");
+  $("escolhidas").querySelectorAll("[data-tira]").forEach((b) => (b.onclick = () => { st.cores = st.cores.filter((x) => x.id !== b.dataset.tira); desenhaCores(); desenhaEscolhidas(); }));
+  $("irCatalogo").textContent = st.cores.length ? "Trocar ou adicionar cores" : "Escolher cores no catálogo";
 }
 
 const abre = (d) => st.pag.dias.includes(new Date(d + "T12:00:00Z").getUTCDay());
@@ -433,15 +577,16 @@ $("enviar").onclick = async () => {
   if (tel.length < 10) { msg("Escreva seu WhatsApp com DDD."); return $("tel").focus(); }
   msg("");
   $("enviar").disabled = true; $("enviar").textContent = "Reservando…";
-  const { data: id, error } = await sb.rpc("ad_agendar_varios", { p_slug: SLUG, p_servicos: [st.serv.id], p_inicio: st.hora, p_nome: nome, p_whatsapp: tel, p_obs: obs || null });
+  const { data: id, error } = await sb.rpc("ad_agendar_varios", { p_slug: SLUG, p_servicos: [st.serv.id], p_inicio: st.hora, p_nome: nome, p_whatsapp: tel, p_obs: [obs, $("noSalao").checked ? "Prefere escolher a cor no salão." : ""].filter(Boolean).join(" ") || null, p_cores: st.cores.length ? st.cores.map((x) => ({ id: x.id, papel: x.papel })) : null });
   $("enviar").disabled = false; $("enviar").textContent = "Confirmar agendamento";
   if (error) {
-    if (error.message.includes("disponível")) { msg("Esse horário acabou de ser ocupado. Escolha outro."); carregaSlots(); vai($("agendar")); }
+    if (error.message.includes("cores escolhidas")) { msg("Uma das cores escolhidas acabou de ficar indisponível. Escolha outra."); carregaCatalogo(); vai($("catalogo")); }
+    else if (error.message.includes("disponível")) { msg("Esse horário acabou de ser ocupado. Escolha outro."); carregaSlots(); vai($("agendar")); }
     else msg("Não foi possível agendar: " + error.message);
     return;
   }
   try { localStorage.setItem("nay_cliente", JSON.stringify({ nome, tel: $("tel").value })); } catch {}
-  st.ag = { id, nome, tel, obs, serv: st.serv, inicio: st.hora };
+  st.ag = { id, nome, tel, obs, serv: st.serv, inicio: st.hora, cores: st.cores.map((x) => ({ ...x, c: st.cat.find((k) => k.id === x.id) })), noSalao: $("noSalao").checked };
   confirmado();
 };
 
@@ -451,9 +596,10 @@ function confirmado() {
   const texto = `Olá, Nayara! 💅 Acabei de agendar pelo site:\n\n` +
     `*Serviço:* ${a.serv.nome}\n*Dia:* ${dataLonga(a.inicio)}\n*Horário:* ${hora(a.inicio)}\n` +
     `*Valor:* a partir de ${brl(a.serv.preco)}\n*Nome:* ${a.nome}\n*WhatsApp:* ${fmtTel(a.tel)}` +
+    (a.cores.length ? `\n*Cores:* ${a.cores.map((x) => `${x.papel}: ${x.c?.nome}${x.c?.marca ? " (" + x.c.marca + (x.c.codigo ? " " + x.c.codigo : "") + ")" : ""}`).join("; ")}` : a.noSalao ? "\n*Cores:* vou escolher no salão" : "") +
     (a.obs ? `\n*Observação:* ${a.obs}` : "");
   $("okWhats").href = `https://wa.me/${st.pag.whatsapp}?text=${encodeURIComponent(texto)}`;
-  $("servicos").classList.add("hide"); $("agendar").classList.add("hide");
+  $("servicos").classList.add("hide"); $("agendar").classList.add("hide"); $("catalogo").classList.add("hide");
   $("confirmado").classList.remove("hide", "rv"); $("confirmado").classList.add("mostra"); atualiza();
   setTimeout(confete, 250);
   vai($("confirmado"), "center");
@@ -477,7 +623,7 @@ $("lembrete").onclick = () => {
 };
 
 $("novo").onclick = () => {
-  st.ag = null; st.serv = null; st.hora = null; $("obs").value = "";
+  st.ag = null; st.serv = null; st.hora = null; st.cores = []; $("obs").value = ""; $("noSalao").checked = false; carregaCatalogo();
   document.querySelectorAll("#lista input").forEach((i) => (i.checked = false));
   carregaSlots();
   $("confirmado").classList.add("hide"); $("servicos").classList.remove("hide"); $("agendar").classList.remove("hide");

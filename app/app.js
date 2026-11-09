@@ -131,7 +131,7 @@ async function carregaServicos() { st.servicos = await q(sb.from("ad_servicos").
 
 // ---------- navegação ----------
 document.querySelectorAll("#abas button").forEach((b) => (b.onclick = () => vaiPara(b.dataset.aba)));
-const TITULOS = { inicio: "Início", agenda: "Agenda", clientes: "Clientes", caixa: "Caixa", mais: "Mais" };
+const TITULOS = { inicio: "Início", agenda: "Agenda", clientes: "Clientes", caixa: "Financeiro", mais: "Mais", estoque: "Estoque e esmaltes" };
 const ORDEM_ABAS = ["inicio", "agenda", "clientes", "caixa", "mais"];
 function vaiPara(aba) {
   st.direcao = ORDEM_ABAS.indexOf(aba) >= ORDEM_ABAS.indexOf(st.aba || "inicio") ? "da-direita" : "da-esquerda";
@@ -145,7 +145,7 @@ function vaiPara(aba) {
   return atualizaTela();
 }
 function atualizaTela() {
-  return ({ inicio: telaInicio, agenda: telaAgenda, clientes: telaClientes, caixa: telaCaixa, mais: telaMais })[st.aba]();
+  return ({ inicio: telaInicio, agenda: telaAgenda, clientes: telaClientes, caixa: telaCaixa, mais: telaMais, estoque: telaEstoque })[st.aba]();
 }
 function saudacao() {
   const h = Number(new Date().toLocaleTimeString("en-GB", { hour: "2-digit", timeZone: TZ }));
@@ -221,12 +221,21 @@ function ligaCartoes(raiz) { raiz.querySelectorAll("[data-ag]").forEach((el) => 
 // =====================================================================
 async function telaInicio() {
   const hoje = isoDia(), amanha = somaDias(hoje, 1);
-  const [ags, agsAmanha, pags, avisos, livresHoje, devendo] = await Promise.all([
+  const iniMes = hoje.slice(0, 8) + "01";
+  const [ags, agsAmanha, pags, avisos, livresHoje, devendo, pagsMes, despMes, prods, novos, contas] = await Promise.all([
     agsEntre(hoje, amanha), agsEntre(amanha, somaDias(hoje, 2)), pagsEntre(hoje, amanha),
     q(sb.from("ad_avisos").select("*").eq("lido", false).order("criado_em", { ascending: false }).limit(3)),
     livres(hoje, 30),
-    q(sb.from("ad_agendamentos").select("id").eq("status", "concluido").eq("pago", false)),
+    q(sb.from("ad_agendamentos").select("id,preco").eq("status", "concluido").eq("pago", false)),
+    pagsEntre(iniMes, amanha),
+    q(sb.from("ad_lancamentos").select("valor,pago").eq("tipo", "saida").gte("data", iniMes).lt("data", amanha)),
+    q(sb.from("ad_produtos").select("id,quantidade,minimo,validade,categoria,catalogo")),
+    q(sb.from("ad_agendamentos").select("id").gte("criado_em", new Date(Date.now() - 864e5).toISOString()).neq("status", "cancelado")),
+    q(sb.from("ad_lancamentos").select("id,valor,vencimento").eq("tipo", "saida").eq("pago", false).lte("vencimento", somaDias(hoje, 7))),
   ]);
+  const recMes = pagsMes.reduce((s, p) => s + Number(p.valor), 0);
+  const gastoMes = despMes.filter((l) => l.pago !== false).reduce((s, l) => s + Number(l.valor), 0);
+  const estq = resumoEstoque(prods);
   const ativos = ags.filter((a) => a.status !== "cancelado");
   const agora = Date.now();
   const proxima = ags.find((a) => ATIVOS.includes(a.status) && new Date(a.fim).getTime() > agora);
@@ -237,7 +246,6 @@ async function telaInicio() {
   const meta = Number(st.prof.meta_mensal || 0);
   let metaHtml = "";
   if (meta) {
-    const recMes = (await pagsEntre(hoje.slice(0, 8) + "01", amanha)).reduce((s, p) => s + Number(p.valor), 0);
     const pct = Math.min(100, Math.round((recMes / meta) * 100));
     const chave = "nay.meta." + hoje.slice(0, 7);
     if (pct >= 100 && !localStorage.getItem(chave)) { localStorage.setItem(chave, "1"); setTimeout(() => { festa(); toast("Meta do mês batida! Parabéns! 🏆"); }, 900); }
@@ -247,6 +255,10 @@ async function telaInicio() {
   const alertas = [];
   avisos.forEach((v) => alertas.push(`<button class="item aviso-item novo" data-aviso="${v.id}" data-agid="${v.agendamento_id || ""}"><span class="ponto"></span><div class="cresce"><b>${esc(v.titulo)}</b><div class="pequeno">${esc(v.corpo)}</div></div></button>`));
   if (aConfirmar.length) alertas.push(`<button class="item" data-ir="confirmar"><div class="ic">${IC.sino}</div><div class="cresce"><b>${aConfirmar.length} cliente${aConfirmar.length > 1 ? "s" : ""} sem confirmar</b><div class="pequeno">Hoje e amanhã. Toque para enviar o lembrete.</div></div><span class="seta">›</span></button>`);
+  if (estq.baixos.length) alertas.push(`<button class="item" data-ir="estoque"><div class="ic">${IC.caixa}</div><div class="cresce"><b>${estq.baixos.length} produto${estq.baixos.length > 1 ? "s" : ""} acabando</b><div class="pequeno">Veja o estoque e programe a compra.</div></div><span class="seta">›</span></button>`);
+  if (estq.vencendo.length + estq.vencidos.length) alertas.push(`<button class="item" data-ir="estoque"><div class="ic">${IC.relogio}</div><div class="cresce"><b>${estq.vencendo.length + estq.vencidos.length} produto${estq.vencendo.length + estq.vencidos.length > 1 ? "s" : ""} com validade perto</b><div class="pequeno">Vence em até 30 dias${estq.vencidos.length ? " ou já venceu" : ""}.</div></div><span class="seta">›</span></button>`);
+  if (estq.revisao.length) alertas.push(`<button class="item" data-ir="esmaltes"><div class="ic">${IC.esmalte}</div><div class="cresce"><b>${estq.revisao.length} cor${estq.revisao.length > 1 ? "es" : ""} esperando conferência</b><div class="pequeno">Publique para aparecerem no site.</div></div><span class="seta">›</span></button>`);
+  if (contas.length) alertas.push(`<button class="item" data-ir="caixa"><div class="ic" style="background:var(--red2);color:var(--red)">${IC.dinheiro}</div><div class="cresce"><b>${contas.length} conta${contas.length > 1 ? "s" : ""} para pagar · ${brl(contas.reduce((s, l) => s + Number(l.valor), 0))}</b><div class="pequeno">Vencem nos próximos 7 dias${contas.some((l) => l.vencimento < hoje) ? " (há conta atrasada)" : ""}.</div></div><span class="seta">›</span></button>`);
   if (devendo.length) alertas.push(`<button class="item" data-ir="caixa"><div class="ic">${IC.dinheiro}</div><div class="cresce"><b>${devendo.length} atendimento${devendo.length > 1 ? "s" : ""} sem pagamento registrado</b><div class="pequeno">Registre para o caixa ficar certo.</div></div><span class="seta">›</span></button>`);
 
   const r = tela(`
@@ -256,6 +268,16 @@ async function telaInicio() {
       <div class="stat ouro"><div class="ico">${IC.dinheiro}</div><small>Recebido hoje</small><b>${brl(faturado)}</b><i>de ${brl(previsto)} previstos</i></div>
       <div class="stat"><div class="ico">${IC.sino}</div><small>Aguardando confirmação</small><b>${aConfirmar.length}</b><i>hoje e amanhã</i></div>
       <div class="stat"><div class="ico">${IC.relogio}</div><small>Horários disponíveis</small><b>${livresHoje.length}</b><i>hoje, de 30 min</i></div>
+    </div>
+    <div class="resumo-val" style="margin-bottom:12px">
+      <div><small>Faturamento do mês</small><b class="pos">${brl(recMes)}</b></div>
+      <div><small>Despesas do mês</small><b class="neg">${brl(gastoMes)}</b></div>
+      <div><small>Lucro do mês</small><b>${brl(recMes - gastoMes)}</b></div>
+    </div>
+    <div class="resumo-val" style="margin-bottom:12px">
+      <div><small>Pagamentos pendentes</small><b>${brl(devendo.reduce((s, a) => s + Number(a.preco), 0))}</b></div>
+      <div><small>Estoque baixo</small><b class="${estq.baixos.length ? "neg" : ""}">${estq.baixos.length}</b></div>
+      <div><small>Novos agendamentos</small><b>${novos.length}</b></div>
     </div>
     ${metaHtml ? `<div class="cartao">${metaHtml}</div>` : ""}
     <div id="banner-notif"></div>
@@ -271,12 +293,15 @@ async function telaInicio() {
     ${alertas.length ? `<div class="tit-linha"><h2>Avisos</h2><button data-ir="avisos">Ver todos</button></div><div class="lista">${alertas.join("")}</div>` : ""}
     <div class="tit-linha"><h2>Atalhos</h2></div>
     <div class="atalhos">
+      <button class="atalho" data-atalho="agenda"><span>${IC.agenda}</span>Agenda</button>
+      <button class="atalho" data-atalho="clientes"><span>${IC.cliente}</span>Clientes</button>
+      <button class="atalho" data-atalho="financeiro"><span>${IC.dinheiro}</span>Financeiro</button>
+      <button class="atalho" data-atalho="estoque"><span>${IC.caixa}</span>Estoque</button>
+      <button class="atalho" data-atalho="esmaltes"><span>${IC.esmalte}</span>Esmaltes</button>
+      <button class="atalho" data-atalho="relatorios"><span>${IC.grafico}</span>Relatórios</button>
+      <button class="atalho" data-atalho="compras"><span>${IC.carrinho}</span>Compras</button>
+      <button class="atalho" data-atalho="config"><span>${IC.engrenagem}</span>Configurações</button>
       <button class="atalho" data-atalho="novo"><span>${IC.mais}</span>Novo agendamento</button>
-      <button class="atalho" data-atalho="agenda"><span>${IC.agenda}</span>Ver agenda</button>
-      <button class="atalho" data-atalho="cliente"><span>${IC.cliente}</span>Cadastrar cliente</button>
-      <button class="atalho" data-atalho="bloquear"><span>${IC.bloqueio}</span>Bloquear horário</button>
-      <button class="atalho" data-atalho="pagamento"><span>${IC.dinheiro}</span>Registrar pagamento</button>
-      <a class="atalho" href="https://wa.me/" target="_blank" rel="noopener"><span>${IC.zap}</span>Abrir WhatsApp</a>
     </div>
     <div class="tit-linha"><h2>Hoje</h2><button data-ir="agenda">Agenda completa</button></div>
     ${ags.length ? ags.map((a) => cartaoAg(a)).join("") : `<div class="vazio">${IC.calendario}<div>Nenhum agendamento hoje.</div></div>`}
@@ -291,11 +316,14 @@ async function telaInicio() {
     const ir = b.dataset.ir;
     if (ir === "confirmar") listaConfirmar(aConfirmar);
     else if (ir === "avisos") telaAvisos();
+    else if (ir === "esmaltes") { st.estSeg = "esmaltes"; vaiPara("estoque"); }
+    else if (ir === "estoque") { st.estSeg = estq.baixos.some((p) => p.categoria !== "Esmaltes") ? "produtos" : "esmaltes"; vaiPara("estoque"); }
     else vaiPara(ir);
   }));
   r.querySelectorAll("[data-atalho]").forEach((b) => (b.onclick = () => ({
-    novo: () => novoAgendamento({}), agenda: () => vaiPara("agenda"), cliente: () => editaCliente(null),
-    bloquear: () => novoBloqueio(), pagamento: () => registraPagamento(null),
+    novo: () => novoAgendamento({}), agenda: () => vaiPara("agenda"), clientes: () => vaiPara("clientes"), financeiro: () => vaiPara("caixa"),
+    estoque: () => { st.estSeg = "produtos"; vaiPara("estoque"); }, esmaltes: () => { st.estSeg = "esmaltes"; vaiPara("estoque"); },
+    relatorios: telaRelatorios, compras: () => registraCompra(), config: () => vaiPara("mais"),
   })[b.dataset.atalho]()));
   bannerNotificacao();
 }
@@ -410,6 +438,7 @@ async function detalheAg(id) {
     q(sb.from("ad_pagamentos").select("*").eq("agendamento_id", id).order("recebido_em")),
   ]);
   if (!a) return toast("Agendamento não encontrado.", 1);
+  const coresAtuais = a.cores?.length ? await q(sb.from("ad_produtos").select("id,quantidade").in("id", a.cores.map((c) => c.id).filter(Boolean))) : [];
   const pago = pags.reduce((s, p) => s + Number(p.valor), 0);
   const prox = { marcado: ["confirmado", "Confirmar horário"], confirmado: ["chegou", "Cliente chegou"], chegou: ["atendendo", "Iniciar atendimento"], atendendo: ["concluido", "Finalizar atendimento"] }[a.status];
   const passado = new Date(a.inicio) < new Date();
@@ -425,6 +454,7 @@ async function detalheAg(id) {
       </dl>
       ${a.observacao ? `<p style="margin-top:12px;padding:10px 12px;background:var(--blush-2);border-radius:12px;font-size:14.5px">📝 ${esc(a.observacao)}</p>` : ""}
     </div>
+    ${htmlCores(a.cores, coresAtuais)}
     <div class="pilha">
       ${prox ? `<button class="btn ouro cheio" data-st="${prox[0]}">${prox[1]}</button>` : ""}
       ${["concluido", "atendendo", "chegou"].includes(a.status) && !a.pago ? `<button class="btn cheio" data-pagar>${IC.dinheiro}Registrar pagamento</button>` : ""}
@@ -723,10 +753,11 @@ async function telaCaixa() {
   const fimMes = new Date(Date.UTC(a0, m0, 1)).toISOString().slice(0, 10);
   const [pags, ags, desp, agsMesTodo, pagsMesAnt] = await Promise.all([
     pagsEntre(ini, fim), agsEntre(ini, fim),
-    q(sb.from("ad_lancamentos").select("*").eq("tipo", "saida").gte("data", ini).lt("data", fim).order("data", { ascending: false })),
+    q(sb.from("ad_lancamentos").select("*").eq("tipo", "saida").eq("pago", true).gte("data", ini).lt("data", fim).order("data", { ascending: false })),
     per === "mes" ? agsEntre(ini, fimMes) : Promise.resolve(null),
     per === "mes" ? (async () => { const i = new Date(Date.UTC(a0, m0 - 2, 1)).toISOString().slice(0, 10); const d = Math.min(Number(hoje.slice(8)), new Date(Date.UTC(a0, m0 - 1, 0)).getUTCDate()); return pagsEntre(i, somaDias(i, d)); })() : Promise.resolve(null),
   ]);
+  const aPagar = await q(sb.from("ad_lancamentos").select("*").eq("tipo", "saida").eq("pago", false).order("vencimento"));
   const recebido = pags.reduce((s, p) => s + Number(p.valor), 0);
   const despesas = desp.reduce((s, l) => s + Number(l.valor), 0);
   const lucro = recebido - despesas;
@@ -777,7 +808,11 @@ async function telaCaixa() {
     ${pendentes.length ? `<div class="tit-linha"><h2>A receber</h2></div>${pendentes.map((a) => cartaoAg(a, true)).join("")}` : ""}
     <div class="cartao"><h2>Por forma de pagamento</h2>${Object.keys(porForma).length ? Object.entries(porForma).sort((x, y) => y[1] - x[1]).map(([f, v]) => `<div style="margin-top:12px"><div class="linha entre"><span>${FORMAS[f]}</span><b>${brl(v)}</b></div><div class="barra-h"><span style="width:${(v / maxF) * 100}%"></span></div></div>`).join("") : `<p class="mudo">Nenhum pagamento registrado ${rot}.</p>`}</div>
     <div class="cartao"><h2>Serviços que mais faturaram</h2>${Object.keys(porServ).length ? Object.entries(porServ).sort((x, y) => y[1] - x[1]).slice(0, 6).map(([sv, v]) => `<div style="margin-top:12px"><div class="linha entre"><span class="cresce" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(sv)}</span><b>${brl(v)}</b></div><div class="barra-h"><span style="width:${(v / maxS) * 100}%"></span></div></div>`).join("") : `<p class="mudo">Aparece aqui quando houver pagamentos de atendimentos.</p>`}</div>
-    <div class="tit-linha"><h2>Despesas</h2><button id="nova-desp2">+ Adicionar</button></div>
+    <div class="tit-linha"><h2>Contas a pagar</h2><span class="pequeno">${aPagar.length ? brl(aPagar.reduce((s, l) => s + Number(l.valor), 0)) : ""}</span></div>
+    ${aPagar.length ? `<div class="lista">${aPagar.map((l) => { const atras = l.vencimento && l.vencimento < hoje; return `<div class="item" style="cursor:default"><div class="ic" style="background:var(--red2);color:var(--red)">${IC.relogio}</div><div class="cresce"><b>${esc(l.descricao)}</b><div class="pequeno">${esc(l.categoria || "Outras despesas")} · ${atras ? '<span style="color:var(--red)">venceu</span>' : "vence"} ${l.vencimento ? dataCurta(meioDia(l.vencimento)) : ""}</div></div><b>${brl(l.valor)}</b><button class="btn mini" data-pagou="${l.id}">Paguei</button></div>`; }).join("")}</div>` : `<p class="mudo" style="margin:0 4px 12px">Nenhuma conta em aberto. Ao registrar uma despesa, escolha "Conta a pagar" para anotar aluguel, energia, água...</p>`}
+    <div class="cartao"><h2>Despesas por categoria</h2>${desp.length ? (() => { const pc = {}; desp.forEach((l) => (pc[l.categoria || "Outras despesas"] = (pc[l.categoria || "Outras despesas"] || 0) + Number(l.valor))); const mx = Math.max(...Object.values(pc)); return Object.entries(pc).sort((x, y) => y[1] - x[1]).map(([c, v]) => `<div style="margin-top:12px"><div class="linha entre"><span>${esc(c)}</span><b>${brl(v)}</b></div><div class="barra-h"><span style="width:${(v / mx) * 100}%;background:var(--red)"></span></div></div>`).join(""); })() : `<p class="mudo">Nenhuma despesa ${rot}.</p>`}</div>
+    <button class="btn cheio" id="b-relat" style="margin-bottom:12px">${IC.grafico}Relatório dos últimos 6 meses</button>
+    <div class="tit-linha"><h2>Despesas pagas</h2><button id="nova-desp2">+ Adicionar</button></div>
     ${desp.length ? `<div class="lista">${desp.map((l) => `<div class="item" style="cursor:default"><div class="ic" style="background:var(--red2);color:var(--red)">${IC.dinheiro}</div><div class="cresce"><b>${esc(l.descricao)}</b><div class="pequeno">${esc(l.categoria || "Outros")} · ${dataCurta(meioDia(l.data))}</div></div><b style="color:var(--red)">− ${brl(l.valor)}</b><button class="fechar" data-del-desp="${l.id}" aria-label="Apagar" style="width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:var(--soft);color:var(--mute);flex:none">✕</button></div>`).join("")}</div>` : `<p class="mudo" style="margin:0 4px 12px">Registre materiais, aluguel e contas para saber o lucro de verdade.</p>`}
     <div class="tit-linha"><h2>Recebimentos</h2></div>
     ${pags.length ? `<div class="lista">${pags.map((p) => { const a = agPorId[p.agendamento_id]; return `<div class="item" ${a ? `data-ag="${a.id}"` : 'style="cursor:default"'}><div class="ic" style="background:var(--ok2);color:var(--ok)">${IC.dinheiro}</div><div class="cresce"><b>${a ? esc(a.cliente_nome) : esc(p.observacao || "Recebimento avulso")}</b><div class="pequeno">${FORMAS[p.forma]} · ${dataCurta(p.recebido_em)} ${hora(p.recebido_em)}${a ? " · " + esc(a.servico_nome) : ""}</div></div><b style="color:var(--ok)">${brl(p.valor)}</b></div>`; }).join("")}</div>` : `<div class="vazio">${IC.dinheiro}<div>Os pagamentos registrados aparecem aqui.</div></div>`}`);
@@ -786,27 +821,65 @@ async function telaCaixa() {
   $("pag-avulso").onclick = () => registraPagamento(null);
   $("nova-desp").onclick = $("nova-desp2").onclick = novaDespesa;
   $("b-meta")?.addEventListener("click", editaMeta);
+  $("b-relat").onclick = telaRelatorios;
+  r.querySelectorAll("[data-pagou]").forEach((b) => (b.onclick = async () => { await q(sb.from("ad_lancamentos").update({ pago: true, data: isoDia() }).eq("id", b.dataset.pagou)); toast("Conta paga e lançada nas despesas."); telaCaixa(); }));
   r.querySelectorAll("[data-del-desp]").forEach((b) => (b.onclick = async () => { if (!confirm("Apagar esta despesa?")) return; await q(sb.from("ad_lancamentos").delete().eq("id", b.dataset.delDesp)); toast("Despesa apagada."); telaCaixa(); }));
   dicas().then((h) => { if ($("dicas")) $("dicas").innerHTML = h; });
 }
 
+const CATS_DESP = ["Compra de esmaltes", "Compra de materiais", "Produtos de limpeza", "Aluguel", "Energia", "Água", "Internet", "Manutenção", "Outras despesas"];
+
+// Relatório: faturamento x despesas dos últimos 6 meses + indicadores
+async function telaRelatorios() {
+  const hoje = isoDia(), [a0, m0] = hoje.split("-").map(Number);
+  const meses = Array.from({ length: 6 }, (_, i) => { const d = new Date(Date.UTC(a0, m0 - 6 + i, 1)); return d.toISOString().slice(0, 10); });
+  const fimTudo = new Date(Date.UTC(a0, m0, 1)).toISOString().slice(0, 10);
+  const [pags, desp, ags] = await Promise.all([
+    pagsEntre(meses[0], fimTudo),
+    q(sb.from("ad_lancamentos").select("valor,data,categoria").eq("tipo", "saida").eq("pago", true).gte("data", meses[0]).lt("data", fimTudo)),
+    agsEntre(meses[0], fimTudo),
+  ]);
+  const chaveMes = (iso) => iso.slice(0, 7);
+  const dados = meses.map((m) => {
+    const k = chaveMes(m);
+    const rec = pags.filter((p) => isoDia(new Date(p.recebido_em)).slice(0, 7) === k).reduce((s, p) => s + Number(p.valor), 0);
+    const gas = desp.filter((l) => l.data.slice(0, 7) === k).reduce((s, l) => s + Number(l.valor), 0);
+    const at = ags.filter((a) => isoDia(new Date(a.inicio)).slice(0, 7) === k && a.status === "concluido").length;
+    return { k, nome: new Date(m + "T12:00:00Z").toLocaleDateString("pt-BR", { month: "short", timeZone: "UTC" }).replace(".", ""), rec, gas, lucro: rec - gas, at };
+  });
+  const mx = Math.max(1, ...dados.map((d) => Math.max(d.rec, d.gas)));
+  const tot = dados.reduce((s, d) => ({ rec: s.rec + d.rec, gas: s.gas + d.gas, at: s.at + d.at }), { rec: 0, gas: 0, at: 0 });
+  const melhor = [...dados].sort((x, y) => y.lucro - x.lucro)[0];
+  abreFolha(cabFolha("Relatórios", "Últimos 6 meses, com os dados reais do salão.") + `
+    <div class="cartao"><h2>Faturamento × despesas</h2>
+      <div class="grafico">${dados.map((d) => `<div class="g-col"><div class="g-barras"><span class="g-rec" style="height:${(d.rec / mx) * 100}%" title="${brl(d.rec)}"></span><span class="g-gas" style="height:${(d.gas / mx) * 100}%" title="${brl(d.gas)}"></span></div><small>${d.nome}</small></div>`).join("")}</div>
+      <div class="linha" style="gap:14px;margin-top:10px"><span class="pequeno"><i class="g-leg" style="background:var(--acc)"></i>Recebido</span><span class="pequeno"><i class="g-leg" style="background:var(--red)"></i>Despesas</span></div>
+    </div>
+    <div class="resumo-val"><div><small>Recebido (6 meses)</small><b class="pos">${brl(tot.rec)}</b></div><div><small>Despesas</small><b class="neg">${brl(tot.gas)}</b></div><div><small>Lucro líquido</small><b>${brl(tot.rec - tot.gas)}</b></div></div>
+    <div class="resumo-val"><div><small>Atendimentos</small><b>${tot.at}</b></div><div><small>Ticket médio</small><b>${brl(tot.at ? tot.rec / tot.at : 0)}</b></div><div><small>Melhor mês</small><b style="font-size:14px">${melhor.lucro > 0 ? melhor.nome : "—"}</b></div></div>
+    <div class="cartao"><h2>Mês a mês</h2>${dados.slice().reverse().map((d) => `<div class="linha entre" style="padding:8px 0;border-top:1px solid var(--line)"><span style="text-transform:capitalize">${d.nome}</span><span class="pequeno">${d.at} atend.</span><b class="${d.lucro < 0 ? "neg" : ""}">${brl(d.lucro)}</b></div>`).join("")}</div>`);
+}
+
 function novaDespesa() {
-  const cats = ["Material", "Aluguel", "Contas", "Transporte", "Divulgação", "Outros"];
-  let cat = "Material";
+  const cats = CATS_DESP;
+  let cat = cats[0], jaPaga = true;
   abreFolha(cabFolha("Registrar despesa", "Entra no cálculo do lucro.") + `
     <div class="cartao">
       <label class="f">Valor (R$)</label><input class="campo" data-valor type="number" inputmode="decimal" step="0.01" min="0" style="font-size:22px;font-weight:700">
       <label class="f">Tipo</label><div class="opcoes" data-cats>${cats.map((c) => `<button type="button" data-c="${c}" class="${c === cat ? "on" : ""}">${c}</button>`).join("")}</div>
       <label class="f">Descrição</label><input class="campo" data-desc placeholder="Ex.: esmaltes, lixas, algodão">
-      <label class="f">Data</label><input class="campo" data-data type="date" value="${isoDia()}">
+      <label class="f">Situação</label><div class="seg" data-sit style="margin:0"><button type="button" data-pg="1" class="on">Já paguei</button><button type="button" data-pg="0">Conta a pagar</button></div>
+      <label class="f" data-rot-data>Data do pagamento</label><input class="campo" data-data type="date" value="${isoDia()}">
     </div>
     <button class="btn prim cheio" data-salvar>Salvar despesa</button>`, (r) => {
+    r.querySelectorAll("[data-pg]").forEach((b) => (b.onclick = () => { jaPaga = b.dataset.pg === "1"; r.querySelectorAll("[data-pg]").forEach((x) => x.classList.toggle("on", x === b)); r.querySelector("[data-rot-data]").textContent = jaPaga ? "Data do pagamento" : "Vencimento"; }));
     r.querySelectorAll("[data-c]").forEach((b) => (b.onclick = () => { cat = b.dataset.c; r.querySelectorAll("[data-c]").forEach((x) => x.classList.toggle("on", x === b)); }));
     r.querySelector("[data-salvar]").onclick = async () => {
       const valor = Number(r.querySelector("[data-valor]").value);
       if (!(valor > 0)) return toast("Informe o valor.", 1);
-      await q(sb.from("ad_lancamentos").insert({ profissional_id: st.user.id, tipo: "saida", valor, categoria: cat, descricao: r.querySelector("[data-desc]").value.trim() || cat, data: r.querySelector("[data-data]").value || isoDia() }));
-      toast(`Despesa de ${brl(valor)} registrada.`); fechaFolha(); atualizaTela();
+      const dt = r.querySelector("[data-data]").value || isoDia();
+      await q(sb.from("ad_lancamentos").insert({ profissional_id: st.user.id, tipo: "saida", valor, categoria: cat, descricao: r.querySelector("[data-desc]").value.trim() || cat, data: dt, pago: jaPaga, vencimento: jaPaga ? null : dt }));
+      toast(jaPaga ? `Despesa de ${brl(valor)} registrada.` : `Conta de ${brl(valor)} anotada. Aviso quando estiver perto de vencer.`); fechaFolha(); atualizaTela();
     };
   });
 }
@@ -862,6 +935,8 @@ async function dicas() {
 // =====================================================================
 function telaMais() {
   const itens = [
+    ["estoque", IC.caixa, "Estoque e esmaltes", "Catálogo de cores por foto, produtos, compras"],
+    ["relatorios", IC.grafico, "Relatórios", "Faturamento, despesas e lucro dos últimos meses"],
     ["servicos", IC.tesoura, "Serviços e preços", "Adicionar, editar, mudar preço e duração"],
     ["horarios", IC.relogio, "Horários e folgas", "Dias de trabalho, intervalos, feriados e férias"],
     ["automacoes", IC.relogio, "Automações", "Finalizar sozinho, avisos às 18h, aniversários, feriados"],
@@ -879,7 +954,7 @@ function telaMais() {
   const r = tela(`<div class="lista">${itens.map(([k, ic, t, s]) => `<button class="item" data-m="${k}"><div class="ic">${ic}</div><div class="cresce"><b>${t}</b>${s ? `<div class="pequeno">${s}</div>` : ""}</div><span class="seta">›</span></button>`).join("")}</div>
     <p class="pequeno" style="text-align:center;margin-top:20px">Nay Nails Gestão · versão 1.0<br>Mesma agenda do site de agendamento</p>`);
   r.querySelectorAll("[data-m]").forEach((b) => (b.onclick = () => ({
-    servicos: telaServicos, horarios: telaHorarios, notificacoes: telaNotificacoes, chegar: comoChegar, site: telaSite, salao: dadosSalao, instalar: instrucoesInstalar, senha: novaSenha, seguranca: telaSeguranca, aparencia: telaAparencia, automacoes: telaAutomacoes, tutorial: () => mostraTutorial(),
+    estoque: () => vaiPara("estoque"), relatorios: telaRelatorios, servicos: telaServicos, horarios: telaHorarios, notificacoes: telaNotificacoes, chegar: comoChegar, site: telaSite, salao: dadosSalao, instalar: instrucoesInstalar, senha: novaSenha, seguranca: telaSeguranca, aparencia: telaAparencia, automacoes: telaAutomacoes, tutorial: () => mostraTutorial(),
     sair: async () => { if (confirm("Sair do app?")) { await sb.auth.signOut(); location.reload(); } },
   })[b.dataset.m]()));
 }

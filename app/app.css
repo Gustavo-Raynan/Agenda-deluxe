@@ -256,7 +256,7 @@ textarea.campo { min-height: 80px; resize: vertical; }
 #toast { position: fixed; left: 50%; bottom: calc(100px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 20px); background: var(--card2); color: var(--ink); border: 1px solid var(--line2); padding: 12px 18px; border-radius: 16px; opacity: 0; transition: .25s; pointer-events: none; z-index: 95; max-width: 92vw; font-size: 14px; text-align: center; box-shadow: 0 18px 40px -16px rgba(0,0,0,.6); }
 #toast.on { opacity: 1; transform: translate(-50%, 0); }
 #toast.erro { background: var(--red2); color: var(--red); }
-@media (min-width: 520px) { .stats { grid-template-columns: repeat(4, 1fr); } .atalhos { grid-template-columns: repeat(6, 1fr); } }
+@media (min-width: 520px) { .stats { grid-template-columns: repeat(4, 1fr); } }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 
 /* biometria na trava */
@@ -349,3 +349,24 @@ nav.abas button.on svg { animation: popa .35s ease; }
 #tutorial .pontos i.on { width: 22px; background: var(--acc); }
 #tutorial .acoes { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; max-width: 420px; width: 100%; margin: 0 auto; }
 @media (prefers-reduced-motion: reduce) { .fab, #tutorial .big { animation: none !important; } .confete-app { display: none; } }
+
+/* ---------- estoque e catálogo de esmaltes ---------- */
+.neg { color: var(--red); } .pos { color: var(--ok); }
+.grade-esm { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+@media (min-width: 520px) { .grade-esm { grid-template-columns: repeat(3, 1fr); } }
+.esm { text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 8px 8px 11px; display: flex; flex-direction: column; gap: 2px; cursor: pointer; color: var(--ink); font: inherit; transition: transform .15s ease, border-color .2s; }
+.esm:active { transform: scale(.97); }
+.esm-foto { position: relative; aspect-ratio: 1; border-radius: 14px; overflow: hidden; margin-bottom: 6px; }
+.esm-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.esm-foto .chip { position: absolute; left: 6px; top: 6px; font-size: 10.5px; backdrop-filter: blur(6px); }
+.esm b { font-size: 14px; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.esm small { font-size: 12px; color: var(--mute); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.esm small.neg { color: var(--red); }
+.grafico { display: flex; align-items: flex-end; gap: 8px; height: 160px; margin-top: 12px; }
+.g-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; gap: 6px; }
+.g-col small { font-size: 11px; color: var(--mute); text-transform: capitalize; }
+.g-barras { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 3px; }
+.g-barras span { width: 42%; max-width: 18px; border-radius: 6px 6px 2px 2px; min-height: 2px; animation: sobe .6s ease both; transform-origin: bottom; }
+.g-rec { background: var(--acc); } .g-gas { background: var(--red); opacity: .85; }
+.g-leg { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+@keyframes sobe { from { transform: scaleY(0); } }
