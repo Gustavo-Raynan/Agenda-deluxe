@@ -13,6 +13,7 @@
 <link rel="icon" href="icone-192.png">
 <link rel="apple-touch-icon" href="icone-192.png">
 <link rel="manifest" href="manifest.json">
+<link rel="preload" as="image" href="logo.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
@@ -167,7 +168,7 @@ footer a{color:var(--gt);text-decoration:none}
 </head>
 <body>
 <header>
-  <img class="logo" src="logo.jpg" width="640" height="641" fetchpriority="high" alt="Nayara Fernandes, Nails e cuidados">
+  <img class="logo" src="logo.jpg" onerror="if(!this.dataset.r){this.dataset.r=1;this.src='/nayara/logo.jpg'}" width="640" height="641" fetchpriority="high" decoding="async" alt="Nayara Fernandes, Nails e cuidados">
   <h1>Cuidado em cada detalhe</h1>
   <p class="sl">Unhas lindas e pés bem cuidados, com carinho e capricho. Agende em menos de um minuto.</p>
   <a class="cta" href="#servicos">Agendar meu horário</a>

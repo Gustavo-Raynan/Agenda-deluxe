@@ -16,6 +16,7 @@ function modoAuth(login) {
   $("a-troca").textContent = login ? "Criar conta" : "Entrar";
 }
 $("a-troca").onclick = () => modoAuth(!st.modoLogin);
+modoAuth(true); // começa em Entrar
 $("a-ok").onclick = async () => {
   const email = $("a-email").value.trim(), password = $("a-senha").value;
   if (!email || password.length < 6) return AD.toast("Preencha e-mail e senha (mínimo 6 caracteres).", 1);
