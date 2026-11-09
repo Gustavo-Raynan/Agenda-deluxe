@@ -52,7 +52,7 @@ async function iniciar() {
   }
   mostra("v-painel");
   // Voltou do Mercado Pago? Confere o status da assinatura
-  if (new URLSearchParams(location.search).get("assinatura")) {
+  if (AD_CONFIG.COBRANCA_ATIVA && new URLSearchParams(location.search).get("assinatura")) {
     history.replaceState(null, "", location.pathname);
     await sincronizaAssinatura(true);
   }
@@ -65,12 +65,12 @@ async function iniciar() {
 const fimTeste = () => new Date(new Date(st.perfil.criado_em).getTime() + 14 * 864e5);
 const diasTeste = () => Math.ceil((fimTeste() - Date.now()) / 864e5);
 const assinante = () => st.perfil.assinatura_status === "authorized";
-const liberado = () => assinante() || fimTeste() > new Date();
+const liberado = () => !AD_CONFIG.COBRANCA_ATIVA || assinante() || fimTeste() > new Date();
 
 function atualizaAvisos() {
   $("aviso-bloqueio").classList.toggle("hide", liberado());
   const d = diasTeste();
-  const mostraTeste = !assinante() && d > 0 && d <= 5;
+  const mostraTeste = AD_CONFIG.COBRANCA_ATIVA && !assinante() && d > 0 && d <= 5;
   $("aviso-teste").classList.toggle("hide", !mostraTeste);
   if (mostraTeste) $("aviso-teste").innerHTML = `<div class="row between"><span class="muted">Seu teste grátis termina em <b>${d} dia${d > 1 ? "s" : ""}</b>.</span><button class="btn-gold btn-sm" onclick="abaAtiva('link')">Assinar</button></div>`;
 }
@@ -333,6 +333,8 @@ function renderLink() {
   $("abrir-link").href = url;
   $("compartilhar").href = "https://wa.me/?text=" + encodeURIComponent(`Agora você pode marcar seu horário comigo direto por aqui, a qualquer hora: ${url}`);
   $("e-nome").value = st.perfil.nome; $("e-prof").value = st.perfil.profissao || ""; $("e-zap").value = st.perfil.whatsapp || "";
+  $("card-assinatura").classList.toggle("hide", !AD_CONFIG.COBRANCA_ATIVA);
+  if (!AD_CONFIG.COBRANCA_ATIVA) return;
   const d = diasTeste(), status = st.perfil.assinatura_status;
   const ST = { authorized: "ativa ✅", pending: "aguardando pagamento", paused: "pausada", cancelled: "cancelada" };
   $("assinatura-txt").innerHTML = assinante()

@@ -15,3 +15,13 @@ Agenda online para profissionais autônomos (manicure, barbeiro, cabeleireira, p
 - Banco: tabelas `ad_*` no Supabase, protegidas por RLS; o cliente só acessa pelas funções `ad_pagina_publica`, `ad_horarios_livres`, `ad_agendar` e `ad_responder`.
 
 Site estático: não precisa de build.
+
+## Hospedagem
+- **Site:** Cloudflare Pages conectado a este repositório (branch `main`, sem build, pasta raiz). Também publicado no GitHub Pages.
+- **Backend:** Supabase (banco + Edge Functions `ad-assinar` e `ad-mp-webhook`).
+
+## Cobrança
+Desligada por enquanto: o app é gratuito. Para ligar no futuro:
+1. `config.js` → `COBRANCA_ATIVA: true`
+2. No banco: `create or replace function public.ad_cobranca_ativa() returns boolean language sql immutable set search_path = '' as $$ select true $$;`
+3. Supabase → Edge Functions → Secrets: `MP_ACCESS_TOKEN` e `MP_WEBHOOK_SECRET` (Mercado Pago)

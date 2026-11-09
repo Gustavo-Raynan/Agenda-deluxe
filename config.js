@@ -4,6 +4,8 @@ window.AD_CONFIG = {
   SUPABASE_URL: "https://izpsmlbfponhqwzjodyf.supabase.co",
   SUPABASE_KEY: "sb_publishable_AvyHVWMBYWUlw5SRiDJt3w_KH2eIhbm",
   PRECO_MENSAL: 20,
+  // Cobrança desligada: app gratuito. Para ligar, mudar para true (e ad_cobranca_ativa() no banco).
+  COBRANCA_ATIVA: false,
 };
 window.sb = window.supabase.createClient(AD_CONFIG.SUPABASE_URL, AD_CONFIG.SUPABASE_KEY);
 
