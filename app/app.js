@@ -46,6 +46,8 @@ const IC = {
   link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3.2-3.2a4.5 4.5 0 0 0-6.4-6.4L12 5.6"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3.2 3.2a4.5 4.5 0 0 0 6.4 6.4l1.2-1.2"/></svg>',
   salao: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V10l8-6 8 6v11"/><path d="M9 21v-6h6v6"/></svg>',
   sair: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4"/></svg>',
+  cadeado: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="10" width="16" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.3" fill="currentColor"/></svg>',
+  lua: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>',
   estrela: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>',
   baixar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>',
   busca: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
@@ -114,6 +116,7 @@ async function iniciar() {
   if (!prof) { toast("Esta conta não tem um salão cadastrado.", 1); await sb.auth.signOut(); return; }
   st.prof = prof;
   $("v-login").classList.add("hide"); $("v-app").classList.remove("hide");
+  if (travaCfg()) mostraTrava(); else if (!localStorage.getItem("nay.trava.perguntou")) setTimeout(() => { localStorage.setItem("nay.trava.perguntou", "1"); criaSenha(true); }, 1200);
   await carregaServicos();
   tempoReal(); contaAvisos(); registraSW();
   const m = location.hash.match(/ag=([0-9a-f-]{36})/);
@@ -129,7 +132,7 @@ const TITULOS = { inicio: "Início", agenda: "Agenda", clientes: "Clientes", cai
 function vaiPara(aba) {
   st.aba = aba;
   document.querySelectorAll("#abas button").forEach((b) => b.classList.toggle("on", b.dataset.aba === aba));
-  $("titulo").textContent = aba === "inicio" ? saudacao() : TITULOS[aba] || "";
+  $("titulo").innerHTML = (aba === "inicio" ? esc(saudacao()) : TITULOS[aba] || "") + `<small>${aba === "inicio" ? esc(dataLonga(new Date())) : "Nay Nails Gestão"}</small>`;
   scrollTo(0, 0);
   return atualizaTela();
 }
@@ -210,23 +213,26 @@ async function telaInicio() {
   if (devendo.length) alertas.push(`<button class="item" data-ir="caixa"><div class="ic">${IC.dinheiro}</div><div class="cresce"><b>${devendo.length} atendimento${devendo.length > 1 ? "s" : ""} sem pagamento registrado</b><div class="pequeno">Registre para o caixa ficar certo.</div></div><span class="seta">›</span></button>`);
 
   const r = tela(`
-    <p class="mudo" style="margin:-4px 2px 14px">${dataLonga(new Date())}</p>
+    <div class="hero">
+      <div class="l">Recebido hoje</div>
+      <div class="v">${brl(faturado)}</div>
+      <div class="sub">Previsto para hoje: ${brl(previsto)}${cancel ? ` · ${cancel} cancelado${cancel > 1 ? "s" : ""}` : ""}</div>
+      <div class="hstats">
+        <div><small>Atendimentos</small><b>${ativos.length}</b></div>
+        <div><small>A confirmar</small><b>${aConfirmar.length}</b></div>
+        <div><small>Horários livres</small><b>${livresHoje.length}</b></div>
+      </div>
+    </div>
     <div id="banner-notif"></div>
     ${proxima ? `<div class="proxima">
         <small>${new Date(proxima.inicio).getTime() <= agora ? "Atendendo agora" : "Próxima cliente"}</small>
         <h3>${esc(proxima.cliente_nome)}</h3>
-        <div>${esc(proxima.servico_nome)} · <span class="hora">${hora(proxima.inicio)}</span></div>
+        <div class="mudo">${esc(proxima.servico_nome)} · <span class="hora">${hora(proxima.inicio)}</span> · ${brl(proxima.preco)}</div>
         <div class="acoes">
           <a class="btn zap mini" target="_blank" rel="noopener" href="https://wa.me/${zapNum(proxima.cliente_whatsapp)}">${IC.zap}WhatsApp</a>
-          <button class="btn claro mini" data-ag="${proxima.id}">Ver detalhes</button>
+          <button class="btn mini" data-ag="${proxima.id}">Ver detalhes</button>
         </div></div>`
-      : `<div class="cartao rosa"><h2>${ativos.length ? "Atendimentos de hoje concluídos" : "Nenhuma cliente marcada hoje"}</h2><p class="mudo">${livresHoje.length ? `Ainda há ${livresHoje.length} horários livres hoje. Divulgue seu link de agendamento.` : "Aproveite para descansar ou organizar o salão."}</p></div>`}
-    <div class="stats">
-      <div class="stat destaque"><small>Recebido hoje</small><b>${brl(faturado)}</b><i>previsto ${brl(previsto)}</i></div>
-      <div class="stat"><small>Atendimentos</small><b>${ativos.length}</b><i>hoje</i></div>
-      <div class="stat"><small>A confirmar</small><b>${aConfirmar.length}</b><i>hoje e amanhã</i></div>
-      <div class="stat"><small>Horários livres</small><b>${livresHoje.length}</b><i>${cancel ? cancel + " cancelado" + (cancel > 1 ? "s" : "") : "hoje"}</i></div>
-    </div>
+      : `<div class="cartao"><h2>${ativos.length ? "Atendimentos de hoje concluídos ✨" : "Nenhuma cliente marcada hoje"}</h2><p class="mudo">${livresHoje.length ? `Ainda há ${livresHoje.length} horários livres hoje. Divulgue seu link de agendamento.` : "Aproveite para descansar ou organizar o salão."}</p></div>`}
     ${alertas.length ? `<div class="tit-linha"><h2>Avisos</h2><button data-ir="avisos">Ver todos</button></div><div class="lista">${alertas.join("")}</div>` : ""}
     <div class="tit-linha"><h2>Atalhos</h2></div>
     <div class="atalhos">
@@ -706,14 +712,16 @@ function telaMais() {
     ["chegar", IC.local, "Como chegar", "Endereço, mapa e compartilhar localização"],
     ["site", IC.link, "Site de agendamento", "Copiar e divulgar seu link"],
     ["salao", IC.salao, "Dados do salão", "Nome, WhatsApp, Instagram e endereço"],
+    ["seguranca", IC.cadeado, "Senha do app e biometria", travaCfg() ? "Ativada neste celular" : "Proteja o app com uma senha de números"],
+    ["aparencia", IC.lua, "Aparência", temaAtual() === "claro" ? "Tema claro" : "Tema escuro"],
     ["instalar", IC.baixar, "Instalar o app no celular", "Ícone na tela inicial, abre como aplicativo"],
-    ["senha", IC.estrela, "Trocar senha", ""],
+    ["senha", IC.estrela, "Trocar senha da conta", "A senha do e-mail de login"],
     ["sair", IC.sair, "Sair", ""],
   ];
   const r = tela(`<div class="lista">${itens.map(([k, ic, t, s]) => `<button class="item" data-m="${k}"><div class="ic">${ic}</div><div class="cresce"><b>${t}</b>${s ? `<div class="pequeno">${s}</div>` : ""}</div><span class="seta">›</span></button>`).join("")}</div>
     <p class="pequeno" style="text-align:center;margin-top:20px">Nay Nails Gestão · versão 1.0<br>Mesma agenda do site de agendamento</p>`);
   r.querySelectorAll("[data-m]").forEach((b) => (b.onclick = () => ({
-    servicos: telaServicos, horarios: telaHorarios, notificacoes: telaNotificacoes, chegar: comoChegar, site: telaSite, salao: dadosSalao, instalar: instrucoesInstalar, senha: novaSenha,
+    servicos: telaServicos, horarios: telaHorarios, notificacoes: telaNotificacoes, chegar: comoChegar, site: telaSite, salao: dadosSalao, instalar: instrucoesInstalar, senha: novaSenha, seguranca: telaSeguranca, aparencia: telaAparencia,
     sair: async () => { if (confirm("Sair do app?")) { await sb.auth.signOut(); location.reload(); } },
   })[b.dataset.m]()));
 }
@@ -980,6 +988,149 @@ function novaSenha() {
 }
 
 // ao voltar para o app, atualiza
-document.addEventListener("visibilitychange", () => { if (!document.hidden && st.prof && !$("folha").classList.contains("on")) { atualizaTela(); contaAvisos(); } });
+let saiuEm = 0;
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) { saiuEm = Date.now(); return; }
+  if (st.prof && travaCfg() && Date.now() - saiuEm > 60000) { destravado = false; mostraTrava(); }
+  if (st.prof && !$("folha").classList.contains("on")) { atualizaTela(); contaAvisos(); }
+});
 // toque na notificação com o app aberto
 navigator.serviceWorker?.addEventListener("message", (e) => { if (e.data?.agendamento) detalheAg(e.data.agendamento); else if (e.data?.abrir === "avisos") telaAvisos(); });
+
+
+// =====================================================================
+// SENHA DO APP E BIOMETRIA (fica só neste celular, como no Tico Finances)
+// =====================================================================
+const TRAVA = "nay.trava";
+let destravado = false;
+function travaCfg() { try { return JSON.parse(localStorage.getItem(TRAVA) || "null"); } catch { return null; } }
+async function sha(t) { const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t)); return [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join(""); }
+const b64u = (a) => btoa(String.fromCharCode(...new Uint8Array(a))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const ub64 = (t) => Uint8Array.from(atob(t.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
+const bioDisponivel = () => !!(window.PublicKeyCredential && navigator.credentials && window.isSecureContext);
+async function bioCadastra() {
+  const c = await navigator.credentials.create({ publicKey: {
+    challenge: crypto.getRandomValues(new Uint8Array(32)), rp: { name: "Nay Nails Gestão" },
+    user: { id: crypto.getRandomValues(new Uint8Array(16)), name: "nayara", displayName: "Nay Nails Gestão" },
+    pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+    authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required", residentKey: "discouraged" }, timeout: 60000 } });
+  return b64u(c.rawId);
+}
+async function bioConfere(id) {
+  const r = await navigator.credentials.get({ publicKey: { challenge: crypto.getRandomValues(new Uint8Array(32)), allowCredentials: [{ type: "public-key", id: ub64(id), transports: ["internal"] }], userVerification: "required", timeout: 60000 } });
+  return !!r;
+}
+
+// Teclado numérico (usado para destravar e para criar a senha)
+function teclado(el, { titulo, msg, tamanho, bio, aoCompletar, aoBio, rodape, semImagem }) {
+  let pin = "";
+  const desenha = (m, treme) => {
+    el.innerHTML = `<div class="lk">${semImagem ? "" : '<img src="icone-192.png" alt="">'}<h3>${titulo}</h3><div class="s">${m || msg}</div>
+      <div class="pins${treme ? " treme" : ""}">${Array.from({ length: tamanho }, (_, i) => `<i class="${i < pin.length ? "on" : ""}"></i>`).join("")}</div>
+      <div class="kp">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => `<button type="button" data-k="${n}">${n}</button>`).join("")}
+        ${bio ? `<button type="button" class="kb" data-k="bio" aria-label="Usar biometria">☝️</button>` : "<span></span>"}
+        <button type="button" data-k="0">0</button><button type="button" class="kb" data-k="del" aria-label="Apagar">⌫</button></div>
+      ${rodape || ""}</div>`;
+    el.querySelectorAll("[data-k]").forEach((b) => (b.onclick = () => tecla(b.dataset.k)));
+  };
+  const tecla = async (k) => {
+    if (k === "bio") return aoBio && aoBio(desenha);
+    if (k === "del") { pin = pin.slice(0, -1); return desenha(); }
+    if (pin.length >= tamanho) return;
+    pin += k; desenha();
+    if (pin.length === tamanho) { const p = pin; pin = ""; setTimeout(() => aoCompletar(p, (m) => desenha(m, true), desenha), 120); }
+  };
+  el._tecla = tecla;
+  desenha();
+}
+document.addEventListener("keydown", (e) => {
+  const el = $("trava"); if (!el || !el._tecla) return;
+  if (/^\d$/.test(e.key)) el._tecla(e.key); else if (e.key === "Backspace") el._tecla("del");
+});
+
+function mostraTrava() {
+  const L = travaCfg(); if (!L || destravado) return;
+  let el = $("trava");
+  if (!el) { el = document.createElement("div"); el.id = "trava"; document.body.appendChild(el); }
+  const libera = () => { destravado = true; el.remove(); };
+  const temBio = !!(L.bio && bioDisponivel());
+  teclado(el, {
+    titulo: "Nay Nails Gestão", msg: "Digite a senha do app", tamanho: L.len || 4, bio: temBio,
+    aoCompletar: async (p, erro) => { if ((await sha(L.salt + p)) === L.hash) libera(); else erro("Senha incorreta. Tente de novo."); },
+    aoBio: async (desenha) => { try { if (await bioConfere(L.bio)) libera(); } catch { desenha("Biometria não confirmou. Use a senha."); } },
+    rodape: `<button type="button" class="link" id="esqueci-pin" style="margin-top:18px">Esqueci a senha</button>`,
+  });
+  el.querySelector("#esqueci-pin").onclick = async () => {
+    if (!confirm("Para tirar a senha, você vai sair e entrar de novo com e-mail e senha da conta. Continuar?")) return;
+    localStorage.removeItem(TRAVA); await sb.auth.signOut(); location.reload();
+  };
+  if (temBio) setTimeout(() => el._tecla && el._tecla("bio"), 400);
+}
+
+function criaSenha(primeiraVez) {
+  let tamanho = 4;
+  abreFolha(cabFolha("Senha do app", primeiraVez ? "Proteja o app com uma senha de números. Ela é pedida sempre que o app abrir." : "Escolha quantos números a senha vai ter.") + `
+    <div class="opcoes" data-tam style="justify-content:center;margin-bottom:16px">${[4, 5, 6].map((n) => `<button type="button" data-n="${n}" class="${n === 4 ? "on" : ""}">${n} números</button>`).join("")}</div>
+    <div id="cria-pin"></div>
+    ${primeiraVez ? `<button class="btn cheio" data-fechar style="margin-top:16px">Agora não</button>` : ""}`, (r) => {
+    const box = r.querySelector("#cria-pin");
+    let primeira = null;
+    const inicia = () => {
+      primeira = null;
+      teclado(box, { titulo: "Criar senha", msg: `Digite ${tamanho} números`, tamanho, semImagem: true,
+        aoCompletar: async (p, erro, desenha) => {
+          if (!primeira) { primeira = p; return desenha("Digite de novo para confirmar"); }
+          if (p !== primeira) { primeira = null; return erro("As senhas não são iguais. Comece de novo."); }
+          const salt = b64u(crypto.getRandomValues(new Uint8Array(12)));
+          const cfg = { len: tamanho, salt, hash: await sha(salt + p), bio: null };
+          if (bioDisponivel() && confirm("Quer destravar também com a digital ou o rosto (biometria)?")) {
+            try { cfg.bio = await bioCadastra(); } catch { toast("Biometria não ativada. Você pode ativar depois em Mais.", 1); }
+          }
+          localStorage.setItem(TRAVA, JSON.stringify(cfg)); destravado = true;
+          toast("Senha do app criada!"); fechaFolha(); if (st.aba === "mais") telaMais();
+        } });
+    };
+    r.querySelectorAll("[data-n]").forEach((b) => (b.onclick = () => { tamanho = +b.dataset.n; r.querySelectorAll("[data-n]").forEach((x) => x.classList.toggle("on", x === b)); inicia(); }));
+    inicia();
+  });
+}
+
+function telaSeguranca() {
+  const L = travaCfg();
+  if (!L) return criaSenha(false);
+  abreFolha(cabFolha("Senha do app e biometria", "Ativada neste celular ✅") + `
+    <div class="cartao">
+      <label class="interruptor"><span>Destravar com digital ou rosto</span><input type="checkbox" data-bio ${L.bio ? "checked" : ""} ${bioDisponivel() ? "" : "disabled"}></label>
+      ${bioDisponivel() ? "" : `<p class="pequeno">Este celular ou navegador não oferece biometria para sites.</p>`}
+      <p class="pequeno" style="margin-top:8px">O app trava sozinho quando fica mais de 1 minuto fechado.</p>
+    </div>
+    <div class="pilha">
+      <button class="btn cheio" data-trocar>Trocar a senha do app</button>
+      <button class="btn perigo cheio" data-remover>Remover a senha do app</button>
+    </div>`, (r) => {
+    r.querySelector("[data-bio]").onchange = async (e) => {
+      const cfg = travaCfg();
+      if (e.target.checked) { try { cfg.bio = await bioCadastra(); toast("Biometria ativada."); } catch { e.target.checked = false; return toast("Não foi possível ativar a biometria.", 1); } }
+      else cfg.bio = null;
+      localStorage.setItem(TRAVA, JSON.stringify(cfg));
+    };
+    r.querySelector("[data-trocar]").onclick = () => criaSenha(false);
+    r.querySelector("[data-remover]").onclick = () => {
+      if (!confirm("Remover a senha do app neste celular?")) return;
+      localStorage.removeItem(TRAVA); toast("Senha do app removida."); fechaFolha(); if (st.aba === "mais") telaMais();
+    };
+  });
+}
+
+// ---------- aparência ----------
+function temaAtual() { return localStorage.getItem("nay.tema") || "escuro"; }
+function aplicaTema(t) {
+  localStorage.setItem("nay.tema", t); document.documentElement.dataset.tema = t;
+  document.querySelector('meta[name="theme-color"]').content = t === "claro" ? "#F6F0EA" : "#0B090A";
+}
+function telaAparencia() {
+  abreFolha(cabFolha("Aparência") + `<div class="lista">
+    ${[["escuro", "Escuro", "Fundo escuro com rosé e dourado"], ["claro", "Claro", "Fundo bege com rosa blush"]].map(([k, n, d]) => `<button class="item" data-t="${k}"><div class="ic">${k === "escuro" ? IC.lua : IC.estrela}</div><div class="cresce"><b>${n}</b><div class="pequeno">${d}</div></div>${temaAtual() === k ? '<span class="chip confirmado">Em uso</span>' : ""}</button>`).join("")}</div>`, (r) => {
+    r.querySelectorAll("[data-t]").forEach((b) => (b.onclick = () => { aplicaTema(b.dataset.t); telaAparencia(); if (st.aba === "mais") telaMais(); }));
+  });
+}
