@@ -206,6 +206,13 @@ async function telaInicio() {
   const faturado = pags.reduce((s, p) => s + Number(p.valor), 0);
   const cancel = ags.filter((a) => a.status === "cancelado").length;
   const previsto = ativos.filter((a) => a.status !== "faltou").reduce((s, a) => s + Number(a.preco), 0);
+  const meta = Number(st.prof.meta_mensal || 0);
+  let metaHtml = "";
+  if (meta) {
+    const recMes = (await pagsEntre(hoje.slice(0, 8) + "01", amanha)).reduce((s, p) => s + Number(p.valor), 0);
+    const pct = Math.min(100, Math.round((recMes / meta) * 100));
+    metaHtml = `<div class="meta"><small><span>Meta do mês · ${brl(recMes)} de ${brl(meta)}</span><span>${pct}%</span></small><div class="barra"><span style="width:${pct}%"></span></div></div>`;
+  }
 
   const alertas = [];
   avisos.forEach((v) => alertas.push(`<button class="item aviso-item novo" data-aviso="${v.id}" data-agid="${v.agendamento_id || ""}"><span class="ponto"></span><div class="cresce"><b>${esc(v.titulo)}</b><div class="pequeno">${esc(v.corpo)}</div></div></button>`));
@@ -222,6 +229,7 @@ async function telaInicio() {
         <div><small>A confirmar</small><b>${aConfirmar.length}</b></div>
         <div><small>Horários livres</small><b>${livresHoje.length}</b></div>
       </div>
+      ${metaHtml}
     </div>
     <div id="banner-notif"></div>
     ${proxima ? `<div class="proxima">
@@ -270,6 +278,24 @@ function listaConfirmar(lista) {
       <a class="btn zap mini" target="_blank" rel="noopener" href="${linkZap(a, "lembrete")}">Lembrete</a></div>`).join("")}</div>`);
 }
 
+// Previsto x recebido x a receber de um conjunto de atendimentos (mostra quanto vai entrar)
+async function resumoValores(ags, despesas) {
+  const validos = ags.filter((a) => !["cancelado", "faltou"].includes(a.status));
+  const previsto = validos.reduce((s, a) => s + Number(a.preco), 0);
+  const ids = validos.map((a) => a.id);
+  let recebido = 0;
+  if (ids.length) recebido = (await q(sb.from("ad_pagamentos").select("valor").in("agendamento_id", ids))).reduce((s, p) => s + Number(p.valor), 0);
+  const falta = Math.max(previsto - recebido, 0);
+  if (despesas != null) {
+    const lucro = previsto - despesas;
+    return `<div class="resumo-val"><div><small>Previsto</small><b>${brl(previsto)}</b></div><div><small>Despesas</small><b class="neg">${brl(despesas)}</b></div><div><small>Lucro previsto</small><b class="${lucro >= 0 ? "pos" : "neg"}">${brl(lucro)}</b></div></div>`;
+  }
+  return `<div class="resumo-val"><div><small>Previsto</small><b>${brl(previsto)}</b></div><div><small>Já recebido</small><b class="pos">${brl(recebido)}</b></div><div><small>Falta receber</small><b>${brl(falta)}</b></div></div>`;
+}
+async function despesasEntre(deIso, ateIso) {
+  return (await q(sb.from("ad_lancamentos").select("valor").eq("tipo", "saida").gte("data", deIso).lt("data", ateIso))).reduce((s, l) => s + Number(l.valor), 0);
+}
+
 // =====================================================================
 // AGENDA
 // =====================================================================
@@ -286,7 +312,8 @@ async function telaAgenda() {
     corpo = `<div class="navdia"><button class="redondo" data-d="-1" aria-label="Dia anterior">‹</button>
       <div class="cresce">${st.dia === hoje ? "Hoje" : diaSemana(meioDia(st.dia))}<small>${meioDia(st.dia).toLocaleDateString("pt-BR", { day: "numeric", month: "long", timeZone: "UTC" })}</small></div>
       <button class="redondo" data-d="1" aria-label="Próximo dia">›</button></div>
-      <div class="linha entre" style="margin-bottom:12px"><span class="mudo">${ativos.length} atendimento${ativos.length !== 1 ? "s" : ""} · ${brl(ativos.reduce((s, a) => s + Number(a.preco), 0))}</span>
+      ${await resumoValores(ags)}
+      <div class="linha entre" style="margin:0 4px 10px"><span class="mudo">${ativos.length} atendimento${ativos.length !== 1 ? "s" : ""}</span>
       ${st.dia !== hoje ? `<button class="link" data-hoje>Ir para hoje</button>` : ""}</div>
       ${(bloq || []).map((b) => `<div class="ag cancelado" style="opacity:.8;cursor:default"><div class="h">${hora(b.inicio)}<small>até ${hora(b.fim)}</small></div><div><div class="n">Horário bloqueado</div><div class="s">${esc(b.motivo || "")}</div></div><div class="d"><button class="link" data-desbloq="${b.id}">Liberar</button></div></div>`).join("")}
       ${ags.length ? ags.map((a) => cartaoAg(a)).join("") : `<div class="vazio">${IC.calendario}<div>Nenhum agendamento neste dia.</div></div>`}
@@ -296,6 +323,7 @@ async function telaAgenda() {
     const ags = await agsEntre(ini, fim);
     const dias = Array.from({ length: 7 }, (_, i) => somaDias(ini, i));
     corpo = `<div class="navdia"><button class="redondo" data-d="-7">‹</button><div class="cresce">${dataCurta(meioDia(ini))} a ${dataCurta(meioDia(somaDias(ini, 6)))}<small>${ags.filter((a) => a.status !== "cancelado").length} atendimentos</small></div><button class="redondo" data-d="7">›</button></div>
+      ${await resumoValores(ags)}
       <div class="semana">${dias.map((d) => { const l = ags.filter((a) => isoDia(a.inicio) === d); return `<div class="dia-sem"><h3>${d === hoje ? "Hoje" : SEM[meioDia(d).getUTCDay()]}, ${meioDia(d).getUTCDate()}<span>${l.length ? l.length + " · " + brl(l.filter((a) => a.status !== "cancelado").reduce((s, a) => s + Number(a.preco), 0)) : "livre"}</span></h3>${l.map((a) => cartaoAg(a)).join("")}</div>`; }).join("")}</div>`;
   } else if (st.agendaModo === "mes") {
     const [a, m] = st.mes.split("-").map(Number);
@@ -308,6 +336,7 @@ async function telaAgenda() {
     for (let d = 1; d <= nDias; d++) { const iso = `${st.mes}-${String(d).padStart(2, "0")}`; cel += `<button data-dia="${iso}" class="${iso === hoje ? "hoje" : ""}">${d}<i>${cont[iso] ? cont[iso] + "×" : ""}</i></button>`; }
     const nomeMes = cap(new Date(Date.UTC(a, m - 1, 15)).toLocaleDateString("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" }));
     corpo = `<div class="navdia"><button class="redondo" data-m="-1">‹</button><div class="cresce">${nomeMes}<small>${ags.filter((x) => x.status !== "cancelado").length} atendimentos · ${brl(ags.filter((x) => x.status !== "cancelado").reduce((s, x) => s + Number(x.preco), 0))}</small></div><button class="redondo" data-m="1">›</button></div>
+      ${await resumoValores(ags, await despesasEntre(primeiro, prox))}
       <div class="mes">${cel}</div><p class="pequeno" style="text-align:center;margin-top:10px">Toque em um dia para ver os atendimentos.</p>`;
   } else {
     const ags = (await agsEntre(hoje, somaDias(hoje, 45))).filter((a) => ATIVOS.includes(a.status) && new Date(a.fim) > new Date());
@@ -662,18 +691,23 @@ async function telaCaixa() {
   const per = st.caixaPer;
   const ini = per === "hoje" ? hoje : per === "semana" ? somaDias(hoje, -6) : hoje.slice(0, 8) + "01";
   const fim = somaDias(hoje, 1);
-  const [pags, ags, pagsMesAnt] = await Promise.all([
+  const [a0, m0] = hoje.split("-").map(Number);
+  const fimMes = new Date(Date.UTC(a0, m0, 1)).toISOString().slice(0, 10);
+  const [pags, ags, desp, agsMesTodo, pagsMesAnt] = await Promise.all([
     pagsEntre(ini, fim), agsEntre(ini, fim),
-    per === "mes" ? (async () => { const [a, m] = hoje.split("-").map(Number); const i = new Date(Date.UTC(a, m - 2, 1)).toISOString().slice(0, 10); const d = Math.min(Number(hoje.slice(8)), new Date(Date.UTC(a, m - 1, 0)).getUTCDate()); return pagsEntre(i, somaDias(i, d)); })() : Promise.resolve(null),
+    q(sb.from("ad_lancamentos").select("*").eq("tipo", "saida").gte("data", ini).lt("data", fim).order("data", { ascending: false })),
+    per === "mes" ? agsEntre(ini, fimMes) : Promise.resolve(null),
+    per === "mes" ? (async () => { const i = new Date(Date.UTC(a0, m0 - 2, 1)).toISOString().slice(0, 10); const d = Math.min(Number(hoje.slice(8)), new Date(Date.UTC(a0, m0 - 1, 0)).getUTCDate()); return pagsEntre(i, somaDias(i, d)); })() : Promise.resolve(null),
   ]);
   const recebido = pags.reduce((s, p) => s + Number(p.valor), 0);
+  const despesas = desp.reduce((s, l) => s + Number(l.valor), 0);
+  const lucro = recebido - despesas;
   const comAg = pags.filter((p) => p.agendamento_id);
   const atend = new Set(comAg.map((p) => p.agendamento_id)).size;
   const ticket = atend ? comAg.reduce((s, p) => s + Number(p.valor), 0) / atend : 0;
   const pendentes = ags.filter((a) => a.status === "concluido" && !a.pago);
   const pendente = pendentes.reduce((s, a) => s + Number(a.preco), 0);
-  const cancel = ags.filter((a) => a.status === "cancelado");
-  const faltas = ags.filter((a) => a.status === "faltou");
+  const cancel = ags.filter((a) => a.status === "cancelado"), faltas = ags.filter((a) => a.status === "faltou");
   const porForma = {}; pags.forEach((p) => (porForma[p.forma] = (porForma[p.forma] || 0) + Number(p.valor)));
   const agPorId = Object.fromEntries(ags.map((a) => [a.id, a]));
   const porServ = {}; comAg.forEach((p) => { const nm = agPorId[p.agendamento_id]?.servico_nome || "Outros"; porServ[nm] = (porServ[nm] || 0) + Number(p.valor); });
@@ -681,24 +715,118 @@ async function telaCaixa() {
   const ant = pagsMesAnt ? pagsMesAnt.reduce((s, p) => s + Number(p.valor), 0) : null;
   const variacao = ant ? Math.round(((recebido - ant) / ant) * 100) : null;
   const rot = { hoje: "hoje", semana: "nos últimos 7 dias", mes: "neste mês" }[per];
+  // previsão do mês: recebido + o que ainda está agendado até o fim do mês
+  const aindaVem = agsMesTodo ? agsMesTodo.filter((a) => ATIVOS.includes(a.status) && new Date(a.inicio) > new Date()).reduce((s, a) => s + Number(a.preco), 0) : 0;
+  const meta = Number(st.prof.meta_mensal || 0);
+  const pctMeta = meta ? Math.min(100, Math.round((recebido / meta) * 100)) : 0;
 
   const r = tela(`
     <div class="seg" id="per"><button data-p="hoje" class="${per === "hoje" ? "on" : ""}">Hoje</button><button data-p="semana" class="${per === "semana" ? "on" : ""}">7 dias</button><button data-p="mes" class="${per === "mes" ? "on" : ""}">Mês</button></div>
+    <div class="hero">
+      <div class="l">Lucro ${rot}</div>
+      <div class="v">${brl(lucro)}</div>
+      <div class="sub">${variacao !== null ? (variacao >= 0 ? "▲ " : "▼ ") + Math.abs(variacao) + "% de recebimentos vs. o mesmo período do mês passado" : "Recebido menos despesas"}</div>
+      <div class="hstats">
+        <div><small>Recebido</small><b>${brl(recebido)}</b></div>
+        <div><small>Despesas</small><b>${brl(despesas)}</b></div>
+        <div><small>${per === "mes" ? "Ainda vem" : "A receber"}</small><b>${brl(per === "mes" ? aindaVem : pendente)}</b></div>
+      </div>
+      ${per === "mes" ? `<div class="meta">${meta ? `<small><span>Meta do mês: ${brl(meta)}</span><span>${pctMeta}%</span></small><div class="barra"><span style="width:${pctMeta}%"></span></div>` : ""}
+        <small style="margin-top:8px"><span>Previsão do mês (recebido + agendado): <b>${brl(recebido + aindaVem)}</b></span></small></div>` : ""}
+    </div>
+    <div class="grade2" style="margin-bottom:12px">
+      <button class="btn prim" id="pag-avulso">${IC.mais}Recebimento</button>
+      <button class="btn" id="nova-desp">${IC.mais}Despesa</button>
+    </div>
     <div class="stats">
-      <div class="stat destaque"><small>Recebido ${rot}</small><b>${brl(recebido)}</b><i>${variacao !== null ? (variacao >= 0 ? "▲ " : "▼ ") + Math.abs(variacao) + "% vs. mesmo período do mês passado" : pags.length + " pagamento" + (pags.length !== 1 ? "s" : "")}</i></div>
       <div class="stat"><small>A receber</small><b>${brl(pendente)}</b><i>${pendentes.length} atendido${pendentes.length !== 1 ? "s" : ""} sem pagar</i></div>
       <div class="stat"><small>Ticket médio</small><b>${brl(ticket)}</b><i>por atendimento</i></div>
-      <div class="stat"><small>Cancelamentos</small><b>${cancel.length}</b><i>${faltas.length} falta${faltas.length !== 1 ? "s" : ""} · ${brl([...cancel, ...faltas].reduce((s, a) => s + Number(a.preco), 0))}</i></div>
+      <div class="stat"><small>Cancelamentos</small><b>${cancel.length}</b><i>${faltas.length} falta${faltas.length !== 1 ? "s" : ""}</i></div>
+      <div class="stat"><small>Perdido com faltas</small><b>${brl([...cancel, ...faltas].reduce((s, a) => s + Number(a.preco), 0))}</b><i>${rot}</i></div>
     </div>
+    ${per === "mes" ? `<button class="btn cheio" id="b-meta" style="margin-bottom:12px">${meta ? "Mudar a meta do mês" : "Definir uma meta para o mês"}</button>` : ""}
+    <div id="dicas"></div>
     ${pendentes.length ? `<div class="tit-linha"><h2>A receber</h2></div>${pendentes.map((a) => cartaoAg(a, true)).join("")}` : ""}
-    <div class="cartao"><h2>Por forma de pagamento</h2>${Object.keys(porForma).length ? Object.entries(porForma).sort((a, b) => b[1] - a[1]).map(([f, v]) => `<div style="margin-top:12px"><div class="linha entre"><span>${FORMAS[f]}</span><b>${brl(v)}</b></div><div class="barra-h"><span style="width:${(v / maxF) * 100}%"></span></div></div>`).join("") : `<p class="mudo">Nenhum pagamento registrado ${rot}.</p>`}</div>
-    <div class="cartao"><h2>Serviços que mais faturaram</h2>${Object.keys(porServ).length ? Object.entries(porServ).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([s, v]) => `<div style="margin-top:12px"><div class="linha entre"><span class="cresce" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s)}</span><b>${brl(v)}</b></div><div class="barra-h"><span style="width:${(v / maxS) * 100}%"></span></div></div>`).join("") : `<p class="mudo">Aparece aqui quando houver pagamentos de atendimentos.</p>`}</div>
+    <div class="cartao"><h2>Por forma de pagamento</h2>${Object.keys(porForma).length ? Object.entries(porForma).sort((x, y) => y[1] - x[1]).map(([f, v]) => `<div style="margin-top:12px"><div class="linha entre"><span>${FORMAS[f]}</span><b>${brl(v)}</b></div><div class="barra-h"><span style="width:${(v / maxF) * 100}%"></span></div></div>`).join("") : `<p class="mudo">Nenhum pagamento registrado ${rot}.</p>`}</div>
+    <div class="cartao"><h2>Serviços que mais faturaram</h2>${Object.keys(porServ).length ? Object.entries(porServ).sort((x, y) => y[1] - x[1]).slice(0, 6).map(([sv, v]) => `<div style="margin-top:12px"><div class="linha entre"><span class="cresce" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(sv)}</span><b>${brl(v)}</b></div><div class="barra-h"><span style="width:${(v / maxS) * 100}%"></span></div></div>`).join("") : `<p class="mudo">Aparece aqui quando houver pagamentos de atendimentos.</p>`}</div>
+    <div class="tit-linha"><h2>Despesas</h2><button id="nova-desp2">+ Adicionar</button></div>
+    ${desp.length ? `<div class="lista">${desp.map((l) => `<div class="item" style="cursor:default"><div class="ic" style="background:var(--red2);color:var(--red)">${IC.dinheiro}</div><div class="cresce"><b>${esc(l.descricao)}</b><div class="pequeno">${esc(l.categoria || "Outros")} · ${dataCurta(meioDia(l.data))}</div></div><b style="color:var(--red)">− ${brl(l.valor)}</b><button class="fechar" data-del-desp="${l.id}" aria-label="Apagar" style="width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:var(--soft);color:var(--mute);flex:none">✕</button></div>`).join("")}</div>` : `<p class="mudo" style="margin:0 4px 12px">Registre materiais, aluguel e contas para saber o lucro de verdade.</p>`}
     <div class="tit-linha"><h2>Recebimentos</h2></div>
-    ${pags.length ? `<div class="lista">${pags.map((p) => { const a = agPorId[p.agendamento_id]; return `<div class="item" ${a ? `data-ag="${a.id}"` : 'style="cursor:default"'}><div class="ic">${IC.dinheiro}</div><div class="cresce"><b>${a ? esc(a.cliente_nome) : esc(p.observacao || "Recebimento avulso")}</b><div class="pequeno">${FORMAS[p.forma]} · ${dataCurta(p.recebido_em)} ${hora(p.recebido_em)}${a ? " · " + esc(a.servico_nome) : ""}</div></div><b>${brl(p.valor)}</b></div>`; }).join("")}</div>` : `<div class="vazio">${IC.dinheiro}<div>Os pagamentos registrados aparecem aqui.</div></div>`}
-    <button class="btn ouro cheio" id="pag-avulso">${IC.mais}Registrar recebimento avulso</button>`);
+    ${pags.length ? `<div class="lista">${pags.map((p) => { const a = agPorId[p.agendamento_id]; return `<div class="item" ${a ? `data-ag="${a.id}"` : 'style="cursor:default"'}><div class="ic" style="background:var(--ok2);color:var(--ok)">${IC.dinheiro}</div><div class="cresce"><b>${a ? esc(a.cliente_nome) : esc(p.observacao || "Recebimento avulso")}</b><div class="pequeno">${FORMAS[p.forma]} · ${dataCurta(p.recebido_em)} ${hora(p.recebido_em)}${a ? " · " + esc(a.servico_nome) : ""}</div></div><b style="color:var(--ok)">${brl(p.valor)}</b></div>`; }).join("")}</div>` : `<div class="vazio">${IC.dinheiro}<div>Os pagamentos registrados aparecem aqui.</div></div>`}`);
   ligaCartoes(r);
   $("per").querySelectorAll("button").forEach((b) => (b.onclick = () => { st.caixaPer = b.dataset.p; telaCaixa(); }));
   $("pag-avulso").onclick = () => registraPagamento(null);
+  $("nova-desp").onclick = $("nova-desp2").onclick = novaDespesa;
+  $("b-meta")?.addEventListener("click", editaMeta);
+  r.querySelectorAll("[data-del-desp]").forEach((b) => (b.onclick = async () => { if (!confirm("Apagar esta despesa?")) return; await q(sb.from("ad_lancamentos").delete().eq("id", b.dataset.delDesp)); toast("Despesa apagada."); telaCaixa(); }));
+  dicas().then((h) => { if ($("dicas")) $("dicas").innerHTML = h; });
+}
+
+function novaDespesa() {
+  const cats = ["Material", "Aluguel", "Contas", "Transporte", "Divulgação", "Outros"];
+  let cat = "Material";
+  abreFolha(cabFolha("Registrar despesa", "Entra no cálculo do lucro.") + `
+    <div class="cartao">
+      <label class="f">Valor (R$)</label><input class="campo" data-valor type="number" inputmode="decimal" step="0.01" min="0" style="font-size:22px;font-weight:700">
+      <label class="f">Tipo</label><div class="opcoes" data-cats>${cats.map((c) => `<button type="button" data-c="${c}" class="${c === cat ? "on" : ""}">${c}</button>`).join("")}</div>
+      <label class="f">Descrição</label><input class="campo" data-desc placeholder="Ex.: esmaltes, lixas, algodão">
+      <label class="f">Data</label><input class="campo" data-data type="date" value="${isoDia()}">
+    </div>
+    <button class="btn prim cheio" data-salvar>Salvar despesa</button>`, (r) => {
+    r.querySelectorAll("[data-c]").forEach((b) => (b.onclick = () => { cat = b.dataset.c; r.querySelectorAll("[data-c]").forEach((x) => x.classList.toggle("on", x === b)); }));
+    r.querySelector("[data-salvar]").onclick = async () => {
+      const valor = Number(r.querySelector("[data-valor]").value);
+      if (!(valor > 0)) return toast("Informe o valor.", 1);
+      await q(sb.from("ad_lancamentos").insert({ profissional_id: st.user.id, tipo: "saida", valor, categoria: cat, descricao: r.querySelector("[data-desc]").value.trim() || cat, data: r.querySelector("[data-data]").value || isoDia() }));
+      toast(`Despesa de ${brl(valor)} registrada.`); fechaFolha(); atualizaTela();
+    };
+  });
+}
+
+function editaMeta() {
+  abreFolha(cabFolha("Meta do mês", "Quanto você quer receber por mês. O app mostra o progresso.") + `
+    <div class="cartao"><label class="f">Meta (R$)</label><input class="campo" data-meta type="number" inputmode="decimal" step="50" min="0" value="${st.prof.meta_mensal || ""}" style="font-size:22px;font-weight:700"></div>
+    <button class="btn prim cheio" data-salvar>Salvar meta</button>`, (r) => {
+    r.querySelector("[data-salvar]").onclick = async () => {
+      const v = Number(r.querySelector("[data-meta]").value) || null;
+      st.prof = await q(sb.from("ad_profissionais").update({ meta_mensal: v }).eq("id", st.user.id).select().single());
+      toast("Meta salva."); fechaFolha(); atualizaTela();
+    };
+  });
+}
+
+// Dicas calculadas só com os dados reais do salão (últimos 60 dias)
+async function dicas() {
+  const hoje = isoDia();
+  const [hist, futuros] = await Promise.all([agsEntre(somaDias(hoje, -60), somaDias(hoje, 1)), agsEntre(hoje, somaDias(hoje, 7))]);
+  const feitos = hist.filter((a) => !["cancelado", "faltou"].includes(a.status));
+  const itens = [];
+  if (feitos.length >= 5) {
+    const porDia = {}, porHora = {}, porServ = {};
+    feitos.forEach((a) => {
+      const d = new Date(a.inicio).toLocaleDateString("en-US", { weekday: "short", timeZone: TZ });
+      const idx = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(d);
+      porDia[idx] = (porDia[idx] || 0) + Number(a.preco);
+      const h = hora(a.inicio).slice(0, 2); porHora[h] = (porHora[h] || 0) + 1;
+      porServ[a.servico_nome] = (porServ[a.servico_nome] || 0) + 1;
+    });
+    const melhorDia = Object.entries(porDia).sort((x, y) => y[1] - x[1])[0];
+    const piorDia = Object.entries(porDia).sort((x, y) => x[1] - y[1])[0];
+    const pico = Object.entries(porHora).sort((x, y) => y[1] - x[1])[0];
+    const top = Object.entries(porServ).sort((x, y) => y[1] - x[1])[0];
+    itens.push(["📅", `<b>${SEM[melhorDia[0]]}</b> é o dia que mais fatura`, `${brl(melhorDia[1])} nos últimos 60 dias.${piorDia && piorDia[0] !== melhorDia[0] ? ` ${SEM[piorDia[0]]} é o mais fraco: bom dia para promoção.` : ""}`]);
+    itens.push(["⏰", `Horário mais procurado: <b>${pico[0]}h</b>`, `${pico[1]} atendimentos começaram nesse horário.`]);
+    itens.push(["💅", `Serviço mais pedido: <b>${esc(top[0])}</b>`, `${top[1]} vezes nos últimos 60 dias.`]);
+  }
+  const perdidos = hist.filter((a) => ["cancelado", "faltou"].includes(a.status));
+  if (hist.length >= 5 && perdidos.length) itens.push(["⚠️", `${Math.round((perdidos.length / hist.length) * 100)}% de cancelamentos e faltas`, `${brl(perdidos.reduce((s, a) => s + Number(a.preco), 0))} deixaram de entrar. Mande o lembrete do dia anterior para todas.`]);
+  const livres7 = await Promise.all(Array.from({ length: 7 }, (_, i) => somaDias(hoje, i)).map((d) => livres(d, 60).then((l) => l.length)));
+  const vagas = livres7.reduce((s, n) => s + n, 0);
+  const ticketMedio = feitos.length ? feitos.reduce((s, a) => s + Number(a.preco), 0) / feitos.length : 0;
+  if (vagas && ticketMedio) itens.push(["✨", `Ainda há horários livres nos próximos 7 dias`, `Preenchendo só 5 deles, entram cerca de ${brl(5 * ticketMedio)} a mais. Divulgue seu link no status do WhatsApp.`]);
+  if (!futuros.filter((a) => ATIVOS.includes(a.status)).length) itens.push(["📣", "Nenhum agendamento nos próximos 7 dias", "Que tal mandar uma mensagem para as clientes sumidas? Veja em Clientes › Sumidas."]);
+  if (!itens.length) return "";
+  return `<div class="cartao"><h2>Dicas para faturar mais</h2>${itens.map(([e, t, d]) => `<div class="dica"><div class="e">${e}</div><div><b>${t}</b><div class="pequeno" style="margin-top:2px">${d}</div></div></div>`).join("")}</div>`;
 }
 
 // =====================================================================
@@ -1008,6 +1136,7 @@ async function sha(t) { const b = await crypto.subtle.digest("SHA-256", new Text
 const b64u = (a) => btoa(String.fromCharCode(...new Uint8Array(a))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 const ub64 = (t) => Uint8Array.from(atob(t.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
 const bioDisponivel = () => !!(window.PublicKeyCredential && navigator.credentials && window.isSecureContext);
+const nomeBio = () => (ehIOS() ? "Face ID" : /android/i.test(navigator.userAgent) ? "digital" : "biometria");
 async function bioCadastra() {
   const c = await navigator.credentials.create({ publicKey: {
     challenge: crypto.getRandomValues(new Uint8Array(32)), rp: { name: "Nay Nails Gestão" },
@@ -1022,19 +1151,20 @@ async function bioConfere(id) {
 }
 
 // Teclado numérico (usado para destravar e para criar a senha)
+const IC_FACE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 9.5v1M15 9.5v1M12 9.5v3.5h-1M9.5 16a3.5 3.5 0 0 0 5 0"/></svg>';
 function teclado(el, { titulo, msg, tamanho, bio, aoCompletar, aoBio, rodape, semImagem }) {
   let pin = "";
   const desenha = (m, treme) => {
     el.innerHTML = `<div class="lk">${semImagem ? "" : '<img src="icone-192.png" alt="">'}<h3>${titulo}</h3><div class="s">${m || msg}</div>
-      <div class="pins${treme ? " treme" : ""}">${Array.from({ length: tamanho }, (_, i) => `<i class="${i < pin.length ? "on" : ""}"></i>`).join("")}</div>
+      ${bio ? `<button type="button" class="bio-btn" data-k="bio">${IC_FACE}Entrar com ${nomeBio()}</button>` : ""}<div class="pins${treme ? " treme" : ""}">${Array.from({ length: tamanho }, (_, i) => `<i class="${i < pin.length ? "on" : ""}"></i>`).join("")}</div>
       <div class="kp">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => `<button type="button" data-k="${n}">${n}</button>`).join("")}
-        ${bio ? `<button type="button" class="kb" data-k="bio" aria-label="Usar biometria">☝️</button>` : "<span></span>"}
+        <span></span>
         <button type="button" data-k="0">0</button><button type="button" class="kb" data-k="del" aria-label="Apagar">⌫</button></div>
       ${rodape || ""}</div>`;
     el.querySelectorAll("[data-k]").forEach((b) => (b.onclick = () => tecla(b.dataset.k)));
   };
   const tecla = async (k) => {
-    if (k === "bio") return aoBio && aoBio(desenha);
+    if (k === "bio" || k === "bio-auto") return aoBio && aoBio(desenha, k === "bio-auto");
     if (k === "del") { pin = pin.slice(0, -1); return desenha(); }
     if (pin.length >= tamanho) return;
     pin += k; desenha();
@@ -1055,16 +1185,17 @@ function mostraTrava() {
   const libera = () => { destravado = true; el.remove(); };
   const temBio = !!(L.bio && bioDisponivel());
   teclado(el, {
-    titulo: "Nay Nails Gestão", msg: "Digite a senha do app", tamanho: L.len || 4, bio: temBio,
+    titulo: "Nay Nails Gestão", msg: temBio ? "ou digite a senha do app" : "Digite a senha do app", tamanho: L.len || 4, bio: temBio,
     aoCompletar: async (p, erro) => { if ((await sha(L.salt + p)) === L.hash) libera(); else erro("Senha incorreta. Tente de novo."); },
-    aoBio: async (desenha) => { try { if (await bioConfere(L.bio)) libera(); } catch { desenha("Biometria não confirmou. Use a senha."); } },
+    aoBio: async (desenha, automatico) => { try { if (await bioConfere(L.bio)) libera(); } catch { if (!automatico) desenha(`${cap(nomeBio())} não confirmou. Tente de novo ou use a senha.`); } },
     rodape: `<button type="button" class="link" id="esqueci-pin" style="margin-top:18px">Esqueci a senha</button>`,
   });
   el.querySelector("#esqueci-pin").onclick = async () => {
     if (!confirm("Para tirar a senha, você vai sair e entrar de novo com e-mail e senha da conta. Continuar?")) return;
     localStorage.removeItem(TRAVA); await sb.auth.signOut(); location.reload();
   };
-  if (temBio) setTimeout(() => el._tecla && el._tecla("bio"), 400);
+  // Abre o Face ID / digital sozinho (Android abre direto; no iPhone a Apple exige um toque no botão)
+  if (temBio) setTimeout(() => el._tecla && el._tecla("bio-auto"), 350);
 }
 
 function criaSenha(primeiraVez) {
@@ -1081,13 +1212,13 @@ function criaSenha(primeiraVez) {
         aoCompletar: async (p, erro, desenha) => {
           if (!primeira) { primeira = p; return desenha("Digite de novo para confirmar"); }
           if (p !== primeira) { primeira = null; return erro("As senhas não são iguais. Comece de novo."); }
+          // Liga o Face ID / digital direto, sem perguntar (precisa acontecer logo após o toque)
+          let bio = null;
+          if (bioDisponivel()) { try { bio = await bioCadastra(); } catch { bio = null; } }
           const salt = b64u(crypto.getRandomValues(new Uint8Array(12)));
-          const cfg = { len: tamanho, salt, hash: await sha(salt + p), bio: null };
-          if (bioDisponivel() && confirm("Quer destravar também com a digital ou o rosto (biometria)?")) {
-            try { cfg.bio = await bioCadastra(); } catch { toast("Biometria não ativada. Você pode ativar depois em Mais.", 1); }
-          }
+          const cfg = { len: tamanho, salt, hash: await sha(salt + p), bio };
           localStorage.setItem(TRAVA, JSON.stringify(cfg)); destravado = true;
-          toast("Senha do app criada!"); fechaFolha(); if (st.aba === "mais") telaMais();
+          toast(bio ? `Senha criada. Agora o app abre com ${nomeBio()}!` : "Senha do app criada!"); fechaFolha(); if (st.aba === "mais") telaMais();
         } });
     };
     r.querySelectorAll("[data-n]").forEach((b) => (b.onclick = () => { tamanho = +b.dataset.n; r.querySelectorAll("[data-n]").forEach((x) => x.classList.toggle("on", x === b)); inicia(); }));
@@ -1100,7 +1231,7 @@ function telaSeguranca() {
   if (!L) return criaSenha(false);
   abreFolha(cabFolha("Senha do app e biometria", "Ativada neste celular ✅") + `
     <div class="cartao">
-      <label class="interruptor"><span>Destravar com digital ou rosto</span><input type="checkbox" data-bio ${L.bio ? "checked" : ""} ${bioDisponivel() ? "" : "disabled"}></label>
+      <label class="interruptor"><span>Entrar com ${nomeBio()}</span><input type="checkbox" data-bio ${L.bio ? "checked" : ""} ${bioDisponivel() ? "" : "disabled"}></label>
       ${bioDisponivel() ? "" : `<p class="pequeno">Este celular ou navegador não oferece biometria para sites.</p>`}
       <p class="pequeno" style="margin-top:8px">O app trava sozinho quando fica mais de 1 minuto fechado.</p>
     </div>
@@ -1126,11 +1257,11 @@ function telaSeguranca() {
 function temaAtual() { return localStorage.getItem("nay.tema") || "escuro"; }
 function aplicaTema(t) {
   localStorage.setItem("nay.tema", t); document.documentElement.dataset.tema = t;
-  document.querySelector('meta[name="theme-color"]').content = t === "claro" ? "#F6F0EA" : "#0B090A";
+  document.querySelector('meta[name="theme-color"]').content = t === "claro" ? "#EEF1EA" : "#0E110C";
 }
 function telaAparencia() {
   abreFolha(cabFolha("Aparência") + `<div class="lista">
-    ${[["escuro", "Escuro", "Fundo escuro com rosé e dourado"], ["claro", "Claro", "Fundo bege com rosa blush"]].map(([k, n, d]) => `<button class="item" data-t="${k}"><div class="ic">${k === "escuro" ? IC.lua : IC.estrela}</div><div class="cresce"><b>${n}</b><div class="pequeno">${d}</div></div>${temaAtual() === k ? '<span class="chip confirmado">Em uso</span>' : ""}</button>`).join("")}</div>`, (r) => {
+    ${[["escuro", "Escuro", "Verde-oliva escuro com dourado, como a logo"], ["claro", "Claro", "Verde-sálvia claro com dourado"]].map(([k, n, d]) => `<button class="item" data-t="${k}"><div class="ic">${k === "escuro" ? IC.lua : IC.estrela}</div><div class="cresce"><b>${n}</b><div class="pequeno">${d}</div></div>${temaAtual() === k ? '<span class="chip confirmado">Em uso</span>' : ""}</button>`).join("")}</div>`, (r) => {
     r.querySelectorAll("[data-t]").forEach((b) => (b.onclick = () => { aplicaTema(b.dataset.t); telaAparencia(); if (st.aba === "mais") telaMais(); }));
   });
 }
