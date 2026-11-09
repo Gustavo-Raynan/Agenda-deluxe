@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confirmar horário</title>
+<meta name="theme-color" content="#faf7f2">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="card" style="text-align:center;margin-top:40px" id="box">
+    <p class="muted">Carregando…</p>
+  </div>
+  <p class="muted" style="text-align:center">Agendamento por <span class="marca">Agenda <b>Deluxe</b></span></p>
+</div>
+<script>
+const id = new URLSearchParams(location.search).get("id");
+const box = document.getElementById("box");
+const ICON = { marcado: "🗓️", confirmado: "✅", cancelado: "❌", concluido: "💛", faltou: "🗓️" };
+const MSG = { marcado: "Seu horário está marcado.", confirmado: "Presença confirmada! Te esperamos.", cancelado: "Este horário foi desmarcado.", concluido: "Atendimento concluído. Obrigado!", faltou: "Este horário já passou." };
+
+async function acao(a) {
+  const { data, error } = await sb.rpc("ad_responder", { p_id: id, p_acao: a });
+  if (error || !data) { box.innerHTML = `<h2>Agendamento não encontrado</h2><p class="muted">Confira o link recebido.</p>`; return; }
+  const futuro = new Date(data.inicio) > new Date();
+  box.innerHTML = `
+    <div style="font-size:3rem">${ICON[data.status]}</div>
+    <h2>${MSG[data.status]}</h2>
+    <p><b>${AD.esc(data.servico)}</b> com ${AD.esc(data.profissional)}<br>
+    <span style="text-transform:capitalize">${AD.dataLonga(data.inicio)}</span> às <b>${AD.hora(data.inicio)}</b></p>
+    ${futuro && ["marcado", "confirmado"].includes(data.status) ? `
+      <div class="stack" style="margin-top:16px">
+        ${data.status === "marcado" ? `<button class="btn-gold btn-full" id="b-ok">Confirmar presença</button>` : ""}
+        <button class="btn-line btn-full" id="b-cancel" style="color:var(--bad)">Não vou poder ir</button>
+      </div>` : ""}`;
+  const ok = document.getElementById("b-ok"), c = document.getElementById("b-cancel");
+  if (ok) ok.onclick = () => acao("confirmar");
+  if (c) c.onclick = () => { if (confirm("Desmarcar este horário? Ele ficará livre para outra pessoa.")) acao("cancelar"); };
+}
+if (id && /^[0-9a-f-]{36}$/i.test(id)) acao("ver"); else box.innerHTML = `<h2>Link inválido</h2>`;
+</script>
+</body>
+</html>

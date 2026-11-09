@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Agenda Deluxe — sua agenda que trabalha por você</title>
+<meta name="description" content="Agendamento online, lembretes no WhatsApp e controle de pagamentos para profissionais autônomos.">
+<meta name="theme-color" content="#faf7f2">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+</head>
+<body>
+
+<!-- ===== Tela inicial (deslogado) ===== -->
+<section id="v-inicio" class="hide">
+  <div class="wrap">
+    <div class="hero">
+      <h1 class="marca">Agenda <b>Deluxe</b></h1>
+      <p class="muted">A agenda que trabalha por você enquanto você atende.</p>
+    </div>
+    <div class="card">
+      <ul class="lista-check">
+        <li><b>Link de agendamento</b>: seu cliente escolhe o horário sozinho, sem ficar te chamando.</li>
+        <li><b>Lembrete no WhatsApp</b> com botão de confirmar. Menos gente esquecendo e faltando.</li>
+        <li><b>Controle de pagamento</b>: saiba quem já pagou e quanto você faturou no mês.</li>
+        <li>Funciona no celular, sem precisar baixar nada.</li>
+      </ul>
+      <p class="muted" style="margin:6px 0 0">Teste grátis por 14 dias. Depois, R$ 20/mês.</p>
+    </div>
+
+    <div class="card stack" id="auth">
+      <h2 id="auth-titulo">Criar minha conta</h2>
+      <div><label>E-mail</label><input id="a-email" type="email" autocomplete="email" placeholder="voce@email.com"></div>
+      <div><label>Senha</label><input id="a-senha" type="password" autocomplete="current-password" placeholder="mínimo 6 caracteres"></div>
+      <button class="btn-gold btn-full" id="a-ok">Criar conta grátis</button>
+      <p class="muted" style="text-align:center;margin:8px 0 0">
+        <span id="auth-troca-txt">Já tem conta?</span>
+        <button class="link-btn" id="a-troca">Entrar</button>
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Primeiro acesso: perfil ===== -->
+<section id="v-perfil" class="hide">
+  <div class="wrap">
+    <div class="hero"><h1 class="marca">Agenda <b>Deluxe</b></h1><p class="muted">Vamos montar o seu perfil. Leva 1 minuto.</p></div>
+    <div class="card stack">
+      <div><label>Seu nome ou do seu negócio</label><input id="p-nome" placeholder="Ex.: Studio Ana Nails"></div>
+      <div><label>O que você faz</label><input id="p-prof" placeholder="Ex.: Manicure e pedicure"></div>
+      <div><label>Seu WhatsApp (com DDD)</label><input id="p-zap" inputmode="tel" placeholder="11 98765-4321"></div>
+      <div><label>Seu link de agendamento</label>
+        <div class="row"><span class="muted" style="white-space:nowrap">…/agendar.html?u=</span><input id="p-slug" placeholder="ana-nails"></div>
+        <p class="muted" style="margin:4px 0 0">Só letras minúsculas, números e hífen.</p></div>
+      <button class="btn-gold btn-full" id="p-ok">Salvar e continuar</button>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Painel ===== -->
+<section id="v-painel" class="hide">
+  <header class="top"><div class="wrap">
+    <div class="marca" style="font-size:1.15rem">Agenda <b>Deluxe</b></div>
+    <button class="btn-line btn-sm" id="sair">Sair</button>
+  </div></header>
+
+  <div class="wrap">
+    <!-- Agenda -->
+    <div id="t-agenda" class="tab">
+      <div class="card" id="lembretes-box"></div>
+      <div class="daynav">
+        <button class="btn-line btn-sm" id="d-ant" aria-label="Dia anterior">‹</button>
+        <div class="grow" id="d-titulo"></div>
+        <button class="btn-line btn-sm" id="d-prox" aria-label="Próximo dia">›</button>
+      </div>
+      <div class="row" style="margin-bottom:12px">
+        <button class="btn-line btn-sm" id="d-hoje">Hoje</button>
+        <div class="grow"></div>
+        <button class="btn-gold btn-sm" id="novo-ag">+ Novo agendamento</button>
+      </div>
+      <div id="lista-ag"></div>
+    </div>
+
+    <!-- Serviços -->
+    <div id="t-servicos" class="tab hide">
+      <h2>Seus serviços</h2>
+      <p class="muted">É o que aparece para o cliente escolher no seu link.</p>
+      <div id="lista-serv"></div>
+      <div class="card stack">
+        <h3>Adicionar serviço</h3>
+        <div><label>Nome</label><input id="s-nome" placeholder="Ex.: Pé e mão"></div>
+        <div class="row">
+          <div class="grow"><label>Preço (R$)</label><input id="s-preco" type="number" min="0" step="0.01" inputmode="decimal" placeholder="50"></div>
+          <div class="grow"><label>Duração</label><select id="s-dur">
+            <option value="15">15 min</option><option value="30">30 min</option><option value="45">45 min</option>
+            <option value="60" selected>1 hora</option><option value="90">1h30</option><option value="120">2 horas</option>
+            <option value="180">3 horas</option><option value="240">4 horas</option></select></div>
+        </div>
+        <button class="btn-full" id="s-ok">Adicionar</button>
+      </div>
+    </div>
+
+    <!-- Horários -->
+    <div id="t-horarios" class="tab hide">
+      <h2>Horários de atendimento</h2>
+      <p class="muted">Os clientes só conseguem marcar dentro desses horários.</p>
+      <div id="lista-hor"></div>
+      <button class="btn-gold btn-full" id="h-salvar">Salvar horários</button>
+    </div>
+
+    <!-- Resumo -->
+    <div id="t-resumo" class="tab hide">
+      <div class="daynav">
+        <button class="btn-line btn-sm" id="m-ant">‹</button>
+        <div class="grow" id="m-titulo"></div>
+        <button class="btn-line btn-sm" id="m-prox">›</button>
+      </div>
+      <div class="kpis" id="kpis"></div>
+      <div class="card" id="resumo-serv"></div>
+      <div class="card" id="resumo-dev"></div>
+    </div>
+
+    <!-- Meu link -->
+    <div id="t-link" class="tab hide">
+      <div class="card stack">
+        <h2>Seu link de agendamento</h2>
+        <p class="muted">Coloque na bio do Instagram, no status do WhatsApp e mande para os clientes.</p>
+        <input id="meu-link" readonly onclick="this.select()">
+        <div class="row">
+          <button class="grow" id="copiar">Copiar link</button>
+          <a class="btn btn-zap grow" id="compartilhar" target="_blank" rel="noopener">Enviar no WhatsApp</a>
+        </div>
+        <a class="btn btn-line" id="abrir-link" target="_blank" rel="noopener">Ver como o cliente vê</a>
+      </div>
+      <div class="card stack">
+        <h3>Seu perfil</h3>
+        <div><label>Nome</label><input id="e-nome"></div>
+        <div><label>O que você faz</label><input id="e-prof"></div>
+        <div><label>WhatsApp</label><input id="e-zap" inputmode="tel"></div>
+        <button class="btn-line" id="e-ok">Salvar perfil</button>
+      </div>
+      <div class="card">
+        <h3>Sua assinatura</h3>
+        <p class="muted" id="assinatura-txt"></p>
+      </div>
+      <p class="muted" style="text-align:center">Dica: no celular, toque em "Adicionar à tela inicial" para usar como app.</p>
+    </div>
+  </div>
+
+  <nav class="tabs">
+    <button data-tab="agenda" class="on"><span>📅</span>Agenda</button>
+    <button data-tab="servicos"><span>✂️</span>Serviços</button>
+    <button data-tab="horarios"><span>🕘</span>Horários</button>
+    <button data-tab="resumo"><span>📊</span>Resumo</button>
+    <button data-tab="link"><span>🔗</span>Meu link</button>
+  </nav>
+</section>
+
+<!-- Novo agendamento manual -->
+<dialog id="dlg-ag">
+  <form method="dialog" class="stack" id="f-ag">
+    <h2>Novo agendamento</h2>
+    <div><label>Cliente</label><input id="n-nome" required placeholder="Nome"></div>
+    <div><label>WhatsApp do cliente</label><input id="n-zap" required inputmode="tel" placeholder="11 98765-4321"></div>
+    <div><label>Serviço</label><select id="n-serv" required></select></div>
+    <div class="row">
+      <div class="grow"><label>Dia</label><input id="n-dia" type="date" required></div>
+      <div class="grow"><label>Hora</label><input id="n-hora" type="time" required step="300"></div>
+    </div>
+    <div class="row">
+      <button type="button" class="btn-line grow" id="n-cancelar">Cancelar</button>
+      <button type="submit" class="btn-gold grow" value="ok">Agendar</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="app.js"></script>
+</body>
+</html>
