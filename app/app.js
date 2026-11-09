@@ -135,6 +135,7 @@ function vaiPara(aba) {
   document.querySelectorAll("#abas button").forEach((b) => b.classList.toggle("on", b.dataset.aba === aba));
   $("titulo").innerHTML = (aba === "inicio" ? "Nayara Nails" : TITULOS[aba] || "") + `<small>${esc(dataLonga(new Date()))}</small>`;
   scrollTo(0, 0);
+  $("conteudo").innerHTML = `<div style="padding-top:4px">${[64, 120, 120, 88, 88].map((h) => `<div class="esqueleto" style="height:${h}px"></div>`).join("")}</div>`;
   return atualizaTela();
 }
 function atualizaTela() {
@@ -144,7 +145,25 @@ function saudacao() {
   const h = Number(new Date().toLocaleTimeString("en-GB", { hour: "2-digit", timeZone: TZ }));
   return (h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite") + ", " + primeiroNome(st.prof.nome) + "!";
 }
-const tela = (html) => { $("conteudo").innerHTML = `<div class="tela">${html}</div>`; return $("conteudo"); };
+const tela = (html) => { $("conteudo").innerHTML = `<div class="tela">${html}</div>`; contaNumeros($("conteudo")); return $("conteudo"); };
+// Números sobem até o valor (dinheiro e quantidades)
+const calma = matchMedia("(prefers-reduced-motion: reduce)").matches;
+function contaNumeros(raiz) {
+  if (calma) return;
+  raiz.querySelectorAll(".ind .stat b, .stat b, .hero .v, .hero .hstats b, .resumo-val b").forEach((el) => {
+    const txt = el.textContent.trim();
+    const dinheiro = /^-?R\$/.test(txt.replace(/\s/g, "")) || txt.includes("R$");
+    const n = dinheiro ? Number(txt.replace(/[^\d,-]/g, "").replace(",", ".")) : /^\d+$/.test(txt) ? Number(txt) : NaN;
+    if (!isFinite(n) || n === 0) return;
+    const t0 = performance.now(), dur = 650;
+    const passo = (t) => {
+      const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3), v = n * e;
+      el.textContent = dinheiro ? brl(v) : String(Math.round(v));
+      if (k < 1) requestAnimationFrame(passo); else el.textContent = txt;
+    };
+    requestAnimationFrame(passo);
+  });
+}
 
 // ---------- dados ----------
 async function agsEntre(deIso, ateIso) {
@@ -168,6 +187,7 @@ function tempoReal() {
     })
     .on("postgres_changes", { event: "INSERT", schema: "public", table: "ad_avisos", filter: `profissional_id=eq.${st.user.id}` }, (p) => {
       toast(p.new.titulo + " — " + p.new.corpo); contaAvisos();
+      const sino = $("b-sino"); sino.classList.remove("toca"); void sino.offsetWidth; sino.classList.add("toca");
     })
     .subscribe();
 }

@@ -164,6 +164,46 @@ footer{text-align:center;color:var(--m);font-size:14px;padding:22px 16px 10px;li
 footer .marca{font:italic 500 21px var(--serif);color:var(--t)}
 footer a{color:var(--gt);text-decoration:none}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+/* ===== Animações ===== */
+@keyframes surge{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes logoIn{0%{opacity:0;transform:scale(.82) rotate(-6deg);filter:blur(6px)}60%{opacity:1;filter:blur(0)}100%{opacity:1;transform:none}}
+@keyframes brilhoAnel{0%,100%{box-shadow:0 0 0 1px #E4C88F66,0 0 0 7px #C9A86A1f,0 20px 60px -10px #000c,0 0 70px -24px #C9A86A55}50%{box-shadow:0 0 0 1px #E4C88Faa,0 0 0 10px #C9A86A2e,0 20px 60px -10px #000c,0 0 110px -10px #C9A86A88}}
+@keyframes flutua{0%{transform:translateY(0) scale(1);opacity:0}15%{opacity:.9}100%{transform:translateY(-140px) scale(.4);opacity:0}}
+@keyframes passaBrilho{0%{left:-60%}55%,100%{left:130%}}
+@keyframes pulsa{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
+@keyframes pop{0%{transform:scale(.9)}60%{transform:scale(1.06)}100%{transform:scale(1)}}
+@keyframes risco{to{stroke-dashoffset:0}}
+@keyframes confete{0%{transform:translate(0,0) rotate(0);opacity:1}100%{transform:translate(var(--x),var(--y)) rotate(var(--r));opacity:0}}
+@keyframes ondaZap{0%{box-shadow:0 0 0 0 #25D36688}100%{box-shadow:0 0 0 18px #25D36600}}
+header{position:relative;overflow:hidden}
+header>*{position:relative;z-index:1}
+.logo{animation:logoIn .9s cubic-bezier(.2,.8,.2,1) both,brilhoAnel 4s ease-in-out 1s infinite}
+header h1{animation:surge .7s .25s both}
+header .sl{animation:surge .7s .38s both}
+header .cta{animation:surge .7s .5s both,pulsa 2.8s ease-in-out 2s infinite;position:relative;overflow:hidden}
+header .cta::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:45%;background:linear-gradient(100deg,transparent,#ffffffaa,transparent);transform:skewX(-20deg);animation:passaBrilho 3.6s ease-in-out 1.6s infinite}
+.atalhos a{animation:surge .6s both}.atalhos a:nth-child(1){animation-delay:.62s}.atalhos a:nth-child(2){animation-delay:.72s}.atalhos a:nth-child(3){animation-delay:.82s}
+.atalhos a:hover span{border-color:var(--g);transform:translateY(-2px)}
+.particula{position:absolute;bottom:-10px;width:5px;height:5px;border-radius:50%;background:radial-gradient(circle,#FFF3D2,#C9A86A);pointer-events:none;z-index:0;animation:flutua linear infinite}
+.info span{animation:surge .5s both}
+.bad div{animation:surge .5s both}
+.rv{opacity:0;transform:translateY(26px);transition:opacity .7s ease,transform .7s cubic-bezier(.2,.8,.2,1)}
+.rv.in{opacity:1;transform:none}
+.sv{animation:surge .45s both}
+.sv:active{transform:scale(.98)}
+.sv:has(input:checked){animation:pop .35s ease}
+.sv input:checked::after{animation:pop .3s ease}
+.dia,.slot{animation:surge .35s both}
+.dia[aria-pressed="true"],.slot.on{animation:pop .3s ease}
+.go{position:relative;overflow:hidden}
+.go::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:40%;background:linear-gradient(100deg,transparent,#ffffff88,transparent);transform:skewX(-20deg);animation:passaBrilho 3.4s ease-in-out infinite}
+.okbox.mostra{animation:pop .5s ease}
+.okbox .ic svg path{stroke-dasharray:30;stroke-dashoffset:30;animation:risco .5s .25s ease forwards}
+.okbox .zap{animation:ondaZap 1.6s ease-out 1s infinite}
+.confete{position:fixed;width:9px;height:14px;border-radius:2px;pointer-events:none;z-index:50;animation:confete 1.4s cubic-bezier(.15,.7,.3,1) forwards}
+.barra.on .in{animation:surge .35s both}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important}.rv{opacity:1;transform:none}.particula,.confete{display:none}}
+
 </style>
 </head>
 <body>
@@ -308,6 +348,7 @@ async function carregar() {
       <span class="n">${esc(s.nome)}</span>
       <span class="d">${dur(s.duracao_min)}${s.descricao ? `<i>${esc(s.descricao)}</i>` : ""}</span>
       <em><b>a partir de</b>${brl(s.preco)}</em></label>`).join("");
+  cascata("#lista .sv", 0.045);
   $("lista").querySelectorAll("input").forEach((i) => (i.onchange = () => {
     st.serv = data.servicos.find((s) => s.id === i.value);
     carregaSlots(); atualiza();
@@ -326,6 +367,7 @@ function desenhaDias() {
     const mes = dt.toLocaleDateString("pt-BR", { month: "short", timeZone: "UTC" }).replace(".", "");
     return `<button type="button" class="dia" data-d="${d}" aria-pressed="${d === st.dia}" aria-label="${dataLonga(dt)}"><small>${rot}</small><b>${dt.getUTCDate()}</b><small>${mes}</small></button>`;
   }).join("");
+  cascata("#dias .dia", 0.03);
   $("dias").querySelectorAll(".dia").forEach((b) => (b.onclick = () => {
     st.dia = b.dataset.d;
     $("dias").querySelectorAll(".dia").forEach((x) => x.setAttribute("aria-pressed", x === b));
@@ -345,6 +387,7 @@ async function carregaSlots() {
   $("slots").innerHTML = data.length
     ? data.map((t) => `<button type="button" class="slot" data-t="${t}">${hora(t)}</button>`).join("")
     : `<p class="note">Nenhum horário livre neste dia. Escolha outro dia acima.</p>`;
+  cascata("#slots .slot", 0.025);
   $("slots").querySelectorAll(".slot").forEach((b) => (b.onclick = () => {
     st.hora = b.dataset.t;
     $("slots").querySelectorAll(".slot").forEach((x) => x.classList.toggle("on", x === b));
@@ -411,7 +454,8 @@ function confirmado() {
     (a.obs ? `\n*Observação:* ${a.obs}` : "");
   $("okWhats").href = `https://wa.me/${st.pag.whatsapp}?text=${encodeURIComponent(texto)}`;
   $("servicos").classList.add("hide"); $("agendar").classList.add("hide");
-  $("confirmado").classList.remove("hide"); atualiza();
+  $("confirmado").classList.remove("hide", "rv"); $("confirmado").classList.add("mostra"); atualiza();
+  setTimeout(confete, 250);
   vai($("confirmado"), "center");
   $("confirmado").focus({ preventScroll: true });
 }
@@ -439,6 +483,37 @@ $("novo").onclick = () => {
   $("confirmado").classList.add("hide"); $("servicos").classList.remove("hide"); $("agendar").classList.remove("hide");
   vai($("servicos"));
 };
+
+/* ===== Animações ===== */
+const calma = matchMedia("(prefers-reduced-motion: reduce)").matches;
+// partículas douradas no topo
+if (!calma) {
+  const h = document.querySelector("header");
+  for (let i = 0; i < 16; i++) {
+    const p = document.createElement("span"); p.className = "particula";
+    const t = 4 + Math.random() * 5;
+    p.style.cssText = `left:${Math.random() * 100}%;width:${3 + Math.random() * 4}px;height:${3 + Math.random() * 4}px;animation-duration:${t}s;animation-delay:${-Math.random() * t}s`;
+    h.appendChild(p);
+  }
+}
+// seções aparecem ao rolar
+const obs = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); obs.unobserve(e.target); } }), { threshold: .12 });
+document.querySelectorAll("main > section").forEach((s) => { s.classList.add("rv"); obs.observe(s); });
+document.querySelectorAll(".info span, .bad div").forEach((el, i) => (el.style.animationDelay = (0.9 + i * 0.07) + "s"));
+// atraso em cascata para listas
+function cascata(sel, passo = 0.04) { document.querySelectorAll(sel).forEach((el, i) => (el.style.animationDelay = (i * passo) + "s")); }
+// confete dourado e sálvia
+function confete() {
+  if (calma) return;
+  const cores = ["#E4C88F", "#C9A86A", "#F5EBD3", "#A3AB97", "#DDBD80"];
+  const cx = innerWidth / 2, cy = innerHeight * 0.35;
+  for (let i = 0; i < 70; i++) {
+    const c = document.createElement("span"); c.className = "confete";
+    const ang = Math.random() * Math.PI * 2, dist = 120 + Math.random() * 260;
+    c.style.cssText = `left:${cx}px;top:${cy}px;background:${cores[i % cores.length]};--x:${Math.cos(ang) * dist}px;--y:${Math.sin(ang) * dist + 220}px;--r:${Math.random() * 720 - 360}deg;animation-delay:${Math.random() * 0.15}s`;
+    document.body.appendChild(c); setTimeout(() => c.remove(), 1700);
+  }
+}
 
 carregar();
 </script>

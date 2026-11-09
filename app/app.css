@@ -54,8 +54,11 @@ a { color: inherit; }
 .topo .sino b { position: absolute; top: -3px; right: -3px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: var(--acc); color: #17140C; font: 700 10.5px/18px inherit; text-align: center; box-shadow: 0 0 0 2px var(--bg); }
 
 main { max-width: 760px; margin: 0 auto; padding: 14px 14px calc(110px + env(safe-area-inset-bottom, 0px)); }
-.tela { animation: entra .2s ease; }
-@keyframes entra { from { opacity: 0; transform: translateY(5px); } }
+.tela > * { animation: entra .42s cubic-bezier(.2,.8,.2,1) both; }
+.tela > *:nth-child(2) { animation-delay: .04s; } .tela > *:nth-child(3) { animation-delay: .08s; } .tela > *:nth-child(4) { animation-delay: .12s; }
+.tela > *:nth-child(5) { animation-delay: .16s; } .tela > *:nth-child(6) { animation-delay: .2s; } .tela > *:nth-child(7) { animation-delay: .24s; }
+.tela > *:nth-child(n+8) { animation-delay: .28s; }
+@keyframes entra { from { opacity: 0; transform: translateY(12px); } }
 
 /* ---------- navegação inferior ---------- */
 nav.abas { position: fixed; z-index: 25; left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); max-width: 520px; margin: 0 auto;
@@ -285,3 +288,27 @@ textarea.campo { min-height: 80px; resize: vertical; }
 .ind .stat .ico svg { width: 17px; height: 17px; }
 .ind .stat b { font-size: 26px; font-weight: 800; }
 .ind .stat.ouro b { color: var(--ouro); }
+
+/* ===== Animações do app (rápidas e elegantes) ===== */
+@keyframes popa { 0% { transform: scale(.92); } 60% { transform: scale(1.06); } 100% { transform: scale(1); } }
+@keyframes sacode { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(-14deg); } 40% { transform: rotate(12deg); } 60% { transform: rotate(-8deg); } 80% { transform: rotate(5deg); } }
+@keyframes brilhoCarrega { 0% { background-position: -300px 0; } 100% { background-position: 300px 0; } }
+@keyframes sobe { from { opacity: 0; transform: translateY(8px); } }
+@keyframes pontoVivo { 0%, 100% { box-shadow: 0 0 0 4px var(--acc2); } 50% { box-shadow: 0 0 0 8px transparent; } }
+nav.abas button { transition: background .2s, color .2s, transform .12s; }
+nav.abas button:active { transform: scale(.92); }
+nav.abas button.on svg { animation: popa .35s ease; }
+.ind .stat, .stat, .ag, .atalho, .item, .cartao, .proxima, .resumo-val > div { transition: transform .15s ease, border-color .2s; }
+.ag:active, .stat:active, .proxima:active { transform: scale(.98); }
+.lista .item { animation: sobe .35s both; }
+.lista .item:nth-child(2) { animation-delay: .03s; } .lista .item:nth-child(3) { animation-delay: .06s; } .lista .item:nth-child(4) { animation-delay: .09s; }
+.lista .item:nth-child(5) { animation-delay: .12s; } .lista .item:nth-child(n+6) { animation-delay: .15s; }
+.sino.toca svg { animation: sacode .7s ease; transform-origin: 50% 10%; }
+.ponto { animation: pontoVivo 1.8s ease-in-out infinite; }
+.chip { animation: popa .3s ease both; }
+.slots button.on, .opcoes button.on, .seg button.on { animation: popa .28s ease; }
+.pins i.on { animation: popa .2s ease; }
+.folha.on #folha-conteudo > * { animation: sobe .3s both; }
+.folha.on #folha-conteudo > *:nth-child(2) { animation-delay: .04s; } .folha.on #folha-conteudo > *:nth-child(3) { animation-delay: .08s; } .folha.on #folha-conteudo > *:nth-child(n+4) { animation-delay: .12s; }
+.esqueleto { border-radius: 20px; margin-bottom: 10px; background: linear-gradient(90deg, var(--card) 0, var(--soft) 50%, var(--card) 100%); background-size: 600px 100%; animation: brilhoCarrega 1.1s linear infinite; border: 1px solid var(--line); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
