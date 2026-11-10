@@ -1,4 +1,4 @@
-// Nay Nails Gestão — envia notificações push para os celulares cadastrados.
+// Agenda Deluxe (Nay Nails e Eduardo Hair) — envia notificações push para os celulares cadastrados.
 // Chamada pelo banco (gatilho com x-ad-segredo) ou pelo app (botão "testar", com login).
 import { createClient } from "npm:@supabase/supabase-js@2";
 import webpush from "npm:web-push@3.6.7";
@@ -28,11 +28,17 @@ async function chaves() {
   return pub;
 }
 
-async function enviar(userId: string, aviso: { id?: string; tipo: string; titulo: string; corpo: string; agendamento_id?: string | null }) {
+// salao = id do salão (ad_profissionais). Cada celular só recebe avisos do salão do app em que ativou as notificações.
+async function enviar(salao: string, aviso: { id?: string; tipo: string; titulo: string; corpo: string; agendamento_id?: string | null }, soUsuario?: string) {
   await chaves();
-  const { data: eq } = await admin.from("ad_equipe").select("user_id").eq("profissional_id", userId).not("user_id", "is", null);
-  const ids = [userId, ...(eq ?? []).map((e: { user_id: string }) => e.user_id)];
-  const { data: subs } = await admin.from("ad_push").select("*").in("user_id", ids);
+  let ids: string[];
+  if (soUsuario) ids = [soUsuario];
+  else {
+    const { data: eq } = await admin.from("ad_equipe").select("user_id").eq("profissional_id", salao).not("user_id", "is", null);
+    ids = [salao, ...(eq ?? []).map((e: { user_id: string }) => e.user_id)];
+  }
+  const { data: todas } = await admin.from("ad_push").select("*").in("user_id", ids);
+  const subs = (todas ?? []).filter((s: { profissional_id: string | null }) => !s.profissional_id || s.profissional_id === salao);
   let enviados = 0;
   for (const s of subs ?? []) {
     if (s.prefs && s.prefs[aviso.tipo] === false) continue;
@@ -73,7 +79,14 @@ Deno.serve(async (req) => {
     if (!user) return json({ erro: "Faça login novamente." }, 401);
     if (body.acao === "chave") return json({ publica: await chaves() });
     if (body.acao === "teste") {
-      const n = await enviar(user.id, { tipo: "teste", titulo: "Notificações ligadas 💗", corpo: "Você vai receber um aviso aqui sempre que uma cliente agendar, confirmar ou cancelar." });
+      // teste: só para o próprio usuário e só no app (salão) de onde veio o pedido
+      let salao = body.salao ? String(body.salao) : "";
+      if (!salao) { // app antigo (sem o campo): usa o salão da própria conta, senão o primeiro da equipe
+        const { data: dono } = await admin.from("ad_profissionais").select("id").eq("id", user.id).maybeSingle();
+        const { data: eq } = dono ? { data: null } : await admin.from("ad_equipe").select("profissional_id").eq("email", (user.email ?? "").toLowerCase()).order("criado_em").limit(1);
+        salao = dono?.id ?? eq?.[0]?.profissional_id ?? user.id;
+      }
+      const n = await enviar(salao, { tipo: "teste", titulo: "Notificações ligadas 💗", corpo: "Você vai receber um aviso aqui sempre que um cliente agendar, confirmar, cancelar ou comprar." }, user.id);
       return json({ enviados: n });
     }
     return json({ erro: "ação inválida" }, 400);

@@ -1306,7 +1306,7 @@ async function ativaNotificacoes() {
   let sub = await swReg.pushManager.getSubscription();
   if (!sub) sub = await swReg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(chave) });
   const j = sub.toJSON();
-  const { error } = await sb.from("ad_push").upsert({ endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth }, { onConflict: "endpoint" });
+  const { error } = await sb.from("ad_push").upsert({ endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, profissional_id: st.prof.id }, { onConflict: "endpoint" });
   if (error) return toast(erroMsg(error), 1);
   toast("Notificações ativadas neste celular!");
   return true;
@@ -1337,7 +1337,7 @@ async function telaNotificacoes() {
       await q(sb.from("ad_push").update({ prefs }).eq("endpoint", sub.endpoint)); toast("Preferência salva.");
     }));
     r.querySelector("[data-teste]")?.addEventListener("click", async () => {
-      const { data, error } = await sb.functions.invoke("ad-push", { body: { acao: "teste" } });
+      const { data, error } = await sb.functions.invoke("ad-push", { body: { acao: "teste", salao: st.prof.id } });
       toast(error ? "Não foi possível enviar o teste." : data?.enviados ? "Teste enviado! Deve chegar em instantes." : "Nenhum celular inscrito. Ative de novo.", !!error || !data?.enviados);
     });
     r.querySelector("[data-avisos]").onclick = telaAvisos;
