@@ -10,15 +10,14 @@
 <meta property="og:image" content="logo.jpg">
 <meta name="theme-color" content="#FFFFFF">
 <meta name="color-scheme" content="light">
-<link rel="icon" href="icone-192.png">
-<link rel="apple-touch-icon" href="icone-180.png">
+<link rel="icon" href="icone-192.png?v=3">
+<link rel="apple-touch-icon" href="icone-180.png?v=3">
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Eduardo Hair">
 <meta name="format-detection" content="telephone=no">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="preload" as="image" href="logo.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@300;400;600&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
@@ -48,10 +47,11 @@ header{position:relative;overflow:hidden;text-align:center;padding:calc(22px + e
 header>*{position:relative;z-index:2}
 .fitas{position:absolute;inset:0;z-index:0;pointer-events:none;width:100%;height:100%}
 .fitas path{fill:none;stroke-linecap:round}
-.logo-cx{width:min(420px,88vw);margin:0 auto;border-radius:26px;overflow:hidden;background:#fff;box-shadow:0 1px 0 #fff inset,0 24px 60px -24px #6B3E9355,0 6px 18px -8px #2A283022;border:1px solid #EFE9F6}
-.logo{width:100%;height:auto;display:block}
-h1{font:300 clamp(28px,7.6vw,44px)/1.12 var(--titulo);margin-top:24px;letter-spacing:.01em}
-h1 b{font-weight:600;background:var(--marca);-webkit-background-clip:text;background-clip:text;color:transparent}
+.logo-cx{width:min(460px,92vw);margin:0 auto}
+.logo-svg{width:100%;height:auto;display:block;overflow:visible}
+.h1{font:300 clamp(28px,7.6vw,44px)/1.12 var(--titulo);margin-top:14px;letter-spacing:.01em}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.h1 b{font-weight:600;background:var(--marca);-webkit-background-clip:text;background-clip:text;color:transparent}
 .sl{color:var(--m);margin:12px auto 22px;max-width:36ch;text-wrap:balance;font-size:16.5px}
 .cta{display:flex;align-items:center;justify-content:center;gap:10px;width:min(100%,340px);margin:0 auto;background:var(--marca);color:#fff;text-decoration:none;font-weight:600;font-size:17px;padding:16px 26px;border-radius:999px;box-shadow:0 14px 32px -14px #6B3E93cc;position:relative;overflow:hidden}
 .cta svg{width:20px;height:20px}
@@ -265,6 +265,7 @@ a,button,label,input,.sv,.dia,.slot{touch-action:manipulation}
 @keyframes alvo{0%{transform:scale(.6);opacity:1}100%{transform:scale(1.5);opacity:0}}
 .copiar{margin-top:10px}
 @media(max-width:400px){
+  .h1{margin-top:10px}
   header{padding:calc(16px + env(safe-area-inset-top,0px)) 14px 24px}
   .logo-cx{width:min(340px,84vw);border-radius:22px}
   h1{margin-top:18px}
@@ -304,15 +305,25 @@ a,button,label,input,.sv,.dia,.slot{touch-action:manipulation}
 .fitas .f3{stroke-dasharray:1600;stroke-dashoffset:1600;animation:desenha 2.8s .7s cubic-bezier(.4,0,.2,1) forwards}
 .fitas .g1{animation:onda 7s ease-in-out infinite}
 .fitas .g2{animation:onda2 9s ease-in-out infinite}
-.logo-cx{animation:logoIn 1s cubic-bezier(.2,.8,.2,1) both,respira 5s ease-in-out 1.2s infinite}
-header h1{animation:surge .7s .3s both}
+.lg-f1,.lg-f2,.lg-f3,.lg-f4{clip-path:inset(0 100% 0 0);animation:revela 1.3s cubic-bezier(.5,0,.2,1) forwards}
+.lg-f4{animation-delay:.15s}.lg-f2{animation-delay:.35s}.lg-f3{animation-delay:.5s}
+.lg-fitas{transform-origin:330px 140px;animation:flutuaLogo 6s ease-in-out 1.8s infinite}
+.lg-brilho{transform:skewX(-20deg) translateX(0);animation:brilhoFita 4.5s ease-in-out 2s infinite}
+.lg-t1,.lg-t2,.lg-t3{opacity:0;animation:sobeTxt .9s cubic-bezier(.2,.8,.2,1) forwards}
+.lg-t1{animation-delay:.55s}.lg-t2{animation-delay:.8s;letter-spacing:22px;animation-name:sobeTxt,abreLetras}.lg-t3{animation-delay:1.05s}
+@keyframes revela{to{clip-path:inset(0 0 0 0)}}
+@keyframes flutuaLogo{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-5px) rotate(-.6deg)}}
+@keyframes brilhoFita{0%{transform:skewX(-20deg) translateX(0)}60%,100%{transform:skewX(-20deg) translateX(760px)}}
+@keyframes sobeTxt{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes abreLetras{from{letter-spacing:22px}to{letter-spacing:15px}}
+header .h1{animation:surge .7s .3s both}
 header .sl{animation:surge .7s .42s both}
 header .cta{animation:surge .7s .55s both,pulsa 2.8s ease-in-out 2.2s infinite;background-size:200% 200%}
 header .cta::after,.go::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:45%;background:linear-gradient(100deg,transparent,#ffffff99,transparent);transform:skewX(-20deg);animation:passaBrilho 3.6s ease-in-out 1.6s infinite}
 header .nota{animation:surge .7s .66s both}
 .atalhos a{animation:surge .6s both}
 .atalhos a:nth-child(1){animation-delay:.72s}.atalhos a:nth-child(2){animation-delay:.8s}.atalhos a:nth-child(3){animation-delay:.88s}.atalhos a:nth-child(4){animation-delay:.96s}
-h1 b{background-size:200% 100%;animation:gradMove 6s ease-in-out infinite}
+.h1 b{background-size:200% 100%;animation:gradMove 6s ease-in-out infinite}
 .particula{position:absolute;bottom:-10px;border-radius:50%;pointer-events:none;z-index:1;animation:flutua linear infinite}
 .info span,.bad div{animation:surge .5s both}
 .rv{opacity:0;transform:translateY(26px);transition:opacity .7s ease,transform .7s cubic-bezier(.2,.8,.2,1)}
@@ -325,7 +336,7 @@ h1 b{background-size:200% 100%;animation:gradMove 6s ease-in-out infinite}
 .okbox .zap{animation:ondaZap 1.6s ease-out 1s infinite}
 .confete{position:fixed;width:9px;height:14px;border-radius:2px;pointer-events:none;z-index:50;animation:confete 1.4s cubic-bezier(.15,.7,.3,1) forwards}
 .barra.on .in{animation:surge .35s both}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.rv{opacity:1;transform:none}.particula,.confete{display:none}.fitas path,.okbox .ic svg path{stroke-dashoffset:0!important}html{scroll-behavior:auto}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.rv{opacity:1;transform:none}.particula,.confete{display:none}.fitas path,.okbox .ic svg path{stroke-dashoffset:0!important}.lg-f1,.lg-f2,.lg-f3,.lg-f4{clip-path:none!important}.lg-t1,.lg-t2,.lg-t3{opacity:1!important}.lg-brilho{display:none}html{scroll-behavior:auto}}
 </style>
 </head>
 <body>
@@ -340,13 +351,35 @@ h1 b{background-size:200% 100%;animation:gradMove 6s ease-in-out infinite}
       <linearGradient id="gr1" x1="0" x2="1"><stop offset="0" stop-color="#B795DB" stop-opacity="0"/><stop offset=".35" stop-color="#9B72C8" stop-opacity=".55"/><stop offset="1" stop-color="#8A5DB8" stop-opacity=".08"/></linearGradient>
       <linearGradient id="gr2" x1="0" x2="1"><stop offset="0" stop-color="#4FBFB1" stop-opacity="0"/><stop offset=".5" stop-color="#2E9C8F" stop-opacity=".5"/><stop offset="1" stop-color="#4FBFB1" stop-opacity=".05"/></linearGradient>
     </defs>
-    <g class="g1"><path class="f1" d="M-40 120 C 60 20, 160 40, 220 120 S 380 260, 460 150" stroke="url(#gr1)" stroke-width="7"/>
-    <path class="f3" d="M-40 470 C 80 400, 180 560, 280 500 S 420 400, 460 440" stroke="url(#gr1)" stroke-width="4"/></g>
-    <g class="g2"><path class="f2" d="M-40 170 C 70 90, 170 110, 230 175 S 370 290, 460 200" stroke="url(#gr2)" stroke-width="10"/>
-    <path class="f3" d="M-40 540 C 100 470, 200 600, 300 540 S 420 470, 460 500" stroke="url(#gr2)" stroke-width="6"/></g>
+    <g class="g1"><path class="f3" d="M-40 470 C 80 400, 180 560, 280 500 S 420 400, 460 440" stroke="url(#gr1)" stroke-width="4"/></g>
+    <g class="g2"><path class="f3" d="M-40 540 C 100 470, 200 600, 300 540 S 420 470, 460 500" stroke="url(#gr2)" stroke-width="6"/></g>
   </svg>
-  <div class="logo-cx"><img class="logo" src="logo.jpg" width="1000" height="622" fetchpriority="high" decoding="async" alt="Eduardo Teccarelli Hair"></div>
-  <h1>Seu cabelo, <b>do seu jeito</b></h1>
+  <h1 class="sr">Eduardo Teccarelli Hair</h1>
+  <div class="logo-cx"><svg class="logo-svg" viewBox="0 0 600 390" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Eduardo Teccarelli Hair">
+  <defs>
+    <linearGradient id="lgRoxo" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#9C74CC"/><stop offset=".55" stop-color="#B593DD"/><stop offset="1" stop-color="#8A5DB8"/></linearGradient>
+    <linearGradient id="lgVerde" x1="0" y1="0" x2="1" y2=".3"><stop offset="0" stop-color="#2E9C8F"/><stop offset=".5" stop-color="#5CCDBE"/><stop offset="1" stop-color="#2E9C8F"/></linearGradient>
+    <linearGradient id="lgPrata" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#E8E4EE" stop-opacity="0"/><stop offset=".4" stop-color="#D9D4E0"/><stop offset="1" stop-color="#C9C3D2" stop-opacity=".2"/></linearGradient>
+    <linearGradient id="lgBrilho" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <clipPath id="cpFita"><path d="M232 92 C300 84 345 132 392 170 C430 200 470 212 510 190 C530 178 545 160 556 140 C540 178 515 205 478 216 C435 228 392 214 352 182 C310 148 278 108 232 92 Z"/></clipPath>
+  </defs>
+  <g class="lg-fitas">
+    <path class="lg-f1" d="M112 226 C74 150 140 58 262 52 C354 48 404 108 452 156 C492 196 528 188 564 120 C534 200 490 212 446 170 C398 124 350 66 262 64 C150 70 94 150 112 226 Z" fill="url(#lgRoxo)"/>
+    <path class="lg-f2" d="M200 112 C270 84 330 112 380 150 C428 186 480 210 530 172 C496 218 440 206 392 172 C340 136 290 98 200 112 Z" fill="url(#lgPrata)"/>
+    <path class="lg-f3" d="M232 92 C300 84 345 132 392 170 C430 200 470 212 510 190 C530 178 545 160 556 140 C540 178 515 205 478 216 C435 228 392 214 352 182 C310 148 278 108 232 92 Z" fill="url(#lgVerde)"/>
+    <rect class="lg-brilho" x="-120" y="60" width="90" height="190" fill="url(#lgBrilho)" clip-path="url(#cpFita)"/>
+    <path class="lg-f4" d="M170 150 C214 108 274 92 326 104 C276 100 222 114 170 150 Z" fill="#8A5DB8"/>
+  </g>
+  <text class="lg-t1" x="300" y="292" text-anchor="middle" font-family="Josefin Sans, Jost, sans-serif" font-weight="300" font-size="84" letter-spacing="3" fill="#2B2A2E">EDUARDO</text>
+  <text class="lg-t2" x="304" y="340" text-anchor="middle" font-family="Josefin Sans, Jost, sans-serif" font-weight="400" font-size="34" letter-spacing="15" fill="#8A5DB8">TECCARELLI</text>
+  <g class="lg-t3">
+    <line x1="132" y1="371" x2="250" y2="371" stroke="#2E9C8F" stroke-width="1.6"/>
+    <line x1="352" y1="371" x2="470" y2="371" stroke="#2E9C8F" stroke-width="1.6"/>
+    <text x="304" y="380" text-anchor="middle" font-family="Josefin Sans, Jost, sans-serif" font-weight="400" font-size="24" letter-spacing="11" fill="#2E9C8F">HAIR</text>
+  </g>
+</svg>
+</div>
+  <p class="h1">Seu cabelo, <b>do seu jeito</b></p>
   <p class="sl">Corte, cor, mechas, escova, tratamentos e noivas em Lagoa Santa. Agende seu horário em menos de um minuto.</p>
   <a class="cta" href="#servicos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>Agendar meu horário</a>
   <a class="nota" href="https://share.google/qmBK4zE5wo7nWzIZN" target="_blank" rel="noopener"><i>★★★★★</i><b>4,9</b> no Google</a>
