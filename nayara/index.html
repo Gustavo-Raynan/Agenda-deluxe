@@ -93,6 +93,9 @@ h2{font:600 28px/1.1 var(--serif);margin-bottom:6px}
 /* dias (cartões que deslizam) */
 .dias{display:flex;gap:8px;overflow-x:auto;margin:0 -16px;padding:2px 16px 8px;scroll-snap-type:x proximity;scrollbar-width:none}
 .dias::-webkit-scrollbar{display:none}
+@media (hover:hover) and (pointer:fine){.dias{flex-wrap:wrap;overflow:visible;margin:0;padding:2px 0 8px}}
+.dias-dica{font-size:12.5px;color:var(--m);margin:-2px 0 12px}
+@media (hover:hover) and (pointer:fine){.dias-dica .arr{display:none}}
 .dia{flex:0 0 62px;scroll-snap-align:start;border:1px solid var(--b);background:var(--field);border-radius:16px;padding:9px 0 8px;cursor:pointer;display:grid;gap:1px;text-align:center}
 .dia small{font-size:12px;color:var(--m);text-transform:capitalize}
 .dia b{font:600 21px/1.1 var(--font)}
@@ -313,6 +316,7 @@ header .cta::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:4
   <h2>Agendamento</h2>
   <p class="etapa">Escolha o dia</p>
   <div class="dias" id="dias"></div>
+  <p class="dias-dica" id="diasDica"></p>
   <p class="etapa" id="lbHora">Escolha o horário</p>
   <div class="slots" id="slots" role="group" aria-labelledby="lbHora"><button type="button" class="mais-cores" onclick="vai($('servicos'))" style="margin-top:0">↑ Primeiro, escolha o serviço</button></div>
 
@@ -629,6 +633,8 @@ function desenhaDias() {
   const n = Math.min(120, Math.round((new Date(ate + "T12:00:00Z") - new Date(hoje + "T12:00:00Z")) / 864e5) + 1);
   const dias = Array.from({ length: n }, (_, i) => somaDias(hoje, i)).filter(abre);
   if (!st.dia || !dias.includes(st.dia)) st.dia = dias[0];
+  const ult = dias[dias.length - 1];
+  if ($("diasDica") && ult) $("diasDica").innerHTML = `Agenda aberta até <b>${SEM3[new Date(ult + "T12:00:00Z").getUTCDay()]}, ${ult.slice(8)}/${ult.slice(5, 7)}</b><span class="arr"> · arraste para o lado para ver mais dias →</span>`;
   $("dias").innerHTML = dias.map((d) => {
     const dt = new Date(d + "T12:00:00Z");
     const rot = d === hoje ? "hoje" : d === somaDias(hoje, 1) ? "amanhã" : SEM3[dt.getUTCDay()];
