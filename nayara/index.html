@@ -227,7 +227,7 @@ header .cta::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:4
 .cor.on{border-color:var(--g);box-shadow:0 0 0 2px #C9A86A55}
 .cor.off{opacity:.45}
 .cor .ft{aspect-ratio:1;border-radius:13px;overflow:hidden;margin-bottom:7px;background:#333}
-.cor .ft img{width:100%;height:100%;object-fit:cover;display:block}
+.cor .ft img{width:100%;height:100%;object-fit:cover;display:block}.cor .ft img.loja,#modalCx img.loja{object-fit:contain;background:#fff;padding:6px}
 .cor b{display:block;font-size:14px;font-weight:600;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cor small{display:block;font-size:12px;color:var(--m);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .st{display:inline-block;margin-top:4px;font-size:11px;padding:2px 8px;border-radius:99px;background:#75A98722;color:#9CCBAA}
@@ -594,7 +594,7 @@ function desenhaCores() {
   const lista = st.cat.filter((c) => (!st.tom || (st.tom === "♥" ? favs.has(c.id) : c.tonalidade === st.tom)) && (!m || c.marca === m) && (!a || c.acabamento === a) && (!b || semAc([c.nome, c.marca, c.codigo, c.linha, c.tonalidade].join(" ")).includes(b)));
   $("cores").innerHTML = lista.length ? lista.slice(0, st.ver).map((c, i) => {
     return `<div class="cor ${c.status === "indisponivel" ? "off" : ""}" data-id="${c.id}" role="button" tabindex="0" style="animation-delay:${(i % 12) * 0.03}s">
-      <div class="ft"><img src="${c.foto_url ? esc(c.foto_url) : frasco(c.cor_hex)}" alt="${esc(c.nome)}" loading="lazy"></div>
+      <div class="ft"><img class="${/vteximg|cdn\.shopify/.test(c.foto_url || "") ? "loja" : ""}" src="${c.foto_url ? esc(c.foto_url) : frasco(c.cor_hex)}" alt="${esc(c.nome)}" loading="lazy"></div>
       <button type="button" class="fav ${favs.has(c.id) ? "on" : ""}" data-fav="${c.id}" aria-label="Favoritar" style="border:0">${favs.has(c.id) ? "♥" : "♡"}</button>
       <b>${esc(c.nome)}</b><small>${esc(c.marca || "")}${c.codigo ? " · " + esc(c.codigo) : ""}${c.acabamento ? " · " + esc(c.acabamento) : ""}</small>
       <span class="st ${c.status}">${ST_COR[c.status]}</span></div>`;
@@ -607,7 +607,7 @@ function desenhaCores() {
   }));
 }
 function abreCor(c) {
-  $("modalCx").innerHTML = `<img src="${c.foto_url ? esc(c.foto_url) : frasco(c.cor_hex)}" alt="">
+  $("modalCx").innerHTML = `<img class="${/vteximg|cdn\.shopify/.test(c.foto_url || "") ? "loja" : ""}" src="${c.foto_url ? esc(c.foto_url) : frasco(c.cor_hex)}" alt="">
     <h3>${esc(c.nome)}</h3><p>${[c.marca, c.codigo && "cód. " + c.codigo, c.tonalidade, c.acabamento].filter(Boolean).map(esc).join(" · ")}</p>
     <span class="st ${c.status}" style="font-size:12px;padding:3px 10px">${ST_COR[c.status]}</span>
     ${c.status === "indisponivel" ? `<p style="margin-top:12px">Acabou no momento. Logo deve voltar.</p>` : `<p style="margin-top:12px">Gostou? Salve nas favoritas e mostre para a Nayara no dia do atendimento.</p>`}
