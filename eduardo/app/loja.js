@@ -298,8 +298,12 @@ function pagaPedido(p) {
       <div class="opcoes" data-formas>${Object.entries(FORMAS).map(([k, t], i) => `<button type="button" data-f="${k}" class="${i === 0 ? "on" : ""}">${t}</button>`).join("")}</div>
       <label class="check" style="display:flex;gap:10px;align-items:center;margin-top:14px"><input type="checkbox" data-entregue ${p.status !== "entregue" ? "checked" : ""} style="width:22px;height:22px;accent-color:var(--acc)"> Marcar como entregue também</label>
     </div>
+    ${temPix() ? `<button class="btn cheio" data-qrpix style="margin-bottom:8px">${IC.dinheiro}Mostrar QR Code Pix de ${brl(p.total)}</button>` : ""}
     <button class="btn prim cheio" data-ok>Confirmar ${brl(p.total)}</button>`, (r) => {
     let forma = "pix";
+    r.querySelector("[data-qrpix]")?.addEventListener("click", () => mostraPix({ valor: Number(p.total), sub: `Pedido #${esc(p.codigo)} · ${esc(p.cliente_nome)}`, txid: "PED" + p.codigo, mensagem: "Pedido " + p.codigo,
+      zap: p.origem === "site" ? p.cliente_whatsapp : null, nomeCliente: p.cliente_nome, aoOutraForma: () => pagaPedido(p),
+      aoReceber: async () => { const valor = Number(p.total); await q(sb.from("ad_pagamentos").insert({ profissional_id: st.prof.id, pedido_id: p.id, cliente_id: p.cliente_id, valor, forma: "pix", taxa: 0, observacao: `Loja · pedido #${p.codigo}` })); await q(sb.from("ad_pedidos").update({ pago: true, forma: "pix", status: "entregue" }).eq("id", p.id)); toast("Pix recebido e registrado."); festa(); detalhePedido(p.id); if (st.aba === "estoque") telaEstoque(); } }));
     r.querySelectorAll("[data-f]").forEach((b) => (b.onclick = () => { forma = b.dataset.f; r.querySelectorAll("[data-f]").forEach((x) => x.classList.toggle("on", x === b)); }));
     r.querySelector("[data-ok]").onclick = async (e) => {
       e.target.disabled = true;

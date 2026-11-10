@@ -479,3 +479,37 @@ nav.abas button.on svg { color: var(--ouro); }
 .lk img { border-radius: 22px !important; width: 96px !important; height: 96px !important; }
 #tutorial .big img { border-radius: 26px; }
 .topo .perfil svg { width: 21px; height: 21px; }
+
+/* ===== Cores do site do Eduardo (grafite arroxeado + degradê roxo → verde-água) ===== */
+:root { --grad-site: linear-gradient(100deg, #7E4FB3 0%, #6A55B8 48%, #23897D 100%); }
+html[data-tema="escuro"] {
+  --bg: #120F18; --bg2: #17121F; --card: #1C1724; --card2: #231D2D; --solido: #17121F;
+  --ink: #F5F1FB; --mute: #C3BACF; --line: rgba(210,182,245,.10); --line2: rgba(210,182,245,.18); --soft: rgba(210,182,245,.06);
+  --topbg: rgba(18,15,24,.88); --navbg: rgba(28,23,36,.96); --escuro: #231D2D; --escuroInk: #F5F1FB;
+  --ok: #5ED6C6; --ok2: rgba(94,214,198,.14); --sombra: 0 14px 34px -22px rgba(0,0,0,.9);
+}
+html[data-tema="claro"] {
+  --bg: #F7F5FA; --bg2: #EFEAF6; --card: #FFFFFF; --card2: #FFFFFF; --solido: #FFFFFF;
+  --ink: #2A2830; --mute: #6F6A7A; --line: #ECE6F3; --line2: #DDD3EA; --soft: #F4F0FA;
+  --topbg: rgba(247,245,250,.9); --navbg: rgba(255,255,255,.96); --escuro: #2A2140; --escuroInk: #F5F1FB; --escuroOuro: #D2B6F5;
+  --ok: #23897D; --ok2: #E0F3F0;
+}
+.btn.ouro, .btn.prim, .fab { background: var(--grad-site) !important; color: #fff !important; border: 0 !important; box-shadow: 0 12px 26px -14px rgba(106,85,184,.8); }
+.opcoes button.on, .slots button.on { background: var(--grad-site) !important; color: #fff !important; border-color: transparent !important; }
+.hero, .painel-hoje { background: radial-gradient(130% 100% at 0% 0%, #3A2A52 0%, #2A2140 45%, #1F1A2A 100%) !important; color: #F5F1FB; }
+html[data-tema="escuro"] .hero, html[data-tema="escuro"] .painel-hoje { border: 1px solid rgba(210,182,245,.14); }
+nav.abas button.on { color: var(--acc); }
+.topo .sino b { background: #5ED6C6; color: #0E2B27; }
+.login { background: radial-gradient(120% 60% at 50% 0%, rgba(122,80,180,.28), transparent 70%); }
+
+/* ===== Pix na hora ===== */
+.pix-cx { text-align: center; }
+.pix-valor { font-size: 32px; font-weight: 800; letter-spacing: -.03em; margin-bottom: 12px; }
+.pix-qr { position: relative; width: min(270px, 74vw); margin: 0 auto; background: #fff; border-radius: 20px; padding: 10px; box-shadow: 0 16px 40px -20px rgba(0,0,0,.7); }
+.pix-qr svg { width: 100%; height: auto; display: block; transition: filter .3s; }
+.pix-exp { position: absolute; inset: 0; display: grid; place-content: center; gap: 10px; background: rgba(255,255,255,.82); border-radius: 20px; color: #1A1424; font-size: 17px; }
+.pix-tempo { display: flex; align-items: center; gap: 10px; max-width: 270px; margin: 14px auto 0; font-weight: 800; font-size: 17px; font-variant-numeric: tabular-nums; }
+.pix-barra { flex: 1; height: 7px; border-radius: 99px; background: var(--line2); overflow: hidden; }
+.pix-barra i { display: block; height: 100%; width: 100%; background: var(--grad-site); transition: width 1s linear; }
+.pix-tempo.acabando { color: var(--red); }
+.pix-tempo.acabando .pix-barra i { background: var(--red); }

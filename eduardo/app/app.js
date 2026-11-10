@@ -717,11 +717,25 @@ async function novoAgendamento({ data, cliente }) {
 // =====================================================================
 // PAGAMENTOS
 // =====================================================================
-async function registraPagamento(a, depoisDeFinalizar, ehSinal) {
+async function registraPagamento(a, depoisDeFinalizar, ehSinal, semPix) {
   let pago = 0;
   if (a) pago = (await q(sb.from("ad_pagamentos").select("valor").eq("agendamento_id", a.id))).reduce((s, p) => s + Number(p.valor), 0);
   const sugestao = ehSinal ? "" : a ? Math.max(Number(a.preco) - pago, 0) : "";
   let forma = "pix";
+  const salvaPag = async (valor, forma, obs) => {
+    await q(sb.from("ad_pagamentos").insert({ profissional_id: st.prof.id, agendamento_id: a?.id || null, cliente_id: a?.cliente_id || null, valor, forma, taxa: Math.round(valor * taxaPct(forma)) / 100, observacao: ehSinal ? "Sinal" : obs || null }));
+    if (ehSinal) await q(sb.from("ad_agendamentos").update({ sinal: Number(a.sinal || 0) + valor }).eq("id", a.id));
+    if (a && pago + valor >= Number(a.preco) - 0.009) await q(sb.from("ad_agendamentos").update({ pago: true }).eq("id", a.id));
+    toast(`Pagamento de ${brl(valor)} registrado. ✨`); festa();
+    if (a) { if (a.status === "concluido" && confirm("Mandar mensagem de agradecimento para o cliente?")) abreZap(linkZap(a, "agradecimento")); detalheAg(a.id); }
+    else fechaFolha();
+    atualizaTela();
+  };
+  const abrePix = (valor, obs) => mostraPix({ valor, sub: a ? `${esc(a.cliente_nome)} · ${esc(a.servico_nome)}` : esc(obs || "Recebimento"), txid: "EDU" + (a ? a.id.replace(/-/g, "").slice(0, 10) : Date.now().toString(36)),
+    mensagem: a ? a.servico_nome : obs, zap: a?.cliente_whatsapp, nomeCliente: a?.cliente_nome,
+    aoReceber: () => salvaPag(valor, "pix", obs), aoOutraForma: () => registraPagamento(a, depoisDeFinalizar, ehSinal, true) });
+  // já abre o Pix com o valor do atendimento (5 minutos)
+  if (a && !ehSinal && !semPix && sugestao > 0 && temPix()) return abrePix(sugestao, null);
   abreFolha(cabFolha(ehSinal ? "Registrar sinal" : "Registrar pagamento", a ? `${esc(a.cliente_nome)} · ${esc(a.servico_nome)}${pago ? `<br>Já recebido: ${brl(pago)}` : ""}` : "Recebimento avulso") + `
     <div class="cartao">
       <label class="f">Valor recebido (R$)</label>
@@ -729,24 +743,20 @@ async function registraPagamento(a, depoisDeFinalizar, ehSinal) {
       <label class="f">Forma de pagamento</label>
       <div class="opcoes" data-formas>${Object.entries(FORMAS).map(([k, v]) => `<button type="button" data-f="${k}" class="${k === forma ? "on" : ""}">${v}</button>`).join("")}</div>
       <p class="pequeno" data-taxa style="margin-top:8px"></p>
+      <button type="button" class="btn cheio" data-qrpix style="margin-top:10px">${IC.dinheiro}Mostrar QR Code Pix com esse valor</button>
       ${a ? "" : `<label class="f">Descrição</label><input class="campo" data-obs placeholder="Ex.: venda de shampoo">`}
     </div>
     <button class="btn ouro cheio" data-salvar>Salvar pagamento</button>
     ${depoisDeFinalizar ? `<button class="btn claro cheio" data-depois style="margin-top:10px">Registrar depois</button>` : ""}`, (r) => {
-    const mostraTaxa = () => { const v = Number(r.querySelector("[data-valor]").value || 0), p = taxaPct(forma); r.querySelector("[data-taxa]").textContent = p && v ? `Taxa da maquininha (${String(p).replace(".", ",")}%): ${brl(v * p / 100)} · fica ${brl(v - v * p / 100)}` : ""; };
+    const mostraTaxa = () => { const v = Number(r.querySelector("[data-valor]").value || 0), p = taxaPct(forma); r.querySelector("[data-taxa]").textContent = p && v ? `Taxa da maquininha (${String(p).replace(".", ",")}%): ${brl(v * p / 100)} · fica ${brl(v - v * p / 100)}` : ""; r.querySelector("[data-qrpix]").classList.toggle("hide", forma !== "pix" || !(v > 0)); };
+    r.querySelector("[data-qrpix]").onclick = () => abrePix(Number(r.querySelector("[data-valor]").value), r.querySelector("[data-obs]")?.value.trim() || null);
     r.querySelectorAll("[data-f]").forEach((b) => (b.onclick = () => { forma = b.dataset.f; r.querySelectorAll("[data-f]").forEach((x) => x.classList.toggle("on", x === b)); mostraTaxa(); }));
     r.querySelector("[data-valor]").addEventListener("input", mostraTaxa); mostraTaxa();
     r.querySelector("[data-depois]")?.addEventListener("click", () => { detalheAg(a.id); atualizaTela(); });
     r.querySelector("[data-salvar]").onclick = async () => {
       const valor = Number(r.querySelector("[data-valor]").value);
       if (!(valor > 0)) return toast("Informe o valor.", 1);
-      await q(sb.from("ad_pagamentos").insert({ profissional_id: st.prof.id, agendamento_id: a?.id || null, cliente_id: a?.cliente_id || null, valor, forma, taxa: Math.round(valor * taxaPct(forma)) / 100, observacao: ehSinal ? "Sinal" : r.querySelector("[data-obs]")?.value.trim() || null }));
-      if (ehSinal) await q(sb.from("ad_agendamentos").update({ sinal: Number(a.sinal || 0) + valor }).eq("id", a.id));
-      if (a && pago + valor >= Number(a.preco) - 0.009) await q(sb.from("ad_agendamentos").update({ pago: true }).eq("id", a.id));
-      toast(`Pagamento de ${brl(valor)} registrado. ✨`); festa();
-      if (a) { if (a.status === "concluido" && confirm("Mandar mensagem de agradecimento para a cliente?")) abreZap(linkZap(a, "agradecimento")); detalheAg(a.id); }
-      else fechaFolha();
-      atualizaTela();
+      await salvaPag(valor, forma, r.querySelector("[data-obs]")?.value.trim() || null);
     };
   });
 }
@@ -1127,6 +1137,7 @@ function telaMais() {
     ["Gestão", [
       ["estoque", IC.caixa, "Loja e pedidos", "Produtos que você vende no site, estoque e pedidos"],
       ["relatorios", IC.grafico, "Relatórios", "Lucro real, fluxo de caixa, meses e PDF"],
+      ["pix", IC.dinheiro, "Pix do salão", temPix() ? "QR Code com o valor certo em cada pagamento" : "Cadastre a chave para gerar o QR Code"],
       ["divisao", IC.dinheiro, "Divisão do lucro", `${pctSalao()}% salão (reinvestir) · ${100 - pctSalao()}% seu`],
       ["taxas", IC.dinheiro, "Taxas e custos", "Maquininha e material de cada serviço"],
       ["fidelidade", IC.estrela, "Fidelidade", fid().ativo ? `A cada ${fid().a_cada} atendimentos: ${fid().recompensa}` : "Cartão fidelidade, aniversário e indicação"],
@@ -1148,7 +1159,7 @@ function telaMais() {
   const r = tela(grupos.map(([g, itens]) => `<div class="tit-linha"><h2>${g}</h2></div><div class="lista">${itens.map(([k, ic, t, s]) => `<button class="item" data-m="${k}"><div class="ic">${ic}</div><div class="cresce"><b>${t}</b>${s ? `<div class="pequeno">${esc(s)}</div>` : ""}</div><span class="seta">›</span></button>`).join("")}</div>`).join("") + `
     <p class="pequeno" style="text-align:center;margin-top:20px">Eduardo Hair Gestão · versão 1.0<br>Mesma agenda do site de agendamento</p>`);
   r.querySelectorAll("[data-m]").forEach((b) => (b.onclick = () => ({
-    estoque: () => vaiPara("estoque"), relatorios: telaRelatorios, divisao: ajustaDivisao, taxas: telaTaxas, fidelidade: telaFidelidade, equipe: telaEquipe, servicos: telaServicos, horarios: telaHorarios, notificacoes: telaNotificacoes, chegar: comoChegar, site: telaSite, salao: dadosSalao, instalar: instrucoesInstalar, senha: novaSenha, seguranca: telaSeguranca, aparencia: telaAparencia, automacoes: telaAutomacoes, tutorial: () => mostraTutorial(),
+    estoque: () => vaiPara("estoque"), relatorios: telaRelatorios, divisao: ajustaDivisao, pix: () => configuraPix(), taxas: telaTaxas, fidelidade: telaFidelidade, equipe: telaEquipe, servicos: telaServicos, horarios: telaHorarios, notificacoes: telaNotificacoes, chegar: comoChegar, site: telaSite, salao: dadosSalao, instalar: instrucoesInstalar, senha: novaSenha, seguranca: telaSeguranca, aparencia: telaAparencia, automacoes: telaAutomacoes, tutorial: () => mostraTutorial(),
     sair: async () => { if (confirm("Sair do app?")) { await sb.auth.signOut(); location.reload(); } },
   })[b.dataset.m]()));
 }
@@ -1587,7 +1598,7 @@ function telaSeguranca() {
 function temaAtual() { return localStorage.getItem("edu.tema2") || "escuro"; }
 function aplicaTema(t) {
   localStorage.setItem("edu.tema2", t); document.documentElement.dataset.tema = t;
-  document.querySelector('meta[name="theme-color"]').content = t === "claro" ? "#F6F2EC" : "#121110";
+  document.querySelector('meta[name="theme-color"]').content = t === "claro" ? "#F7F5FA" : "#120F18";
 }
 
 
