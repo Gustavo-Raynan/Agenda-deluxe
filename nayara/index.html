@@ -625,7 +625,9 @@ function abreCor(c) {
 const abre = (d) => st.pag.dias.includes(new Date(d + "T12:00:00Z").getUTCDay());
 function desenhaDias() {
   const hoje = isoDia();
-  const dias = Array.from({ length: 30 }, (_, i) => somaDias(hoje, i)).filter(abre);
+  const ate = st.pag.ate && st.pag.ate >= hoje ? st.pag.ate : somaDias(hoje, 29);
+  const n = Math.min(120, Math.round((new Date(ate + "T12:00:00Z") - new Date(hoje + "T12:00:00Z")) / 864e5) + 1);
+  const dias = Array.from({ length: n }, (_, i) => somaDias(hoje, i)).filter(abre);
   if (!st.dia || !dias.includes(st.dia)) st.dia = dias[0];
   $("dias").innerHTML = dias.map((d) => {
     const dt = new Date(d + "T12:00:00Z");

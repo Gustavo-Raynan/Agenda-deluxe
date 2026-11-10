@@ -1252,6 +1252,8 @@ async function telaHorarios() {
   abreFolha(cabFolha("Horários e folgas", "O site só mostra horários dentro destes períodos.") + `
     <div class="cartao"><h2>Semana de trabalho</h2><p class="pequeno">Para ter intervalo de almoço, use dois períodos no mesmo dia (ex.: 9h às 12h e 13h às 18h).</p><div data-semana></div>
       <button class="btn ouro cheio" data-salvar style="margin-top:14px">Salvar horários</button></div>
+    <div class="cartao"><h2>Até quando o site aceita marcações</h2><p class="pequeno">As clientes só conseguem marcar até esta data. Em branco: próximos 30 dias.</p>
+      <div class="linha" style="margin-top:10px;gap:8px"><input class="campo" type="date" data-ate min="${isoDia()}" value="${cfg().agenda_ate || ""}"><button class="btn claro" data-ate-ok style="flex:none">Salvar</button></div></div>
     <div class="tit-linha"><h2>Folgas e bloqueios</h2><button data-bloq>+ Bloquear</button></div>
     ${bloq.length ? `<div class="lista">${bloq.map((b) => `<div class="item" style="cursor:default"><div class="ic">${IC.bloqueio}</div><div class="cresce"><b>${esc(b.motivo || "Bloqueado")}</b><div class="pequeno">${dataCurta(b.inicio)} ${hora(b.inicio)} até ${dataCurta(b.fim)} ${hora(b.fim)}</div></div><button class="link" data-lib="${b.id}">Liberar</button></div>`).join("")}</div>` : `<p class="mudo" style="margin:0 2px 14px">Nenhum bloqueio futuro. Use para folgas, feriados, férias ou compromissos.</p>`}`, (r) => {
     desenha(r);
@@ -1260,6 +1262,11 @@ async function telaHorarios() {
       await q(sb.from("ad_horarios").delete().eq("profissional_id", st.prof.id));
       if (edit.length) await q(sb.from("ad_horarios").insert(edit.map((h) => ({ ...h, profissional_id: st.prof.id }))));
       toast("Horários salvos. O site já foi atualizado.");
+    };
+    r.querySelector("[data-ate-ok]").onclick = async () => {
+      const v = r.querySelector("[data-ate]").value || null;
+      await salvaCfg({ agenda_ate: v });
+      toast(v ? `Site aberto para marcações até ${dataCurta(v + "T12:00:00-03:00")}.` : "Site aberto para os próximos 30 dias.");
     };
     r.querySelector("[data-bloq]").onclick = () => novoBloqueio();
     r.querySelectorAll("[data-lib]").forEach((b) => (b.onclick = async () => { await q(sb.from("ad_bloqueios").delete().eq("id", b.dataset.lib)); toast("Liberado."); telaHorarios(); }));
