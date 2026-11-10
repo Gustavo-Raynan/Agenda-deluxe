@@ -16,6 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Eduardo Hair">
+<meta name="format-detection" content="telephone=no">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preload" as="image" href="logo.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -75,7 +76,7 @@ h1 b{font-weight:600;background:var(--marca);-webkit-background-clip:text;backgr
 
 /* ===== Cartões ===== */
 main{max-width:660px;margin:auto;padding:0 12px calc(110px + var(--safe))}
-section{position:relative;background:var(--card);border:1px solid var(--b);border-radius:24px;padding:22px 16px;margin-top:14px;box-shadow:0 10px 30px -24px #6B3E9340}
+section{scroll-margin-top:calc(66px + env(safe-area-inset-top,0px));position:relative;background:var(--card);border:1px solid var(--b);border-radius:24px;padding:22px 16px;margin-top:14px;box-shadow:0 10px 30px -24px #6B3E9340}
 section::before{content:"";position:absolute;left:30px;right:30px;top:-1px;height:2px;border-radius:2px;background:var(--brilho)}
 h2{font:400 27px/1.15 var(--titulo);margin-bottom:6px;letter-spacing:.01em}
 .sub{margin:0 0 14px;color:var(--m);font-size:14.5px}
@@ -146,6 +147,15 @@ input:focus,textarea:focus{outline:none;border-color:var(--roxo);box-shadow:0 0 
 .aviso{background:#EAF7F5;border:1px solid #BFE5DF;border-radius:16px;padding:12px 14px;margin:16px 0 4px;font-size:14px;line-height:1.5}
 .aviso b{color:#1F7A70}
 
+.politica{background:#FFF7E8;border:1px solid #F1D9A8;border-radius:16px;padding:13px 14px;margin:16px 0 4px;font-size:14px;line-height:1.5;text-align:left}
+.politica>b{color:#9A6512;display:block;margin-bottom:2px}
+.politica p{margin:4px 0 0}
+.politica ul{margin:6px 0 0;padding-left:18px}
+.politica li{margin:3px 0}
+.aceite{display:flex;gap:10px;align-items:center;margin:12px 0 4px;font-size:15px;font-weight:500;cursor:pointer;min-height:44px}
+.aceite input{width:22px;height:22px;flex:none;accent-color:#8A5DB8}
+.aceite.pisca{animation:pisca .4s 3;color:var(--roxo2)}
+@keyframes pisca{50%{transform:translateX(5px)}}
 /* barra fixa */
 .barra{position:fixed;left:0;right:0;bottom:0;z-index:10;padding:10px 12px calc(10px + var(--safe));background:#FFFFFFee;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--b);transform:translateY(120%);transition:transform .25s ease;box-shadow:0 -10px 30px -20px #6B3E9366}
 .barra.on{transform:none}
@@ -213,8 +223,64 @@ footer a{color:var(--roxo2);text-decoration:none}
 .abas{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--bg);border-radius:14px;padding:4px;margin-top:14px}
 .abas button{border:0;background:none;color:var(--m);font:600 14px var(--font);padding:9px;border-radius:10px;cursor:pointer}
 .abas button.on{background:#fff;color:var(--t);box-shadow:0 2px 8px -4px #0003}
-.btn-app{display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:10px 16px;border-radius:99px;border:1px solid var(--b2);background:#fff;font:600 14px var(--font);cursor:pointer}
+.btn-app{display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:11px 18px;border-radius:99px;border:1px solid var(--b2);background:#fff;font:600 14px var(--font);cursor:pointer;min-height:44px}
 .btn-app svg{width:18px;height:18px;color:var(--roxo)}
+
+/* ===== Celular ===== */
+a,button,label,input,.sv,.dia,.slot{touch-action:manipulation}
+/* topo compacto que aparece ao rolar */
+.topo{position:fixed;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;gap:10px;padding:calc(8px + env(safe-area-inset-top,0px)) 12px 8px;background:#FFFFFFeb;backdrop-filter:blur(14px) saturate(1.4);-webkit-backdrop-filter:blur(14px) saturate(1.4);border-bottom:1px solid var(--b);transform:translateY(-110%);transition:transform .3s cubic-bezier(.2,.8,.2,1);box-shadow:0 8px 24px -18px #6B3E9366}
+.topo.on{transform:none}
+.topo img{width:38px;height:38px;border-radius:11px;border:1px solid var(--b);flex:none}
+.topo .nm{flex:1;min-width:0;font:400 14.5px/1.15 var(--titulo);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topo .nm small{display:block;font:400 11.5px var(--font);letter-spacing:0;text-transform:none;color:var(--m)}
+.topo .ag{flex:none;background:var(--marca);color:#fff;text-decoration:none;font:600 14px var(--font);padding:10px 16px;border-radius:99px;min-height:40px;display:flex;align-items:center}
+/* busca e categorias grudam no topo enquanto rola a lista */
+.filtros{position:sticky;top:calc(54px + env(safe-area-inset-top,0px));z-index:6;background:#fff;margin:0 -16px;padding:8px 16px 0;border-radius:0 0 16px 16px}
+.filtros.colado{box-shadow:0 10px 16px -14px #6B3E9355}
+/* botão flutuante do WhatsApp */
+.fab{position:fixed;right:14px;bottom:calc(18px + var(--safe));z-index:9;width:58px;height:58px;border-radius:50%;background:var(--zap);color:#fff;display:grid;place-items:center;box-shadow:0 12px 26px -10px #0C7A35aa;transform:scale(0);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.fab.on{transform:scale(1);animation:ondaZap 2s ease-out 1s 3}
+.fab svg{width:30px;height:30px}
+/* aviso de instalar (embaixo) */
+.inst{position:fixed;left:10px;right:10px;bottom:calc(10px + var(--safe));z-index:30;max-width:520px;margin:auto;background:#fff;border:1px solid var(--b2);border-radius:22px;padding:12px;display:grid;grid-template-columns:auto 1fr;gap:10px 12px;align-items:center;box-shadow:0 20px 50px -18px #2A283077;transform:translateY(140%);transition:transform .4s cubic-bezier(.2,.8,.2,1)}
+.inst.on{transform:none}
+.inst img{width:54px;height:54px;border-radius:14px;border:1px solid var(--b)}
+.inst b{display:block;font-size:15.5px;line-height:1.25}
+.inst span{font-size:13.5px;color:var(--m);line-height:1.3;display:block}
+.inst .bt{grid-column:1/-1;display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
+.inst .bt button{min-height:46px;border-radius:14px;border:1px solid var(--b2);background:#fff;font:600 15px var(--font);cursor:pointer}
+.inst .bt .on{background:var(--marca);color:#fff;border-color:transparent}
+/* cartão "app do salão" */
+.appcard{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center}
+.appcard img{width:64px;height:64px;border-radius:16px;border:1px solid var(--b);box-shadow:0 10px 22px -12px #6B3E9388}
+.appcard p{color:var(--m);font-size:14.5px;margin-top:2px}
+/* passo a passo com desenho do celular */
+.celu{position:relative;margin:14px auto 4px;width:200px;height:118px;border:2px solid #D8CEE6;border-bottom:0;border-radius:26px 26px 0 0;background:linear-gradient(#FBFAFD,#F2ECF9);overflow:hidden}
+.celu .bar{position:absolute;left:10px;right:10px;bottom:10px;height:30px;border-radius:12px;background:#fff;border:1px solid var(--b);display:flex;align-items:center;justify-content:space-around;color:#9A94A6}
+.celu .bar.cima{top:12px;bottom:auto}
+.celu .bar svg{width:16px;height:16px}
+.celu .alvo{color:var(--roxo);position:relative}
+.celu .alvo::after{content:"";position:absolute;inset:-7px;border-radius:50%;border:2px solid var(--roxo);animation:alvo 1.4s ease-out infinite}
+@keyframes alvo{0%{transform:scale(.6);opacity:1}100%{transform:scale(1.5);opacity:0}}
+.copiar{margin-top:10px}
+@media(max-width:400px){
+  header{padding:calc(16px + env(safe-area-inset-top,0px)) 14px 24px}
+  .logo-cx{width:min(340px,84vw);border-radius:22px}
+  h1{margin-top:18px}
+  .sl{font-size:15.5px;margin:10px auto 18px}
+  .atalhos{gap:8px}.atalhos a{min-width:62px;font-size:12.5px}
+  main{padding:0 10px calc(110px + var(--safe))}
+  section{padding:20px 14px;border-radius:22px}
+  .filtros{margin:0 -14px;padding:8px 14px 0}
+  .cats{margin:12px -14px 4px;padding:2px 14px 8px}
+  .dias{margin:0 -14px;padding:2px 14px 8px}
+  .sv{padding:12px;gap:2px 10px}
+  .sv .n{font-size:15.5px}
+  .sv em{font-size:16px}
+  h2{font-size:25px}
+}
+@media(hover:none){.sv:hover,.slot:hover,.btn2:hover{border-color:var(--b)}.atalhos a:hover span{transform:none;box-shadow:none}}
 #toast{position:fixed;left:50%;bottom:calc(90px + var(--safe));transform:translate(-50%,30px);opacity:0;z-index:70;background:var(--t);color:#fff;padding:12px 18px;border-radius:14px;font-size:14.5px;transition:all .25s;pointer-events:none;max-width:90vw;text-align:center}
 #toast.show{opacity:1;transform:translate(-50%,0)}
 
@@ -259,10 +325,15 @@ h1 b{background-size:200% 100%;animation:gradMove 6s ease-in-out infinite}
 .okbox .zap{animation:ondaZap 1.6s ease-out 1s infinite}
 .confete{position:fixed;width:9px;height:14px;border-radius:2px;pointer-events:none;z-index:50;animation:confete 1.4s cubic-bezier(.15,.7,.3,1) forwards}
 .barra.on .in{animation:surge .35s both}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.rv{opacity:1;transform:none}.particula,.confete{display:none}.fitas path{stroke-dashoffset:0!important}html{scroll-behavior:auto}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.rv{opacity:1;transform:none}.particula,.confete{display:none}.fitas path,.okbox .ic svg path{stroke-dashoffset:0!important}html{scroll-behavior:auto}}
 </style>
 </head>
 <body>
+<div class="topo" id="topo" aria-hidden="true">
+  <img src="icone-192.png" alt="">
+  <div class="nm">Eduardo Teccarelli<small>Hair · Lagoa Santa</small></div>
+  <a class="ag" href="#servicos" tabindex="-1">Agendar</a>
+</div>
 <header>
   <svg class="fitas" viewBox="0 0 400 600" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
     <defs>
@@ -295,8 +366,10 @@ h1 b{background-size:200% 100%;animation:gradMove 6s ease-in-out infinite}
 <section id="servicos">
   <h2>Serviços e valores</h2>
   <p class="sub">Escolha um ou mais serviços. Os valores são a partir de: o final depende do comprimento e volume do cabelo, e é combinado no atendimento.</p>
-  <div class="busca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="busca" type="search" placeholder="Buscar serviço (ex.: escova, luzes)" autocomplete="off" enterkeyhint="search"></div>
-  <div class="cats" id="cats"></div>
+  <div class="filtros" id="filtros">
+    <div class="busca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="busca" type="search" placeholder="Buscar serviço" autocomplete="off" enterkeyhint="search"></div>
+    <div class="cats" id="cats"></div>
+  </div>
   <div id="lista"><p class="note">Carregando serviços…</p></div>
 </section>
 
@@ -314,7 +387,9 @@ h1 b{background-size:200% 100%;animation:gradMove 6s ease-in-out infinite}
   <textarea id="obs" maxlength="200" placeholder="Ex.: cabelo longo, quero manter o comprimento, cor que desejo…"></textarea>
   <input class="hp" id="site" tabindex="-1" autocomplete="off" aria-hidden="true">
   <div class="escolha hide" id="escolha"></div>
-  <div class="aviso"><b>Imprevisto?</b> Desmarque aqui mesmo no site, em <b>Precisa desmarcar?</b>, ou avise pelo WhatsApp o quanto antes. Assim o horário fica livre para outra pessoa. 💜</div>
+  <div class="politica"><b>⚠️ Comunicado importante</b><p>Para manter nossa agenda organizada:</p><ul><li><b>Não compareceu:</b> será cobrado <b>100% do serviço</b>.</li><li><b>Aviso com 1h de antecedência:</b> será cobrado <b>50% do serviço</b>.</li></ul><p>Contamos com a compreensão e o respeito aos horários agendados. ❤️</p></div>
+  <label class="aceite" id="lbAceite"><input type="checkbox" id="aceite"> Li e concordo com a política de cancelamento</label>
+  <p class="note" style="margin-top:2px">Imprevisto? Desmarque aqui no site, em <b>Precisa desmarcar?</b>, ou avise pelo WhatsApp o quanto antes.</p>
   <p class="msg" id="msg" role="alert"></p>
   <button class="go" id="enviar" type="button">Confirmar agendamento</button>
   <p class="note" style="text-align:center">Seu horário fica reservado na hora. Depois é só enviar o resumo no WhatsApp.</p>
@@ -330,12 +405,14 @@ h1 b{background-size:200% 100%;animation:gradMove 6s ease-in-out infinite}
     Enviar resumo no WhatsApp</a>
   <button type="button" class="btn2" id="lembrete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>Salvar lembrete no meu celular</button>
   <button type="button" class="btn2" id="novo">Fazer outro agendamento</button>
+  <div class="politica"><b>⚠️ Comunicado importante</b><p>Para manter nossa agenda organizada:</p><ul><li><b>Não compareceu:</b> será cobrado <b>100% do serviço</b>.</li><li><b>Aviso com 1h de antecedência:</b> será cobrado <b>50% do serviço</b>.</li></ul><p>Contamos com a compreensão e o respeito aos horários agendados. ❤️</p></div>
   <p class="note" style="text-align:center;margin-top:12px">Imprevisto? Desmarque aqui mesmo no site, em <b>Precisa desmarcar?</b>.</p>
 </section>
 
 <section id="meus">
   <h2>Precisa desmarcar?</h2>
   <p class="sub">Digite o mesmo nome e WhatsApp que usou no agendamento para ver seus horários.</p>
+  <div class="politica"><b>⚠️ Comunicado importante</b><p>Para manter nossa agenda organizada:</p><ul><li><b>Não compareceu:</b> será cobrado <b>100% do serviço</b>.</li><li><b>Aviso com 1h de antecedência:</b> será cobrado <b>50% do serviço</b>.</li></ul><p>Contamos com a compreensão e o respeito aos horários agendados. ❤️</p></div>
   <div id="meusLista"></div>
   <div id="meusForm">
     <label class="f" for="mNome" style="margin-top:6px">Seu primeiro nome</label><input id="mNome" autocomplete="given-name" placeholder="Ex.: Juliana">
@@ -377,11 +454,25 @@ h1 b{background-size:200% 100%;animation:gradMove 6s ease-in-out infinite}
   </a>
 </section>
 
+<section id="app" class="hide">
+  <div class="appcard">
+    <img src="icone-192.png" alt="">
+    <div><h2 style="font-size:23px;margin:0">O salão no seu celular</h2><p>Coloque o site na tela de início e agende com um toque, como um aplicativo.</p></div>
+  </div>
+  <button type="button" class="go" id="appInstalar" style="margin-top:14px">Colocar na tela de início</button>
+</section>
+
 <footer><span class="marca">Eduardo <b>Teccarelli</b> Hair</span><br>Lagoa Santa - MG<br><a id="rodapeZap" target="_blank" rel="noopener"></a></footer>
 </main>
 
 <div class="modal hide" id="modalApp" role="dialog" aria-modal="true" aria-labelledby="appTit"><div class="cx" id="appCx"></div></div>
 <div class="modal hide" id="modal" role="dialog" aria-modal="true"><div class="cx" id="modalCx"></div></div>
+<a class="fab" id="fab" target="_blank" rel="noopener" aria-label="Chamar no WhatsApp"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.4a.5.5 0 0 0 0-.4l-.8-1.9c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.7a2.8 2.8 0 0 0 1.8-1.3 2.3 2.3 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3Z"/></svg></a>
+<div class="inst" id="inst" role="dialog" aria-label="Instalar o app do salão">
+  <img src="icone-192.png" alt="">
+  <div><b>Instale o app do salão</b><span>Agende com um toque, direto da tela de início.</span></div>
+  <div class="bt"><button type="button" id="instNao">Agora não</button><button type="button" class="on" id="instSim">Instalar</button></div>
+</div>
 <div class="barra" id="barra" aria-hidden="true"><div class="in">
   <div class="tx" id="barraTx"></div>
   <button type="button" id="barraBtn">Continuar</button>
@@ -437,7 +528,7 @@ async function carregar() {
   }
   st.pag = data;
   $("atZap").href = zapLink(`Olá, ${NOME}! Vim pelo site do salão.`);
-  $("rodapeZap").href = $("atZap").href; $("rodapeZap").textContent = "WhatsApp " + fmtTel(zapNum());
+  $("rodapeZap").href = $("atZap").href; $("fab").href = $("atZap").href; $("rodapeZap").textContent = "WhatsApp " + fmtTel(zapNum());
   const insta = "https://www.instagram.com/" + (data.instagram || "eduardoteccarellihairsalao") + "/";
   ["atInsta", "insta"].forEach((id) => ($(id).href = insta));
   $("info").innerHTML = resumoHorarios(data.horarios || []).map((t) => `<span>${t}</span>`).join("") + `<span><b>Sáb e Dom</b> · fechado</span>`;
@@ -559,6 +650,7 @@ $("enviar").onclick = async () => {
   if (!st.hora) { msg("Escolha o dia e o horário."); return vai($("agendar")); }
   if (nome.length < 2) { msg("Escreva seu nome."); return $("nome").focus(); }
   if (tel.length < 10) { msg("Escreva seu WhatsApp com DDD."); return $("tel").focus(); }
+  if (!$("aceite").checked) { msg("Leia e marque que concorda com a política de cancelamento."); $("lbAceite").classList.add("pisca"); setTimeout(() => $("lbAceite").classList.remove("pisca"), 1300); $("lbAceite").scrollIntoView({ behavior: "smooth", block: "center" }); return; }
   msg("");
   $("enviar").disabled = true; $("enviar").textContent = "Reservando…";
   const { data: id, error } = await sb.rpc("ad_agendar_varios", { p_slug: SLUG, p_servicos: st.sel.map((s) => s.id), p_inicio: st.hora, p_nome: nome, p_whatsapp: tel, p_obs: obs || null });
@@ -579,7 +671,8 @@ function confirmado() {
   const texto = `Olá, ${NOME}! 💇‍♀️ Acabei de agendar pelo site:\n\n` +
     `*Serviço:* ${nomes}\n*Dia:* ${dataLonga(a.inicio)}\n*Horário:* ${hora(a.inicio)}\n` +
     `*Valor:* a partir de ${brl(a.preco)}\n*Nome:* ${a.nome}\n*WhatsApp:* ${fmtTel(a.tel)}` +
-    (a.obs ? `\n*Observação:* ${a.obs}` : "");
+    (a.obs ? `\n*Observação:* ${a.obs}` : "") +
+    `\n\n✅ Li e concordo com a política de cancelamento: não comparecer = 100% do serviço; aviso com 1h de antecedência = 50% do serviço.`;
   $("okWhats").href = `https://wa.me/${zapNum()}?text=${encodeURIComponent(texto)}`;
   $("servicos").classList.add("hide"); $("agendar").classList.add("hide");
   $("confirmado").classList.remove("hide", "rv"); $("confirmado").classList.add("mostra"); atualiza();
@@ -625,12 +718,13 @@ async function meusHorarios(silencioso) {
   $("meusLista").innerHTML = data.map((a) => `<div class="meu">
       <div><b>${esc(a.servico)}</b><small>${dataLonga(a.inicio)} às <b>${hora(a.inicio)}</b> · ${a.status === "confirmado" ? "confirmado" : "a confirmar"}</small></div>
       ${a.pode ? `<button type="button" class="btn2 des" data-des="${a.id}">Desmarcar</button>` : `<a class="btn2" target="_blank" rel="noopener" href="https://wa.me/${zapNum()}?text=${encodeURIComponent(`Oi, ${NOME}! Preciso desmarcar meu horário de ${dataLonga(a.inicio)} às ${hora(a.inicio)} (${a.servico}).`)}">Falar com o ${NOME}</a>`}
-    </div>`).join("") + (data.some((a) => !a.pode) ? `<p class="note">Falta menos de 2 horas para um dos horários: nesse caso, avise pelo WhatsApp.</p>` : "");
+    </div>`).join("") + (data.some((a) => !a.pode) ? `<p class="note">Falta menos de 2 horas para um dos horários: nesse caso, avise pelo WhatsApp. Pela política, aviso com 1h de antecedência tem cobrança de 50% do serviço.</p>` : "");
   $("meusLista").querySelectorAll("[data-des]").forEach((b) => (b.onclick = () => desmarca(data.find((x) => x.id === b.dataset.des))));
 }
 function desmarca(a) {
   $("modalCx").innerHTML = `<h3>Desmarcar horário?</h3>
     <p style="margin-top:6px"><b style="color:var(--t)">${esc(a.servico)}</b><br>${dataLonga(a.inicio)} às ${hora(a.inicio)}</p>
+    <p style="margin-top:10px;font-size:13.5px">Avisando com antecedência, sem custo. Lembre: aviso com 1h de antecedência tem cobrança de 50% e não comparecer, 100% do serviço.</p>
     <label class="f" for="mMot" style="margin-top:12px">Motivo <small>(opcional)</small></label><input id="mMot" maxlength="120" placeholder="Ex.: imprevisto no trabalho">
     <div class="duo"><button type="button" data-volta>Voltar</button><button type="button" data-sim class="on">Sim, desmarcar</button></div>`;
   $("modal").classList.remove("hide");
@@ -650,42 +744,106 @@ function desmarca(a) {
 }
 $("mVer").onclick = () => meusHorarios(false);
 
-/* ---------- colocar o site na tela de início ---------- */
+/* ---------- colocar o site na tela de início (Android e iPhone) ---------- */
 const ICON_COMP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-1"/></svg>';
 const ICON_MAIS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/></svg>';
 const ICON_MENU = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
-const naTelaInicio = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const ICON_PTS = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
+const ICON_SANDUBA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
+const ICON_SETA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>';
+const naTelaInicio = () => matchMedia("(display-mode: standalone)").matches || matchMedia("(display-mode: fullscreen)").matches || navigator.standalone === true;
 const ua = navigator.userAgent;
 const ehIOS = /iphone|ipad|ipod/i.test(ua) || (/macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
 const ehAndroid = /android/i.test(ua);
-const dentroDeApp = /instagram|fbav|fban|fb_iab|whatsapp|line\/|tiktok/i.test(ua);
+const dentroDeApp = /instagram|fbav|fban|fb_iab|fbios|whatsapp|line\/|tiktok|musical_ly|snapchat|; wv\)/i.test(ua);
+const navIOS = /crios/i.test(ua) ? "chrome" : /fxios/i.test(ua) ? "firefox" : /edgios/i.test(ua) ? "edge" : "safari";
+const navAndroid = /samsungbrowser/i.test(ua) ? "samsung" : /firefox/i.test(ua) ? "firefox" : /edga/i.test(ua) ? "edge" : /opr\//i.test(ua) ? "opera" : "chrome";
+const iosVer = parseInt((ua.match(/OS (\d+)_/) || [])[1] || "0", 10);
 let pedidoInstalar = null;
-addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); pedidoInstalar = e; if ($("appCx").dataset.plat === "android") passosApp("android"); });
-addEventListener("appinstalled", () => { fechaApp(); $("btnApp").classList.add("hide"); });
+
+// celular desenhado com o botão certo piscando
+function celu(onde) {
+  const b = (ic, alvo) => `<span class="${alvo ? "alvo" : ""}">${ic}</span>`;
+  if (onde === "ios-baixo") return `<div class="celu"><div class="bar">${b(ICON_SETA)}${b(ICON_COMP, 1)}${b(ICON_MAIS)}</div></div>`;
+  if (onde === "ios-pontos") return `<div class="celu"><div class="bar">${b(ICON_SETA)}${b("<svg viewBox='0 0 24 24'></svg>")}${b(ICON_PTS, 1)}</div></div>`;
+  if (onde === "topo-menu") return `<div class="celu" style="border-radius:0 0 26px 26px;border:2px solid #D8CEE6;border-top:0"><div class="bar cima">${b("<svg viewBox='0 0 24 24'></svg>")}${b("<svg viewBox='0 0 24 24'></svg>")}${b(ICON_MENU, 1)}</div></div>`;
+  if (onde === "topo-comp") return `<div class="celu" style="border-radius:0 0 26px 26px;border:2px solid #D8CEE6;border-top:0"><div class="bar cima">${b("<svg viewBox='0 0 24 24'></svg>")}${b(ICON_COMP, 1)}${b(ICON_MENU)}</div></div>`;
+  if (onde === "samsung") return `<div class="celu"><div class="bar">${b(ICON_SETA)}${b("<svg viewBox='0 0 24 24'></svg>")}${b(ICON_SANDUBA, 1)}</div></div>`;
+  return "";
+}
+function guia(plat) {
+  if (plat === "ios") {
+    if (dentroDeApp) return { cel: "", passos: `<li>Você abriu pelo Instagram/WhatsApp, que não deixa instalar. Toque em <b>Copiar link</b> aqui embaixo</li><li>Abra o <b>Safari</b> e cole o link na barra de endereço</li><li>No Safari, toque em <b>Compartilhar</b> ${ICON_COMP} e depois em <b>"Adicionar à Tela de Início"</b> ${ICON_MAIS}</li>`, copiar: true };
+    if (navIOS === "chrome" || navIOS === "edge") return { cel: celu("topo-comp"), passos: `<li>Toque em <b>Compartilhar</b> ${ICON_COMP}, no canto de cima, ao lado do endereço do site</li><li>Toque em <b>"Adicionar à Tela de Início"</b> ${ICON_MAIS} (se não aparecer, toque em <b>"Ver mais"</b>)</li><li>Toque em <b>Adicionar</b>. Pronto! 💜</li>` };
+    if (navIOS === "firefox") return { cel: "", passos: `<li>Toque no menu <b>≡</b> e depois em <b>Compartilhar</b> ${ICON_COMP}</li><li>Toque em <b>"Adicionar à Tela de Início"</b> ${ICON_MAIS}</li><li>Toque em <b>Adicionar</b>. Pronto! 💜</li>` };
+    if (iosVer >= 26) return { cel: celu("ios-pontos"), passos: `<li>Toque nos <b>três pontinhos</b> <b>•••</b> no canto de baixo, à direita</li><li>Toque em <b>Compartilhar</b> ${ICON_COMP}</li><li>Role para baixo e toque em <b>"Adicionar à Tela de Início"</b> ${ICON_MAIS}</li><li>Deixe ligado <b>"Abrir como App Web"</b> e toque em <b>Adicionar</b>. Pronto! 💜</li>` };
+    return { cel: celu("ios-baixo"), passos: `<li>Toque em <b>Compartilhar</b> ${ICON_COMP}, no meio da barra de baixo do Safari<br><small style="color:var(--m)">Não está vendo a barra? Role a página um pouquinho para cima.</small></li><li>Role a lista para baixo e toque em <b>"Adicionar à Tela de Início"</b> ${ICON_MAIS}</li><li>Toque em <b>Adicionar</b>, no canto de cima. Pronto! 💜</li>` };
+  }
+  if (dentroDeApp) return { cel: celu("topo-menu"), passos: `<li>Toque nos <b>três pontinhos</b> ${ICON_MENU} no canto de cima</li><li>Escolha <b>"Abrir no Chrome"</b> (ou "Abrir no navegador")</li><li>No Chrome, toque de novo em ${ICON_MENU} e em <b>"Adicionar à tela inicial"</b></li>`, copiar: true };
+  if (pedidoInstalar) return { cel: "", passos: `<li>Toque em <b>"Instalar agora"</b> aqui embaixo</li><li>Confirme em <b>Instalar</b>. O ícone do salão aparece na sua tela de início 💜</li>`, instalar: true };
+  if (navAndroid === "samsung") return { cel: celu("samsung"), passos: `<li>Toque no menu ${ICON_SANDUBA}, no canto de baixo, à direita</li><li>Toque em <b>"Adicionar página a"</b></li><li>Escolha <b>"Tela inicial"</b> e toque em <b>Adicionar</b>. Pronto! 💜</li>` };
+  if (navAndroid === "firefox") return { cel: celu("topo-menu"), passos: `<li>Toque nos <b>três pontinhos</b> ${ICON_MENU}</li><li>Toque em <b>"Instalar"</b> ou <b>"Adicionar à tela inicial"</b></li><li>Confirme em <b>Adicionar</b>. Pronto! 💜</li>` };
+  return { cel: celu("topo-menu"), passos: `<li>Toque nos <b>três pontinhos</b> ${ICON_MENU}, no canto de cima, à direita</li><li>Toque em <b>"Adicionar à tela inicial"</b> ou <b>"Instalar app"</b></li><li>Toque em <b>Instalar</b> (ou <b>Adicionar</b>). Pronto! 💜</li>` };
+}
 function passosApp(plat) {
   const cx = $("appCx"); cx.dataset.plat = plat;
-  const ios = dentroDeApp
-    ? `<li>Toque nos <b>três pontinhos</b> ${ICON_MENU} no canto da tela</li><li>Escolha <b>"Abrir no navegador"</b> (Safari)</li><li>No Safari, toque em <b>Compartilhar</b> ${ICON_COMP} e depois em <b>"Adicionar à Tela de Início"</b> ${ICON_MAIS}</li>`
-    : `<li>Toque em <b>Compartilhar</b> ${ICON_COMP} (na barra de baixo ou nos <b>•••</b>)</li><li>Role e toque em <b>"Adicionar à Tela de Início"</b> ${ICON_MAIS}</li><li>Toque em <b>Adicionar</b>. Pronto! O ícone do salão aparece no seu celular 💜</li>`;
-  const android = pedidoInstalar
-    ? `<li>Toque no botão <b>"Instalar agora"</b> abaixo</li><li>Confirme em <b>Instalar</b>. O ícone do salão aparece na sua tela de início 💜</li>`
-    : `<li>Toque nos <b>três pontinhos</b> ${ICON_MENU} no canto de cima${dentroDeApp ? " e escolha <b>\"Abrir no Chrome\"</b>" : ""}</li><li>Toque em <b>"Adicionar à tela inicial"</b> ou <b>"Instalar app"</b></li><li>Confirme em <b>Adicionar</b>. Pronto! 💜</li>`;
-  cx.innerHTML = `<div class="app-top"><img src="icone-192.png" alt=""><div><h3 id="appTit">Tenha o salão no seu celular</h3><p>Agende com um toque, como um aplicativo, sem procurar o link.</p></div></div>
+  const g = guia(plat);
+  cx.innerHTML = `<div class="app-top"><img src="icone-192.png" alt=""><div><h3 id="appTit">O salão no seu celular</h3><p>Coloque na tela de início e agende com um toque, como um aplicativo.</p></div></div>
     <div class="abas"><button type="button" data-p="ios" class="${plat === "ios" ? "on" : ""}">iPhone</button><button type="button" data-p="android" class="${plat === "android" ? "on" : ""}">Android</button></div>
-    <ol class="passos">${plat === "ios" ? ios : android}</ol>
-    <div class="duo">${plat === "android" && pedidoInstalar ? `<button type="button" data-depois>Agora não</button><button type="button" class="on" data-instalar>Instalar agora</button>` : `<button type="button" data-depois style="grid-column:1/-1">Entendi</button>`}</div>`;
+    ${g.cel}
+    <ol class="passos">${g.passos}</ol>
+    ${g.copiar ? `<button type="button" class="btn2 copiar" data-copiar>Copiar link do site</button>` : ""}
+    <div class="duo">${g.instalar ? `<button type="button" data-depois>Agora não</button><button type="button" class="on" data-instalar>Instalar agora</button>` : `<button type="button" data-depois style="grid-column:1/-1">Entendi</button>`}</div>`;
   cx.querySelectorAll("[data-p]").forEach((b) => (b.onclick = () => passosApp(b.dataset.p)));
   cx.querySelector("[data-depois]").onclick = fechaApp;
-  cx.querySelector("[data-instalar]")?.addEventListener("click", async () => { pedidoInstalar.prompt(); const r = await pedidoInstalar.userChoice; pedidoInstalar = null; if (r.outcome === "accepted") fechaApp(); else passosApp("android"); });
+  cx.querySelector("[data-copiar]")?.addEventListener("click", async (e) => {
+    const link = location.origin + location.pathname;
+    try { await navigator.clipboard.writeText(link); } catch { const t = document.createElement("textarea"); t.value = link; document.body.appendChild(t); t.select(); try { document.execCommand("copy"); } catch {} t.remove(); }
+    e.target.textContent = "Link copiado ✓";
+  });
+  cx.querySelector("[data-instalar]")?.addEventListener("click", instalarAgora);
 }
-function abreApp() { $("modalApp").classList.remove("hide"); passosApp(ehIOS ? "ios" : "android"); }
-function fechaApp() { $("modalApp").classList.add("hide"); try { localStorage.setItem("et_app_visto", "1"); } catch {} }
+async function instalarAgora() {
+  if (!pedidoInstalar) return abreApp();
+  pedidoInstalar.prompt();
+  const r = await pedidoInstalar.userChoice; pedidoInstalar = null;
+  if (r.outcome === "accepted") { fechaApp(); escondeInst(); toast("Pronto! O salão está na sua tela de início 💜"); } else if (!$("modalApp").classList.contains("hide")) passosApp("android");
+}
+function abreApp() { escondeInst(); $("modalApp").classList.remove("hide"); passosApp(ehIOS ? "ios" : "android"); }
+function fechaApp() { $("modalApp").classList.add("hide"); }
 $("modalApp").onclick = (e) => { if (e.target === $("modalApp")) fechaApp(); };
-if (!naTelaInicio()) {
-  $("btnApp").classList.remove("hide"); $("btnApp").onclick = abreApp;
-  let visto = false; try { visto = !!localStorage.getItem("et_app_visto"); } catch {}
-  if ((ehIOS || ehAndroid) && !visto) setTimeout(abreApp, 2500);
+// aviso de instalar embaixo: aparece 1 vez por semana, depois de alguns segundos
+function escondeInst() { $("inst").classList.remove("on"); }
+function mostraInst() {
+  let ultimo = 0; try { ultimo = +localStorage.getItem("et_inst_nao") || 0; } catch {}
+  if (Date.now() - ultimo < 7 * 864e5 || naTelaInicio() || st.ag || $("barra").classList.contains("on") || !$("modalApp").classList.contains("hide")) return;
+  $("inst").classList.add("on");
 }
+$("instNao").onclick = () => { escondeInst(); try { localStorage.setItem("et_inst_nao", Date.now()); } catch {} };
+$("instSim").onclick = () => (pedidoInstalar ? instalarAgora() : abreApp());
+addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); pedidoInstalar = e; if ($("appCx").dataset.plat === "android" && !$("modalApp").classList.contains("hide")) passosApp("android"); });
+addEventListener("appinstalled", () => { fechaApp(); escondeInst(); ["btnApp", "app"].forEach((id) => $(id).classList.add("hide")); });
+if (!naTelaInicio()) {
+  $("btnApp").classList.remove("hide"); $("btnApp").onclick = () => (pedidoInstalar ? instalarAgora() : abreApp());
+  $("app").classList.remove("hide"); $("appInstalar").onclick = $("btnApp").onclick;
+  if (ehIOS || ehAndroid) setTimeout(mostraInst, 6000);
+}
+
+/* ---------- topo compacto, filtros grudados e WhatsApp flutuante ---------- */
+let passouTopo = false;
+function rolou() {
+  const y = scrollY, hd = document.querySelector("header").offsetHeight;
+  passouTopo = y > hd - 40;
+  $("topo").classList.toggle("on", passouTopo);
+  const f = $("filtros").getBoundingClientRect().top;
+  $("filtros").classList.toggle("colado", passouTopo && f <= 70 && f > -40);
+  $("fab").classList.toggle("on", passouTopo && !$("barra").classList.contains("on") && !$("inst").classList.contains("on"));
+}
+addEventListener("scroll", () => requestAnimationFrame(rolou), { passive: true });
+new MutationObserver(rolou).observe($("barra"), { attributes: true, attributeFilter: ["class"] });
+new MutationObserver(rolou).observe($("inst"), { attributes: true, attributeFilter: ["class"] });
+// ao escolher categoria, a lista volta para o começo (sem pular a tela)
+$("cats").addEventListener("click", () => { if (passouTopo) { const y = $("servicos").getBoundingClientRect().top + scrollY - 60; if (scrollY > y) scrollTo({ top: y, behavior: "smooth" }); } });
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 
 /* ===== Animações ===== */
@@ -693,7 +851,7 @@ const calma = matchMedia("(prefers-reduced-motion: reduce)").matches;
 function cascata(sel, passo = 0.04, base = 0) { document.querySelectorAll(sel).forEach((el, i) => (el.style.animationDelay = (base + Math.min(i, 30) * passo) + "s")); }
 if (!calma) {
   const h = document.querySelector("header"), cores = ["#B795DB", "#4FBFB1", "#D9C6EF", "#8A5DB8"];
-  for (let i = 0; i < 18; i++) {
+  for (let i = 0; i < (innerWidth < 500 ? 10 : 18); i++) {
     const p = document.createElement("span"); p.className = "particula";
     const t = 5 + Math.random() * 6, s = 3 + Math.random() * 5;
     p.style.cssText = `left:${Math.random() * 100}%;width:${s}px;height:${s}px;background:${cores[i % 4]};opacity:.7;animation-duration:${t}s;animation-delay:${-Math.random() * t}s`;
