@@ -557,7 +557,7 @@ async function detalheAg(id) {
   abreFolha(cabFolha(esc(a.cliente_nome), `<span class="chip ${a.status}">${STATUS[a.status]}</span>${a.pago ? ' <span class="chip pago">Pago</span>' : ""}`) + `
     <div class="cartao">
       <dl class="info-ag">
-        <dt>Serviço</dt><dd>${esc(a.servico_nome)}${a.serie_id ? ' <span class="chip">🔁 Recorrente</span>' : ""}</dd>
+        <dt>Serviço</dt><dd>${esc(a.servico_nome)}${a.serie_id ? ` <span class="chip">🔁 ${esc(a.serie_regra || "Recorrente")}</span>` : ""}</dd>
         <dt>Data</dt><dd>${dataLonga(a.inicio)}</dd>
         <dt>Horário</dt><dd>${hora(a.inicio)} às ${hora(a.fim)} · ${dur(Math.round((new Date(a.fim) - new Date(a.inicio)) / 60000))}</dd>
         <dt>Valor</dt><dd>${brl(a.preco)}</dd>
@@ -739,7 +739,7 @@ async function novoAgendamento({ data, cliente }) {
         profissional_id: st.prof.id, servico_id: s.id, servico_nome: s.nome, preco: s.preco,
         cliente_nome: nome, cliente_whatsapp: zap, cliente_id: cli?.id || null, status: "confirmado",
         inicio: d.toISOString(), fim: new Date(d.getTime() + s.duracao_min * 60000).toISOString(),
-        observacao: obs, serie_id: serie,
+        observacao: obs, serie_id: serie, serie_regra: serie ? rep.descricao().replace(/^./, (x) => x.toUpperCase()) : null,
       })));
       if (error) return toast(erroMsg(error), 1);
       toast(datas.length > 1 ? `${datas.length} horários agendados! 🔁` : "Agendado!");
