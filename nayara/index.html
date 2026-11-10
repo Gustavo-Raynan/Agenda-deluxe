@@ -274,8 +274,12 @@ header .cta::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:4
 .app-abas{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--field);border-radius:14px;padding:4px;margin-top:14px}
 .app-abas button{border:0;background:none;color:var(--m);font:600 14px var(--font);padding:9px;border-radius:10px;cursor:pointer}
 .app-abas button.on{background:var(--raise);color:var(--t)}
-.app-seta{position:fixed;left:50%;bottom:calc(8px + var(--safe));transform:translateX(-50%);z-index:61;font-size:30px;animation:quica 1s infinite;pointer-events:none}
-@keyframes quica{50%{transform:translate(-50%,8px)}}
+.app-seta{position:fixed;right:14px;bottom:calc(6px + var(--safe));z-index:61;font-size:30px;display:flex;flex-direction:column;align-items:center;animation:quica 1s infinite;pointer-events:none;filter:drop-shadow(0 4px 10px #000a)}
+.app-seta span{font:700 12px var(--font);color:#1B1608;background:var(--ouro);padding:4px 9px;border-radius:99px;margin-bottom:2px}
+@keyframes quica{50%{transform:translateY(8px)}}
+.pts{display:inline-block;font-weight:900;letter-spacing:1px;background:var(--raise);border:1px solid var(--b2);border-radius:99px;padding:0 8px;line-height:1.5}
+.passos small{display:block;color:var(--m);font-size:13px;margin-top:4px}
+.modal .cx.app-cx{padding-bottom:calc(64px + var(--safe))}
 .btn-app{display:inline-flex;align-items:center;gap:8px;margin-top:14px;padding:10px 16px;border-radius:99px;border:1px solid var(--b2);background:var(--raise);color:var(--t);font:600 14px var(--font);cursor:pointer}
 .btn-app svg{width:18px;height:18px;color:var(--gt)}
 </style>
@@ -531,7 +535,12 @@ function passosApp(plat) {
   const cx = $("appCx"); cx.dataset.plat = plat;
   const ios = dentroDeApp
     ? `<li>Toque nos <b>três pontinhos</b> ${ICON_MENU} ou no ícone do navegador, no canto da tela</li><li>Escolha <b>"Abrir no navegador"</b> (Safari)</li><li>No Safari, toque em <b>Compartilhar</b> ${ICON_COMP} e depois em <b>"Adicionar à Tela de Início"</b> ${ICON_MAIS}</li>`
-    : `<li>Toque em <b>Compartilhar</b> ${ICON_COMP} na barra do Safari (embaixo da tela${/crios/i.test(ua) ? " ou no topo, no Chrome" : ""})</li><li>Role a lista e toque em <b>"Adicionar à Tela de Início"</b> ${ICON_MAIS}</li><li>O nome já vem como <b>Agenda Nay</b>. Toque em <b>Adicionar</b>, no canto de cima. Pronto! 💅</li>`;
+    : /crios/i.test(ua)
+      ? `<li>Toque em <b>Compartilhar</b> ${ICON_COMP} no canto de cima, ao lado do endereço do site</li><li>Toque em <b>"Ver mais"</b> e depois em <b>"Adicionar à Tela de Início"</b> ${ICON_MAIS}</li><li>O nome já vem como <b>Agenda Nay</b>. Toque em <b>Adicionar</b>. Pronto! 💅</li>`
+      : `<li>Toque nos <b>três pontinhos</b> <span class="pts">•••</span> no <b>canto de baixo, à direita</b> da tela<br><small>Em iPhones mais antigos, toque direto em <b>Compartilhar</b> ${ICON_COMP} na barra de baixo e pule para o passo 3.</small></li>
+        <li>Toque em <b>Compartilhar</b> ${ICON_COMP}</li>
+        <li>Role a lista para baixo (ou toque em <b>"Ver mais"</b>) e toque em <b>"Adicionar à Tela de Início"</b> ${ICON_MAIS}</li>
+        <li>O nome já vem como <b>Agenda Nay</b>. Deixe ligado <b>"Abrir como App Web"</b>, se aparecer, e toque em <b>Adicionar</b>. Pronto! 💅</li>`;
   const android = pedidoInstalar
     ? `<li>Toque no botão abaixo <b>"Instalar agora"</b></li><li>Confirme em <b>Instalar</b>. O ícone <b>Agenda Nay</b> aparece na sua tela de início 💅</li>`
     : dentroDeApp
@@ -545,7 +554,7 @@ function passosApp(plat) {
   cx.querySelector("[data-depois]").onclick = fechaApp;
   cx.querySelector("[data-instalar]")?.addEventListener("click", async () => { pedidoInstalar.prompt(); const r = await pedidoInstalar.userChoice; pedidoInstalar = null; if (r.outcome === "accepted") fechaApp(); else passosApp("android"); });
   document.querySelector(".app-seta")?.remove();
-  if (plat === "ios" && !dentroDeApp && !/crios|fxios|edgios/i.test(ua)) { const s = document.createElement("div"); s.className = "app-seta"; s.textContent = "⬇"; document.body.appendChild(s); }
+  if (plat === "ios" && !dentroDeApp && !/crios|fxios|edgios/i.test(ua)) { const s = document.createElement("div"); s.className = "app-seta"; s.innerHTML = "<span>Toque aqui</span>👇"; document.body.appendChild(s); }
 }
 function abreApp() { $("modalApp").classList.remove("hide"); passosApp(ehIOS ? "ios" : ehAndroid ? "android" : "ios"); }
 function fechaApp() { $("modalApp").classList.add("hide"); document.querySelector(".app-seta")?.remove(); }
