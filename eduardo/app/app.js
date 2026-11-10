@@ -163,7 +163,7 @@ async function iniciar() {
   const { data: prof } = await sb.from("ad_profissionais").select("*").eq("slug", "eduardoteccarelli").maybeSingle();
   if (!prof) { semAcesso(); return; }
   st.prof = prof;
-  $("b-perfil").textContent = iniciais(prof.nome);
+  $("b-perfil").innerHTML = IC.engrenagem || IC.cliente;
   $("v-login").classList.add("hide"); $("v-app").classList.remove("hide");
   const pedeSenha = () => { if (!travaCfg() && !localStorage.getItem("edu.trava.perguntou")) setTimeout(() => { localStorage.setItem("edu.trava.perguntou", "1"); criaSenha(true); }, 500); };
   if (travaCfg()) mostraTrava();

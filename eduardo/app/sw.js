@@ -1,5 +1,5 @@
 // Eduardo Hair Gestão — service worker: abre rápido e recebe notificações com o app fechado
-const CACHE = "edu-gestao-v4";
+const CACHE = "edu-gestao-v5";
 const ARQUIVOS = ["./", "app.css", "app.js", "loja.js", "catalogo.js", "catalogo.json", "divisao.js", "extras.js", "manifest.json", "icone-192.png", "../icone-192.png"];
 
 self.addEventListener("install", (e) => {

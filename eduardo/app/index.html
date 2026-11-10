@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icone-180.png?v=2">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Josefin+Sans:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="app.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
@@ -24,7 +24,29 @@
 
 <!-- Entrar -->
 <section id="v-login" class="login hide">
-  <img src="../icone-512.png" alt="Eduardo Teccarelli Hair">
+  <svg class="logo-app" viewBox="60 30 500 365" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Eduardo Teccarelli Hair">
+  <defs>
+    <linearGradient id="lgRoxo" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#9B6BD6"/><stop offset=".55" stop-color="#D3B6F6"/><stop offset="1" stop-color="#A27AE0"/></linearGradient>
+    <linearGradient id="lgVerde" x1="0" y1="0" x2="1" y2=".3"><stop offset="0" stop-color="#22A393"/><stop offset=".5" stop-color="#86EEE0"/><stop offset="1" stop-color="#2BB3A2"/></linearGradient>
+    <linearGradient id="lgPrata" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0"/><stop offset=".45" stop-color="#E9E4F2" stop-opacity=".75"/><stop offset="1" stop-color="#FFFFFF" stop-opacity=".1"/></linearGradient>
+    <linearGradient id="lgBrilho" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <clipPath id="cpFita"><path d="M232 92 C300 84 345 132 392 170 C430 200 470 212 510 190 C530 178 545 160 556 140 C540 178 515 205 478 216 C435 228 392 214 352 182 C310 148 278 108 232 92 Z"/></clipPath>
+  </defs>
+  <g>
+    <path d="M112 226 C74 150 140 58 262 52 C354 48 404 108 452 156 C492 196 528 188 564 120 C534 200 490 212 446 170 C398 124 350 66 262 64 C150 70 94 150 112 226 Z" fill="url(#lgRoxo)"/>
+    <path d="M200 112 C270 84 330 112 380 150 C428 186 480 210 530 172 C496 218 440 206 392 172 C340 136 290 98 200 112 Z" fill="url(#lgPrata)"/>
+    <path d="M232 92 C300 84 345 132 392 170 C430 200 470 212 510 190 C530 178 545 160 556 140 C540 178 515 205 478 216 C435 228 392 214 352 182 C310 148 278 108 232 92 Z" fill="url(#lgVerde)"/>
+    
+    <path d="M170 150 C214 108 274 92 326 104 C276 100 222 114 170 150 Z" fill="#C29BEF"/>
+  </g>
+  <text x="300" y="292" text-anchor="middle" font-family="Josefin Sans, Manrope, sans-serif" font-weight="400" font-size="86" letter-spacing="3" fill="currentColor">EDUARDO</text>
+  <text x="304" y="340" text-anchor="middle" font-family="Josefin Sans, Manrope, sans-serif" font-weight="600" font-size="34" letter-spacing="15" style="fill:var(--lgRoxo)">TECCARELLI</text>
+  <g>
+    <line x1="132" y1="371" x2="250" y2="371" style="stroke:var(--lgVerde)" stroke-width="2"/>
+    <line x1="352" y1="371" x2="470" y2="371" style="stroke:var(--lgVerde)" stroke-width="2"/>
+    <text x="304" y="380" text-anchor="middle" font-family="Josefin Sans, Manrope, sans-serif" font-weight="600" font-size="24" letter-spacing="11" style="fill:var(--lgVerde)">HAIR</text>
+  </g>
+</svg>
   <h1>Eduardo Hair Gestão</h1>
   <p class="mudo" style="margin-top:6px">Sua agenda, suas clientes e o caixa do salão, no celular.</p>
   <div class="cartao" id="l-cartao">
@@ -43,10 +65,33 @@
 <!-- App -->
 <section id="v-app" class="hide">
   <header class="topo">
-    <img class="marca" src="../icone-192.png" alt="Eduardo Hair">
+    <svg class="marca-svg" viewBox="60 30 500 365" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <defs>
+    <linearGradient id="mkRoxo" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#9B6BD6"/><stop offset=".55" stop-color="#D3B6F6"/><stop offset="1" stop-color="#A27AE0"/></linearGradient>
+    <linearGradient id="mkVerde" x1="0" y1="0" x2="1" y2=".3"><stop offset="0" stop-color="#22A393"/><stop offset=".5" stop-color="#86EEE0"/><stop offset="1" stop-color="#2BB3A2"/></linearGradient>
+    <linearGradient id="mkPrata" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0"/><stop offset=".45" stop-color="#E9E4F2" stop-opacity=".75"/><stop offset="1" stop-color="#FFFFFF" stop-opacity=".1"/></linearGradient>
+    <linearGradient id="mkBrilho" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <clipPath id="mkCp"><path d="M232 92 C300 84 345 132 392 170 C430 200 470 212 510 190 C530 178 545 160 556 140 C540 178 515 205 478 216 C435 228 392 214 352 182 C310 148 278 108 232 92 Z"/></clipPath>
+  </defs>
+  
+  <g>
+    <path d="M112 226 C74 150 140 58 262 52 C354 48 404 108 452 156 C492 196 528 188 564 120 C534 200 490 212 446 170 C398 124 350 66 262 64 C150 70 94 150 112 226 Z" fill="url(#mkRoxo)"/>
+    <path d="M200 112 C270 84 330 112 380 150 C428 186 480 210 530 172 C496 218 440 206 392 172 C340 136 290 98 200 112 Z" fill="url(#mkPrata)"/>
+    <path d="M232 92 C300 84 345 132 392 170 C430 200 470 212 510 190 C530 178 545 160 556 140 C540 178 515 205 478 216 C435 228 392 214 352 182 C310 148 278 108 232 92 Z" fill="url(#mkVerde)"/>
+    
+    <path d="M170 150 C214 108 274 92 326 104 C276 100 222 114 170 150 Z" fill="#C29BEF"/>
+  </g>
+  <text x="300" y="292" text-anchor="middle" font-family="Josefin Sans, Manrope, sans-serif" font-weight="400" font-size="86" letter-spacing="3" fill="currentColor">EDUARDO</text>
+  <text x="304" y="340" text-anchor="middle" font-family="Josefin Sans, Manrope, sans-serif" font-weight="600" font-size="34" letter-spacing="15" style="fill:var(--lgRoxo)">TECCARELLI</text>
+  <g>
+    <line x1="132" y1="371" x2="250" y2="371" style="stroke:var(--lgVerde)" stroke-width="2"/>
+    <line x1="352" y1="371" x2="470" y2="371" style="stroke:var(--lgVerde)" stroke-width="2"/>
+    <text x="304" y="380" text-anchor="middle" font-family="Josefin Sans, Manrope, sans-serif" font-weight="600" font-size="24" letter-spacing="11" style="fill:var(--lgVerde)">HAIR</text>
+  </g>
+</svg>
     <h1 id="titulo">Início</h1>
     <button class="sino" id="b-sino" aria-label="Avisos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10.3 20a1.9 1.9 0 0 0 3.4 0"/></svg><b id="n-avisos" class="hide">0</b></button>
-    <button class="perfil" id="b-perfil" aria-label="Perfil">ET</button>
+    <button class="perfil" id="b-perfil" aria-label="Perfil e ajustes"></button>
   </header>
   <main id="conteudo"></main>
   <nav class="abas" id="abas">

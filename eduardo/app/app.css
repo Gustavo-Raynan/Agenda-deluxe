@@ -470,3 +470,12 @@ nav.abas button.on svg { color: var(--ouro); }
   body.imprimindo .nao-imprime, body.imprimindo #folha .fechar, body.imprimindo #folha .alca { display: none !important; }
   body.imprimindo .cartao, body.imprimindo .resumo-val > div { break-inside: avoid; border-color: #ddd !important; box-shadow: none !important; }
 }
+
+/* ===== Logo do Eduardo (vetor) ===== */
+:root, [data-tema="claro"] { --lgRoxo: #7E4FB3; --lgVerde: #23897D; }
+[data-tema="escuro"] { --lgRoxo: #CFA9F7; --lgVerde: #6FE0D1; }
+.logo-app { width: min(280px, 78vw); height: auto; display: block; margin: 0 auto 10px; color: var(--ink); overflow: visible; filter: drop-shadow(0 10px 28px rgba(155,107,214,.35)); }
+.topo .marca-svg { height: 46px; margin: -4px 0; width: auto; flex: none; display: block; color: var(--ink); overflow: visible; }
+.lk img { border-radius: 22px !important; width: 96px !important; height: 96px !important; }
+#tutorial .big img { border-radius: 26px; }
+.topo .perfil svg { width: 21px; height: 21px; }
