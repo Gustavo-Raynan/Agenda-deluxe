@@ -7,7 +7,7 @@ window.AD_CONFIG = {
   // Cobrança desligada: app gratuito. Para ligar, mudar para true (e ad_cobranca_ativa() no banco).
   COBRANCA_ATIVA: false,
   // Páginas de agendamento personalizadas (link -> pasta)
-  PAGINAS: { nayfernandes: "nayara/" },
+  PAGINAS: { nayfernandes: "nayara/", eduardoteccarelli: "eduardo/" },
 };
 window.sb = window.supabase.createClient(AD_CONFIG.SUPABASE_URL, AD_CONFIG.SUPABASE_KEY);
 

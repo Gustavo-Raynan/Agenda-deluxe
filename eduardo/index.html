@@ -1,0 +1,721 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Eduardo Teccarelli Hair | Salão de beleza em Lagoa Santa</title>
+<meta name="description" content="Salão Eduardo Teccarelli Hair, em Lagoa Santa/MG: corte, coloração, mechas, luzes, escova, progressiva, botox, penteados e noivas. Agende seu horário online.">
+<meta property="og:title" content="Eduardo Teccarelli Hair · Lagoa Santa">
+<meta property="og:description" content="Cortes, coloração, mechas, escovas, tratamentos e noivas. Agende online em menos de um minuto.">
+<meta property="og:image" content="logo.jpg">
+<meta name="theme-color" content="#FFFFFF">
+<meta name="color-scheme" content="light">
+<link rel="icon" href="icone-192.png">
+<link rel="apple-touch-icon" href="icone-180.png">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Eduardo Hair">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preload" as="image" href="logo.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@300;400;600&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+ --bg:#F7F5FA;--card:#FFFFFF;--field:#FBFAFD;--b:#E9E3F1;--b2:#D8CEE6;
+ --t:#2A2830;--m:#6F6A7A;
+ --roxo:#8A5DB8;--roxo2:#6B3E93;--roxo3:#B795DB;--verde:#2E9C8F;--verde2:#4FBFB1;
+ --zap:#1FB855;--err:#C94A5A;
+ --titulo:"Josefin Sans",system-ui,sans-serif;--font:"Jost",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+ --marca:linear-gradient(100deg,#8A5DB8 0%,#7A63BD 45%,#2E9C8F 100%);
+ --brilho:linear-gradient(90deg,transparent,#B795DB 30%,#4FBFB1 70%,transparent);
+ --safe:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;font-variant-numeric:lining-nums}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;background:var(--bg)}
+body{font-family:var(--font);background:var(--bg);color:var(--t);line-height:1.5;font-size:16px;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+a{color:inherit}
+button{font:inherit;color:inherit}
+.hide{display:none!important}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+:focus-visible{outline:2px solid var(--roxo);outline-offset:2px}
+
+/* ===== Topo ===== */
+header{position:relative;overflow:hidden;text-align:center;padding:calc(22px + env(safe-area-inset-top,0px)) 18px 30px;background:radial-gradient(120% 80% at 50% 0,#FFFFFF 0,#F3EEF9 55%,var(--bg) 100%)}
+header>*{position:relative;z-index:2}
+.fitas{position:absolute;inset:0;z-index:0;pointer-events:none;width:100%;height:100%}
+.fitas path{fill:none;stroke-linecap:round}
+.logo-cx{width:min(420px,88vw);margin:0 auto;border-radius:26px;overflow:hidden;background:#fff;box-shadow:0 1px 0 #fff inset,0 24px 60px -24px #6B3E9355,0 6px 18px -8px #2A283022;border:1px solid #EFE9F6}
+.logo{width:100%;height:auto;display:block}
+h1{font:300 clamp(28px,7.6vw,44px)/1.12 var(--titulo);margin-top:24px;letter-spacing:.01em}
+h1 b{font-weight:600;background:var(--marca);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sl{color:var(--m);margin:12px auto 22px;max-width:36ch;text-wrap:balance;font-size:16.5px}
+.cta{display:flex;align-items:center;justify-content:center;gap:10px;width:min(100%,340px);margin:0 auto;background:var(--marca);color:#fff;text-decoration:none;font-weight:600;font-size:17px;padding:16px 26px;border-radius:999px;box-shadow:0 14px 32px -14px #6B3E93cc;position:relative;overflow:hidden}
+.cta svg{width:20px;height:20px}
+.nota{display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:7px 14px;border-radius:99px;background:#fff;border:1px solid var(--b);font-size:14px;color:var(--m);text-decoration:none}
+.nota b{color:var(--t)}
+.nota i{font-style:normal;color:#E7A92E;letter-spacing:1px}
+
+.atalhos{display:flex;justify-content:center;gap:12px;margin-top:22px;flex-wrap:wrap}
+.atalhos a{display:grid;justify-items:center;gap:6px;text-decoration:none;font-size:13px;color:var(--m);min-width:64px}
+.atalhos span{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:#fff;border:1px solid var(--b2);color:var(--roxo);transition:border-color .15s,transform .15s,box-shadow .15s}
+.atalhos a:hover span{border-color:var(--roxo3);transform:translateY(-2px);box-shadow:0 8px 18px -10px #6B3E93}
+.atalhos svg{width:24px;height:24px}
+
+.info{display:flex;gap:8px;overflow-x:auto;padding:16px 16px 4px;scrollbar-width:none;justify-content:safe center}
+.info::-webkit-scrollbar{display:none}
+.info span{flex:none;border:1px solid var(--b);background:#fff;border-radius:999px;padding:8px 14px;font-size:13.5px;white-space:nowrap}
+.info span b{color:var(--roxo2);font-weight:600}
+.bad{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;max-width:760px;margin:12px auto 0;padding:6px 20px;font-size:13.5px;color:var(--m)}
+.bad div{display:flex;align-items:center;gap:8px;line-height:1.3}
+.bad div::before{content:"";flex:none;width:18px;height:18px;border-radius:50%;background:var(--verde) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 12.5l4 4L18 8'/%3E%3C/svg%3E") center/12px no-repeat}
+@media(min-width:680px){.bad{grid-template-columns:repeat(4,auto);justify-content:space-between}}
+
+/* ===== Cartões ===== */
+main{max-width:660px;margin:auto;padding:0 12px calc(110px + var(--safe))}
+section{position:relative;background:var(--card);border:1px solid var(--b);border-radius:24px;padding:22px 16px;margin-top:14px;box-shadow:0 10px 30px -24px #6B3E9340}
+section::before{content:"";position:absolute;left:30px;right:30px;top:-1px;height:2px;border-radius:2px;background:var(--brilho)}
+h2{font:400 27px/1.15 var(--titulo);margin-bottom:6px;letter-spacing:.01em}
+.sub{margin:0 0 14px;color:var(--m);font-size:14.5px}
+.note{font-size:13.5px;color:var(--m);margin-top:10px}
+.etapa{font:600 14px var(--font);color:var(--roxo2);margin:22px 0 10px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.06em}
+.etapa i{font-style:normal;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--marca);color:#fff;font-size:12.5px;letter-spacing:0}
+
+/* busca + categorias */
+.busca{position:relative}
+.busca svg{position:absolute;left:14px;top:50%;width:18px;height:18px;transform:translateY(-50%);color:var(--m)}
+.busca input{padding-left:42px!important}
+.cats{display:flex;gap:8px;overflow-x:auto;margin:12px -16px 4px;padding:2px 16px 8px;scrollbar-width:none;scroll-snap-type:x proximity}
+.cats::-webkit-scrollbar{display:none}
+.cats button{flex:none;scroll-snap-align:start;padding:8px 14px;border-radius:99px;border:1px solid var(--b2);background:#fff;font:500 14px var(--font);cursor:pointer;white-space:nowrap;transition:all .15s}
+.cats button.on{background:var(--marca);color:#fff;border-color:transparent;box-shadow:0 6px 16px -8px #6B3E93}
+.grupo{font:600 12.5px var(--font);color:var(--verde);text-transform:uppercase;letter-spacing:.1em;margin:18px 2px 8px;display:flex;align-items:center;gap:10px}
+.grupo::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,#4FBFB166,transparent)}
+.grupo:first-child{margin-top:6px}
+
+.sv{display:grid;grid-template-columns:auto 1fr auto;gap:2px 12px;align-items:center;padding:13px 14px;border:1px solid var(--b);border-radius:16px;margin-bottom:8px;cursor:pointer;background:var(--field);transition:border-color .15s,background .15s,transform .1s}
+.sv:hover{border-color:var(--b2)}
+.sv:has(input:checked){border-color:var(--roxo);background:#F4EEFB}
+.sv input{appearance:none;-webkit-appearance:none;grid-row:1/span 2;width:22px;height:22px;margin:0;border:1.5px solid var(--b2);border-radius:7px;background:#fff;display:grid;place-content:center;cursor:pointer;transition:background .15s}
+.sv input::after{content:"";width:12px;height:12px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/contain no-repeat;transform:scale(0);transition:transform .12s}
+.sv input:checked{background:var(--marca);border-color:transparent}
+.sv input:checked::after{transform:scale(1)}
+.sv .n{font-size:16px;font-weight:500;line-height:1.3}
+.sv .d{grid-column:2;color:var(--m);font-size:13px;line-height:1.35}
+.sv em{grid-column:3;grid-row:1/span 2;font:600 17px var(--font);font-style:normal;white-space:nowrap;color:var(--roxo2);text-align:right}
+.sv em b{display:block;font:400 11px var(--font);color:var(--m)}
+.sv:active{transform:scale(.985)}
+.vazio{padding:14px;text-align:center;color:var(--m)}
+
+/* dias */
+.dias{display:flex;gap:8px;overflow-x:auto;margin:0 -16px;padding:2px 16px 8px;scroll-snap-type:x proximity;scrollbar-width:none}
+.dias::-webkit-scrollbar{display:none}
+.dia{flex:0 0 62px;scroll-snap-align:start;border:1px solid var(--b);background:var(--field);border-radius:16px;padding:9px 0 8px;cursor:pointer;display:grid;gap:1px;text-align:center}
+.dia small{font-size:12px;color:var(--m);text-transform:capitalize}
+.dia b{font:600 21px/1.1 var(--font)}
+.dia[aria-pressed="true"]{background:var(--marca);border-color:transparent;color:#fff;box-shadow:0 8px 18px -10px #6B3E93}
+.dia[aria-pressed="true"] small{color:#F1E9FA}
+
+.slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.slots .note{grid-column:1/-1;margin:0}
+.slot{padding:14px 4px;background:var(--field);border:1px solid var(--b);border-radius:14px;font:600 16px var(--font);cursor:pointer;transition:border-color .15s,background .15s,transform .1s}
+.slot:hover{border-color:var(--roxo3)}
+.slot:active{transform:scale(.96)}
+.slot.on{background:var(--marca);border-color:transparent;color:#fff}
+@media(min-width:420px){.slots{grid-template-columns:repeat(4,1fr)}}
+.primeiro{width:100%;padding:13px;border-radius:14px;border:1px dashed var(--b2);background:transparent;color:var(--roxo2);font:500 15px var(--font);cursor:pointer;grid-column:1/-1}
+
+label.f{display:block;font-size:14px;font-weight:500;margin:16px 0 6px}
+label.f small{color:var(--m);font-weight:400}
+input:not([type=checkbox]):not([type=hidden]),textarea{width:100%;padding:15px 14px;background:var(--field);color:var(--t);border:1px solid var(--b2);border-radius:14px;font:16px var(--font);-webkit-appearance:none}
+textarea{resize:vertical;min-height:76px}
+input::placeholder,textarea::placeholder{color:#A39DAE}
+input:focus,textarea:focus{outline:none;border-color:var(--roxo);box-shadow:0 0 0 3px #8A5DB833}
+.escolha{background:#F4EEFB;border:1px solid #E1D3F2;border-radius:16px;padding:14px;margin-top:18px;line-height:1.55}
+.escolha b{color:var(--roxo2);font-weight:600}
+.escolha .tot{display:flex;justify-content:space-between;border-top:1px dashed #D8C6EC;margin-top:8px;padding-top:8px;font-weight:600}
+.msg{font-size:14px;margin-top:12px;color:var(--err)}
+.go{width:100%;margin-top:16px;padding:18px;background:var(--marca);color:#fff;font:600 17px var(--font);border:0;border-radius:18px;cursor:pointer;box-shadow:0 14px 28px -14px #6B3E93cc;position:relative;overflow:hidden;transition:transform .1s}
+.go:active{transform:scale(.98)}
+.go:disabled{opacity:.65;cursor:wait}
+.btn2{display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 16px;border-radius:16px;border:1px solid var(--b2);background:#fff;text-decoration:none;font:600 15px var(--font);cursor:pointer;width:100%;transition:border-color .15s}
+.btn2:hover{border-color:var(--roxo3)}
+.btn2 svg{width:20px;height:20px;color:var(--roxo)}
+.aviso{background:#EAF7F5;border:1px solid #BFE5DF;border-radius:16px;padding:12px 14px;margin:16px 0 4px;font-size:14px;line-height:1.5}
+.aviso b{color:#1F7A70}
+
+/* barra fixa */
+.barra{position:fixed;left:0;right:0;bottom:0;z-index:10;padding:10px 12px calc(10px + var(--safe));background:#FFFFFFee;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--b);transform:translateY(120%);transition:transform .25s ease;box-shadow:0 -10px 30px -20px #6B3E9366}
+.barra.on{transform:none}
+.barra .in{max-width:660px;margin:auto;display:flex;align-items:center;gap:12px}
+.barra .tx{flex:1;min-width:0;font-size:13px;color:var(--m);line-height:1.3}
+.barra .tx b{display:block;color:var(--t);font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.barra button{flex:none;background:var(--marca);color:#fff;border:0;border-radius:999px;padding:13px 20px;font-weight:600;font-size:15px;cursor:pointer}
+
+/* confirmação */
+.okbox{text-align:center;background:radial-gradient(90% 60% at 50% 0,#F2EAFB,#fff)}
+.okbox .ic{width:76px;height:76px;margin:4px auto 12px;border-radius:50%;display:grid;place-items:center;background:var(--marca);color:#fff;box-shadow:0 12px 30px -10px #6B3E93}
+.okbox .ic svg{width:36px;height:36px}
+.okbox .resumo{font-size:17px;font-weight:500;margin:12px 0;line-height:1.55}
+.okbox .resumo b{color:var(--roxo2)}
+.okbox .zap{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:16px;padding:18px;border-radius:18px;background:var(--zap);color:#fff;font-weight:600;font-size:17px;text-decoration:none}
+.okbox .btn2{margin-top:10px}
+
+/* avaliações */
+.aval{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center}
+.aval .num{font:300 54px/1 var(--titulo);background:var(--marca);-webkit-background-clip:text;background-clip:text;color:transparent}
+.aval .est{color:#E7A92E;font-size:20px;letter-spacing:2px}
+.aval small{display:block;color:var(--m);font-size:14px}
+.depo{display:flex;gap:10px;overflow-x:auto;margin:16px -16px 0;padding:2px 16px 6px;scrollbar-width:none;scroll-snap-type:x mandatory}
+.depo::-webkit-scrollbar{display:none}
+.depo blockquote{flex:0 0 82%;max-width:320px;scroll-snap-align:start;background:var(--field);border:1px solid var(--b);border-radius:18px;padding:14px 16px;font-size:15px;line-height:1.45}
+.depo blockquote::before{content:"“";display:block;font:600 34px/0.6 var(--titulo);color:var(--roxo3);margin:6px 0 4px}
+
+/* como chegar */
+.end{font-size:17px;font-weight:600}
+.end small{display:block;color:var(--m);font-weight:400;font-size:14px;margin-top:2px}
+.mapa{border-radius:18px;overflow:hidden;border:1px solid var(--b);aspect-ratio:4/3;margin:14px 0;background:var(--field)}
+.mapa iframe{width:100%;height:100%;border:0;display:block}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.acts .full{grid-column:1/-1}
+
+.insta{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;text-decoration:none}
+.insta .ico{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;color:#fff;background:radial-gradient(circle at 30% 107%,#fdf497 0%,#fd5949 45%,#d6249f 60%,#285AEB 90%)}
+.insta .ico svg{width:28px;height:28px}
+.insta b{font:600 17px var(--font);display:block;word-break:break-all}
+.insta span{color:var(--m);font-size:14px}
+.insta .seta{color:var(--roxo);font-size:24px}
+
+footer{text-align:center;color:var(--m);font-size:14px;padding:24px 16px 10px;line-height:1.7}
+footer .marca{font:300 20px var(--titulo);color:var(--t);letter-spacing:.12em;text-transform:uppercase}
+footer .marca b{font-weight:400;color:var(--roxo)}
+footer a{color:var(--roxo2);text-decoration:none}
+
+/* meus horários / modal */
+.meu{display:flex;flex-direction:column;gap:10px;background:var(--field);border:1px solid var(--b);border-radius:16px;padding:14px;margin:8px 0}
+.meu b{font-weight:600}.meu small{display:block;color:var(--m);font-size:14px;margin-top:3px}
+.meu .des{border-color:#E8B9C0;color:var(--err)}
+.modal{position:fixed;inset:0;z-index:60;background:#2A283066;display:flex;align-items:flex-end;justify-content:center;animation:fadeM .2s ease}
+.modal .cx{width:100%;max-width:520px;max-height:92vh;overflow:auto;background:#fff;border-radius:24px 24px 0 0;padding:18px 16px calc(18px + var(--safe));animation:sobeM .28s cubic-bezier(.2,.8,.2,1)}
+.modal h3{font:600 20px var(--font)}.modal p{color:var(--m);font-size:14.5px}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.duo button{padding:13px 8px;border-radius:14px;border:1px solid var(--b2);background:#fff;font:600 14.5px var(--font);cursor:pointer}
+.duo button.on{background:var(--marca);color:#fff;border-color:transparent}
+@keyframes fadeM{from{opacity:0}}@keyframes sobeM{from{transform:translateY(40px);opacity:.4}}
+.app-top{display:flex;gap:14px;align-items:center}
+.app-top img{width:64px;height:64px;border-radius:16px;box-shadow:0 8px 20px -8px #6B3E9388;flex:none;border:1px solid var(--b)}
+.passos{list-style:none;padding:0;margin:16px 0 4px;display:flex;flex-direction:column;gap:10px;counter-reset:p}
+.passos li{position:relative;padding:11px 12px 11px 52px;min-height:50px;background:var(--field);border:1px solid var(--b);border-radius:14px;font-size:15px;line-height:1.35}
+.passos li::before{counter-increment:p;content:counter(p);position:absolute;left:12px;top:50%;margin-top:-14px;width:28px;height:28px;border-radius:50%;background:var(--marca);color:#fff;font-weight:700;display:grid;place-items:center;font-size:14px}
+.passos svg{width:20px;height:20px;vertical-align:-4px;color:var(--roxo)}
+.abas{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--bg);border-radius:14px;padding:4px;margin-top:14px}
+.abas button{border:0;background:none;color:var(--m);font:600 14px var(--font);padding:9px;border-radius:10px;cursor:pointer}
+.abas button.on{background:#fff;color:var(--t);box-shadow:0 2px 8px -4px #0003}
+.btn-app{display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:10px 16px;border-radius:99px;border:1px solid var(--b2);background:#fff;font:600 14px var(--font);cursor:pointer}
+.btn-app svg{width:18px;height:18px;color:var(--roxo)}
+#toast{position:fixed;left:50%;bottom:calc(90px + var(--safe));transform:translate(-50%,30px);opacity:0;z-index:70;background:var(--t);color:#fff;padding:12px 18px;border-radius:14px;font-size:14.5px;transition:all .25s;pointer-events:none;max-width:90vw;text-align:center}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* ===== Animações ===== */
+@keyframes surge{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes logoIn{0%{opacity:0;transform:translateY(16px) scale(.94);filter:blur(6px)}100%{opacity:1;transform:none;filter:none}}
+@keyframes respira{0%,100%{box-shadow:0 24px 60px -24px #6B3E9355,0 6px 18px -8px #2A283022}50%{box-shadow:0 30px 70px -20px #6B3E9377,0 0 0 6px #B795DB22}}
+@keyframes desenha{to{stroke-dashoffset:0}}
+@keyframes onda{0%,100%{transform:translateY(0)}50%{transform:translateY(10px)}}
+@keyframes onda2{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+@keyframes flutua{0%{transform:translateY(0) scale(1);opacity:0}15%{opacity:.85}100%{transform:translateY(-160px) scale(.4);opacity:0}}
+@keyframes passaBrilho{0%{left:-60%}55%,100%{left:130%}}
+@keyframes pulsa{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
+@keyframes pop{0%{transform:scale(.94)}60%{transform:scale(1.04)}100%{transform:scale(1)}}
+@keyframes risco{to{stroke-dashoffset:0}}
+@keyframes confete{0%{transform:translate(0,0) rotate(0);opacity:1}100%{transform:translate(var(--x),var(--y)) rotate(var(--r));opacity:0}}
+@keyframes ondaZap{0%{box-shadow:0 0 0 0 #1FB85588}100%{box-shadow:0 0 0 18px #1FB85500}}
+@keyframes gradMove{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+.fitas .f1{stroke-dasharray:1600;stroke-dashoffset:1600;animation:desenha 2.6s .2s cubic-bezier(.4,0,.2,1) forwards}
+.fitas .f2{stroke-dasharray:1600;stroke-dashoffset:1600;animation:desenha 2.6s .45s cubic-bezier(.4,0,.2,1) forwards}
+.fitas .f3{stroke-dasharray:1600;stroke-dashoffset:1600;animation:desenha 2.8s .7s cubic-bezier(.4,0,.2,1) forwards}
+.fitas .g1{animation:onda 7s ease-in-out infinite}
+.fitas .g2{animation:onda2 9s ease-in-out infinite}
+.logo-cx{animation:logoIn 1s cubic-bezier(.2,.8,.2,1) both,respira 5s ease-in-out 1.2s infinite}
+header h1{animation:surge .7s .3s both}
+header .sl{animation:surge .7s .42s both}
+header .cta{animation:surge .7s .55s both,pulsa 2.8s ease-in-out 2.2s infinite;background-size:200% 200%}
+header .cta::after,.go::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:45%;background:linear-gradient(100deg,transparent,#ffffff99,transparent);transform:skewX(-20deg);animation:passaBrilho 3.6s ease-in-out 1.6s infinite}
+header .nota{animation:surge .7s .66s both}
+.atalhos a{animation:surge .6s both}
+.atalhos a:nth-child(1){animation-delay:.72s}.atalhos a:nth-child(2){animation-delay:.8s}.atalhos a:nth-child(3){animation-delay:.88s}.atalhos a:nth-child(4){animation-delay:.96s}
+h1 b{background-size:200% 100%;animation:gradMove 6s ease-in-out infinite}
+.particula{position:absolute;bottom:-10px;border-radius:50%;pointer-events:none;z-index:1;animation:flutua linear infinite}
+.info span,.bad div{animation:surge .5s both}
+.rv{opacity:0;transform:translateY(26px);transition:opacity .7s ease,transform .7s cubic-bezier(.2,.8,.2,1)}
+.rv.in{opacity:1;transform:none}
+.sv,.dia,.slot,.grupo{animation:surge .4s both}
+.sv:has(input:checked){animation:pop .35s ease}
+.dia[aria-pressed="true"],.slot.on{animation:pop .3s ease}
+.okbox.mostra{animation:pop .5s ease}
+.okbox .ic svg path{stroke-dasharray:30;stroke-dashoffset:30;animation:risco .5s .25s ease forwards}
+.okbox .zap{animation:ondaZap 1.6s ease-out 1s infinite}
+.confete{position:fixed;width:9px;height:14px;border-radius:2px;pointer-events:none;z-index:50;animation:confete 1.4s cubic-bezier(.15,.7,.3,1) forwards}
+.barra.on .in{animation:surge .35s both}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.rv{opacity:1;transform:none}.particula,.confete{display:none}.fitas path{stroke-dashoffset:0!important}html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header>
+  <svg class="fitas" viewBox="0 0 400 600" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <defs>
+      <linearGradient id="gr1" x1="0" x2="1"><stop offset="0" stop-color="#B795DB" stop-opacity="0"/><stop offset=".35" stop-color="#9B72C8" stop-opacity=".55"/><stop offset="1" stop-color="#8A5DB8" stop-opacity=".08"/></linearGradient>
+      <linearGradient id="gr2" x1="0" x2="1"><stop offset="0" stop-color="#4FBFB1" stop-opacity="0"/><stop offset=".5" stop-color="#2E9C8F" stop-opacity=".5"/><stop offset="1" stop-color="#4FBFB1" stop-opacity=".05"/></linearGradient>
+    </defs>
+    <g class="g1"><path class="f1" d="M-40 120 C 60 20, 160 40, 220 120 S 380 260, 460 150" stroke="url(#gr1)" stroke-width="7"/>
+    <path class="f3" d="M-40 470 C 80 400, 180 560, 280 500 S 420 400, 460 440" stroke="url(#gr1)" stroke-width="4"/></g>
+    <g class="g2"><path class="f2" d="M-40 170 C 70 90, 170 110, 230 175 S 370 290, 460 200" stroke="url(#gr2)" stroke-width="10"/>
+    <path class="f3" d="M-40 540 C 100 470, 200 600, 300 540 S 420 470, 460 500" stroke="url(#gr2)" stroke-width="6"/></g>
+  </svg>
+  <div class="logo-cx"><img class="logo" src="logo.jpg" width="1000" height="622" fetchpriority="high" decoding="async" alt="Eduardo Teccarelli Hair"></div>
+  <h1>Seu cabelo, <b>do seu jeito</b></h1>
+  <p class="sl">Corte, cor, mechas, escova, tratamentos e noivas em Lagoa Santa. Agende seu horário em menos de um minuto.</p>
+  <a class="cta" href="#servicos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>Agendar meu horário</a>
+  <a class="nota" href="https://share.google/qmBK4zE5wo7nWzIZN" target="_blank" rel="noopener"><i>★★★★★</i><b>4,9</b> no Google</a>
+  <nav class="atalhos" aria-label="Contato">
+    <a id="atZap" target="_blank" rel="noopener"><span><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.4a.5.5 0 0 0 0-.4l-.8-1.9c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.7a2.8 2.8 0 0 0 1.8-1.3 2.3 2.3 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3Z"/></svg></span>WhatsApp</a>
+    <a id="atInsta" target="_blank" rel="noopener"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg></span>Instagram</a>
+    <a href="#meus"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18M9.5 14.5l5 5M14.5 14.5l-5 5"/></svg></span>Desmarcar</a>
+    <a href="#como-chegar"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg></span>Como chegar</a>
+  </nav>
+  <button type="button" class="btn-app hide" id="btnApp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M12 8v6M9 11l3 3 3-3"/></svg>Colocar o site na tela de início</button>
+</header>
+
+<div class="info" id="info"></div>
+<div class="bad"><div>Hora marcada, sem espera</div><div>Cor, mechas e química</div><div>Noivas e penteados</div><div>Agende pelo celular</div></div>
+
+<main>
+<section id="servicos">
+  <h2>Serviços e valores</h2>
+  <p class="sub">Escolha um ou mais serviços. Os valores são a partir de: o final depende do comprimento e volume do cabelo, e é combinado no atendimento.</p>
+  <div class="busca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="busca" type="search" placeholder="Buscar serviço (ex.: escova, luzes)" autocomplete="off" enterkeyhint="search"></div>
+  <div class="cats" id="cats"></div>
+  <div id="lista"><p class="note">Carregando serviços…</p></div>
+</section>
+
+<section id="agendar">
+  <h2>Agendamento</h2>
+  <p class="etapa"><i>1</i>Escolha o dia</p>
+  <div class="dias" id="dias"></div>
+  <p class="etapa" id="lbHora"><i>2</i>Escolha o horário</p>
+  <div class="slots" id="slots" role="group" aria-labelledby="lbHora"></div>
+
+  <p class="etapa"><i>3</i>Seus dados</p>
+  <label class="f" for="nome" style="margin-top:0">Seu nome</label><input id="nome" autocomplete="name" placeholder="Nome completo" enterkeyhint="next">
+  <label class="f" for="tel">Seu WhatsApp</label><input id="tel" type="tel" inputmode="tel" autocomplete="tel" maxlength="15" placeholder="(31) 99999-9999" enterkeyhint="next">
+  <label class="f" for="obs">Observação <small>(opcional)</small></label>
+  <textarea id="obs" maxlength="200" placeholder="Ex.: cabelo longo, quero manter o comprimento, cor que desejo…"></textarea>
+  <input class="hp" id="site" tabindex="-1" autocomplete="off" aria-hidden="true">
+  <div class="escolha hide" id="escolha"></div>
+  <div class="aviso"><b>Imprevisto?</b> Desmarque aqui mesmo no site, em <b>Precisa desmarcar?</b>, ou avise pelo WhatsApp o quanto antes. Assim o horário fica livre para outra pessoa. 💜</div>
+  <p class="msg" id="msg" role="alert"></p>
+  <button class="go" id="enviar" type="button">Confirmar agendamento</button>
+  <p class="note" style="text-align:center">Seu horário fica reservado na hora. Depois é só enviar o resumo no WhatsApp.</p>
+</section>
+
+<section id="confirmado" class="okbox hide" tabindex="-1">
+  <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+  <h2>Horário reservado!</h2>
+  <p class="resumo" id="okResumo"></p>
+  <p class="note" style="font-size:15px">Falta só um passo: toque no botão verde e envie o resumo no WhatsApp do salão.</p>
+  <a class="zap" id="okWhats" href="#" target="_blank" rel="noopener">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm4.5 12.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.4a.5.5 0 0 0 0-.4l-.8-1.9c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.7a2.8 2.8 0 0 0 1.8-1.3 2.3 2.3 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3Z"/></svg>
+    Enviar resumo no WhatsApp</a>
+  <button type="button" class="btn2" id="lembrete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>Salvar lembrete no meu celular</button>
+  <button type="button" class="btn2" id="novo">Fazer outro agendamento</button>
+  <p class="note" style="text-align:center;margin-top:12px">Imprevisto? Desmarque aqui mesmo no site, em <b>Precisa desmarcar?</b>.</p>
+</section>
+
+<section id="meus">
+  <h2>Precisa desmarcar?</h2>
+  <p class="sub">Digite o mesmo nome e WhatsApp que usou no agendamento para ver seus horários.</p>
+  <div id="meusLista"></div>
+  <div id="meusForm">
+    <label class="f" for="mNome" style="margin-top:6px">Seu primeiro nome</label><input id="mNome" autocomplete="given-name" placeholder="Ex.: Juliana">
+    <label class="f" for="mTel">Seu WhatsApp</label><input id="mTel" type="tel" inputmode="tel" autocomplete="tel" maxlength="15" placeholder="(31) 99999-9999">
+    <p class="msg" id="mMsg" role="alert"></p>
+    <button class="btn2" id="mVer" type="button" style="margin-top:6px">Ver meus horários</button>
+  </div>
+</section>
+
+<section id="avaliacoes">
+  <h2>Quem vem, volta</h2>
+  <div class="aval" style="margin-top:12px">
+    <div class="num">4,9</div>
+    <div><div class="est">★★★★★</div><small>Nota média das avaliações no Google</small></div>
+  </div>
+  <div class="depo">
+    <blockquote>Excelente atendimento e prestação de serviços!</blockquote>
+    <blockquote>Lugar com um clima bom, onde somos bem recebidas e atendidas.</blockquote>
+    <blockquote>Bom profissional, já conhecia o trabalho dele. Super indico!</blockquote>
+  </div>
+  <a class="btn2" style="margin-top:12px" href="https://share.google/qmBK4zE5wo7nWzIZN" target="_blank" rel="noopener">Ver todas as avaliações no Google</a>
+</section>
+
+<section id="como-chegar">
+  <h2>Como chegar</h2>
+  <p class="end" style="margin-top:10px">Av. Antônio Abreu Júnior, 625 A<small>Bairro Lundcéia · Lagoa Santa - MG · CEP 33239-088</small></p>
+  <div class="mapa"><iframe title="Mapa do Salão Eduardo Teccarelli" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://maps.google.com/maps?q=Salao%20Eduardo%20Teccarelli%2C%20Av.%20Ant%C3%B4nio%20Abreu%20J%C3%BAnior%2C%20625%20A%20-%20Lundc%C3%A9ia%2C%20Lagoa%20Santa%20-%20MG%2C%2033239-088&z=16&hl=pt-BR&output=embed"></iframe></div>
+  <div class="acts">
+    <a class="btn2" href="https://www.google.com/maps/dir/?api=1&destination=Av.%20Ant%C3%B4nio%20Abreu%20J%C3%BAnior%2C%20625%20A%20-%20Lundc%C3%A9ia%2C%20Lagoa%20Santa%20-%20MG%2C%2033239-088&travelmode=driving" target="_blank" rel="noopener">Google Maps</a>
+    <a class="btn2" href="https://waze.com/ul?q=Av.%20Ant%C3%B4nio%20Abreu%20J%C3%BAnior%2C%20625%2C%20Lagoa%20Santa&navigate=yes" target="_blank" rel="noopener">Waze</a>
+  </div>
+</section>
+
+<section>
+  <a class="insta" id="insta" target="_blank" rel="noopener">
+    <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg></div>
+    <div><b>@eduardoteccarellihairsalao</b><span>Veja os trabalhos e as novidades</span></div>
+    <div class="seta" aria-hidden="true">›</div>
+  </a>
+</section>
+
+<footer><span class="marca">Eduardo <b>Teccarelli</b> Hair</span><br>Lagoa Santa - MG<br><a id="rodapeZap" target="_blank" rel="noopener"></a></footer>
+</main>
+
+<div class="modal hide" id="modalApp" role="dialog" aria-modal="true" aria-labelledby="appTit"><div class="cx" id="appCx"></div></div>
+<div class="modal hide" id="modal" role="dialog" aria-modal="true"><div class="cx" id="modalCx"></div></div>
+<div class="barra" id="barra" aria-hidden="true"><div class="in">
+  <div class="tx" id="barraTx"></div>
+  <button type="button" id="barraBtn">Continuar</button>
+</div></div>
+
+<script>
+/* ===== CONFIGURAÇÕES ===== */
+const SLUG = "eduardoteccarelli";
+const NOME = "Eduardo";
+const ZAP_PADRAO = "553195692068";
+const sb = supabase.createClient("https://izpsmlbfponhqwzjodyf.supabase.co", "sb_publishable_AvyHVWMBYWUlw5SRiDJt3w_KH2eIhbm");
+const TZ = "America/Sao_Paulo";
+const SEM3 = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const ORDEM_CATS = ["Cortes", "Escovas e finalização", "Tratamentos", "Coloração e mechas", "Alinhamento e química", "Mega hair", "Penteados e noivas", "Maquiagem", "Sobrancelhas", "Consultoria"];
+const MAX_SERV = 6;
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const brl = (v) => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const hora = (d) => new Date(d).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: TZ });
+const dataLonga = (d) => { const t = new Date(d).toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", timeZone: TZ }); return t[0].toUpperCase() + t.slice(1); };
+const isoDia = (d = new Date()) => new Date(d).toLocaleDateString("en-CA", { timeZone: TZ });
+const somaDias = (iso, n) => { const d = new Date(iso + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const dur = (m) => (m < 60 ? m + " min" : Math.floor(m / 60) + "h" + (m % 60 ? String(m % 60).padStart(2, "0") : ""));
+const fmtTel = (z) => { z = String(z).replace(/\D/g, "").replace(/^55(?=\d{10,11}$)/, ""); return z.length >= 10 ? `(${z.slice(0, 2)}) ${z.slice(2, -4)}-${z.slice(-4)}` : z; };
+const semAc = (x) => String(x || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const vai = (el, bloco = "start") => el.scrollIntoView({ behavior: "smooth", block: bloco });
+const toast = (m) => { let t = $("toast"); if (!t) { t = document.createElement("div"); t.id = "toast"; document.body.appendChild(t); } t.textContent = m; t.className = "show"; clearTimeout(t._h); t._h = setTimeout(() => (t.className = ""), 2800); };
+
+const st = { pag: null, sel: [], cat: "", dia: null, hora: null, ag: null };
+const zapNum = () => String(st.pag?.whatsapp || ZAP_PADRAO).replace(/\D/g, "");
+const totMin = () => st.sel.reduce((a, s) => a + s.duracao_min, 0);
+const totPreco = () => st.sel.reduce((a, s) => a + Number(s.preco), 0);
+const nomesSel = () => st.sel.map((s) => s.nome).join(" + ");
+
+function resumoHorarios(hs) {
+  const porDia = {};
+  hs.forEach((h) => { (porDia[h.dia] = porDia[h.dia] || []).push(`${h.inicio} às ${h.fim}`); });
+  const grupos = [];
+  [1, 2, 3, 4, 5, 6, 0].filter((d) => porDia[d]).forEach((d) => {
+    const txt = porDia[d].join(" e "), g = grupos[grupos.length - 1];
+    if (g && g.txt === txt && d === g.fim + 1) g.fim = d; else grupos.push({ ini: d, fim: d, txt });
+  });
+  return grupos.map((g) => `<b>${SEM3[g.ini]}${g.fim !== g.ini ? " a " + SEM3[g.fim] : ""}</b> · ${g.txt}`);
+}
+
+async function carregar() {
+  const { data, error } = await sb.rpc("ad_pagina_publica", { p_slug: SLUG });
+  const zapLink = (txt) => "https://wa.me/" + zapNum() + "?text=" + encodeURIComponent(txt);
+  if (error || !data) {
+    $("lista").innerHTML = `<p class="note">Não foi possível carregar os serviços agora. Chame o ${NOME} no <a href="${zapLink("Olá! Quero agendar um horário.")}" target="_blank" rel="noopener" style="color:var(--roxo2)">WhatsApp</a>.</p>`;
+    return;
+  }
+  st.pag = data;
+  $("atZap").href = zapLink(`Olá, ${NOME}! Vim pelo site do salão.`);
+  $("rodapeZap").href = $("atZap").href; $("rodapeZap").textContent = "WhatsApp " + fmtTel(zapNum());
+  const insta = "https://www.instagram.com/" + (data.instagram || "eduardoteccarellihairsalao") + "/";
+  ["atInsta", "insta"].forEach((id) => ($(id).href = insta));
+  $("info").innerHTML = resumoHorarios(data.horarios || []).map((t) => `<span>${t}</span>`).join("") + `<span><b>Sáb e Dom</b> · fechado</span>`;
+  cascata(".info span", 0.07, 0.9);
+
+  if (data.liberado === false || !data.servicos.length) {
+    $("lista").innerHTML = `<p class="note" style="font-size:15px">A agenda online está pausada no momento. Chame o ${NOME} no <a href="${$("atZap").href}" target="_blank" rel="noopener" style="color:var(--roxo2)">WhatsApp</a> para marcar.</p>`;
+    $("agendar").classList.add("hide"); $("cats").classList.add("hide"); document.querySelector(".busca").classList.add("hide");
+    return;
+  }
+  const cats = [...new Set(data.servicos.map((s) => s.categoria || "Outros"))].sort((a, b) => (ORDEM_CATS.indexOf(a) + 1 || 99) - (ORDEM_CATS.indexOf(b) + 1 || 99));
+  st.cats = cats;
+  $("cats").innerHTML = [`<button type="button" data-c="" class="on">Todos</button>`, ...cats.map((c) => `<button type="button" data-c="${esc(c)}">${esc(c)}</button>`)].join("");
+  $("cats").onclick = (e) => { const b = e.target.closest("button"); if (!b) return; st.cat = b.dataset.c; $("cats").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); b.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" }); desenhaLista(); };
+  let t; $("busca").oninput = () => { clearTimeout(t); t = setTimeout(desenhaLista, 150); };
+  desenhaLista();
+  desenhaDias(); carregaSlots();
+  meusHorarios(true);
+}
+
+function desenhaLista() {
+  const b = semAc($("busca").value.trim());
+  const lista = st.pag.servicos.filter((s) => (!st.cat || (s.categoria || "Outros") === st.cat) && (!b || semAc(s.nome + " " + (s.categoria || "")).includes(b)));
+  if (!lista.length) { $("lista").innerHTML = `<p class="vazio">Nenhum serviço encontrado. Tente outra palavra ou fale com o ${NOME} no WhatsApp.</p>`; return; }
+  const porCat = {};
+  lista.forEach((s) => (porCat[s.categoria || "Outros"] = porCat[s.categoria || "Outros"] || []).push(s));
+  $("lista").innerHTML = st.cats.filter((c) => porCat[c]).map((c) => `<p class="grupo">${esc(c)}</p>` + porCat[c].sort((a, b) => a.preco - b.preco || a.nome.localeCompare(b.nome)).map((s) => `
+    <label class="sv"><input type="checkbox" value="${s.id}" ${st.sel.some((x) => x.id === s.id) ? "checked" : ""}>
+      <span class="n">${esc(s.nome)}</span>
+      <span class="d">${dur(s.duracao_min)}${s.descricao ? " · " + esc(s.descricao) : ""}</span>
+      <em><b>a partir de</b>${brl(s.preco)}</em></label>`).join("")).join("");
+  cascata("#lista .sv, #lista .grupo", 0.025);
+  $("lista").querySelectorAll("input").forEach((i) => (i.onchange = () => {
+    const s = st.pag.servicos.find((x) => x.id === i.value);
+    if (i.checked) {
+      if (st.sel.length >= MAX_SERV) { i.checked = false; return toast(`Escolha no máximo ${MAX_SERV} serviços por horário.`); }
+      st.sel.push(s);
+    } else st.sel = st.sel.filter((x) => x.id !== s.id);
+    carregaSlots(); atualiza();
+  }));
+}
+
+/* ---------- dias e horários ---------- */
+const abre = (d) => st.pag.dias.includes(new Date(d + "T12:00:00Z").getUTCDay());
+function desenhaDias() {
+  const hoje = isoDia();
+  const dias = Array.from({ length: 45 }, (_, i) => somaDias(hoje, i)).filter(abre);
+  if (!st.dia || !dias.includes(st.dia)) st.dia = dias[0];
+  $("dias").innerHTML = dias.map((d) => {
+    const dt = new Date(d + "T12:00:00Z");
+    const rot = d === hoje ? "hoje" : d === somaDias(hoje, 1) ? "amanhã" : SEM3[dt.getUTCDay()];
+    const mes = dt.toLocaleDateString("pt-BR", { month: "short", timeZone: "UTC" }).replace(".", "");
+    return `<button type="button" class="dia" data-d="${d}" aria-pressed="${d === st.dia}" aria-label="${dataLonga(dt)}"><small>${rot}</small><b>${dt.getUTCDate()}</b><small>${mes}</small></button>`;
+  }).join("");
+  cascata("#dias .dia", 0.03);
+  $("dias").querySelectorAll(".dia").forEach((b) => (b.onclick = () => {
+    st.dia = b.dataset.d;
+    $("dias").querySelectorAll(".dia").forEach((x) => x.setAttribute("aria-pressed", x === b));
+    carregaSlots();
+  }));
+}
+
+async function carregaSlots() {
+  st.hora = null; atualiza();
+  if (!st.sel.length) { $("slots").innerHTML = `<button type="button" class="primeiro" onclick="vai($('servicos'))">↑ Primeiro, escolha o serviço</button>`; return; }
+  if (!st.dia) { $("slots").innerHTML = `<p class="note">Sem datas disponíveis no momento.</p>`; return; }
+  $("slots").innerHTML = `<p class="note">Procurando horários livres…</p>`;
+  const pedido = st.dia + st.sel.map((s) => s.id).join(); st._p = pedido;
+  const { data, error } = await sb.rpc("ad_horarios_livres_min", { p_slug: SLUG, p_min: totMin(), p_data: st.dia });
+  if (st._p !== pedido) return;
+  if (error) { $("slots").innerHTML = `<p class="note">Não consegui buscar os horários. Tente de novo.</p>`; return; }
+  $("slots").innerHTML = data.length
+    ? data.map((t) => `<button type="button" class="slot" data-t="${t}">${hora(t)}</button>`).join("")
+    : `<p class="note">Nenhum horário livre neste dia para ${dur(totMin())} de atendimento. Escolha outro dia acima.</p>`;
+  cascata("#slots .slot", 0.025);
+  $("slots").querySelectorAll(".slot").forEach((b) => (b.onclick = () => {
+    st.hora = b.dataset.t;
+    $("slots").querySelectorAll(".slot").forEach((x) => x.classList.toggle("on", x === b));
+    $("msg").textContent = ""; atualiza();
+  }));
+}
+
+/* ---------- resumo + barra fixa ---------- */
+let botaoVisivel = false;
+function atualiza() {
+  const e = $("escolha");
+  if (st.sel.length && st.hora) {
+    e.classList.remove("hide");
+    e.innerHTML = st.sel.map((s) => `<div>${esc(s.nome)} · <span style="color:var(--m)">a partir de ${brl(s.preco)}</span></div>`).join("") +
+      `<div style="margin-top:6px">${dataLonga(st.hora)} às <b>${hora(st.hora)}</b> · ${dur(totMin())}</div>` +
+      (st.sel.length > 1 ? `<div class="tot"><span>Total</span><span>a partir de ${brl(totPreco())}</span></div>` : "");
+  } else e.classList.add("hide");
+  const b = $("barra");
+  if (!st.sel.length || st.ag || botaoVisivel) { b.classList.remove("on"); return; }
+  b.classList.add("on");
+  const qtd = st.sel.length > 1 ? `${st.sel.length} serviços` : esc(st.sel[0].nome);
+  if (!st.hora) {
+    $("barraTx").innerHTML = `<b>${qtd}</b>a partir de ${brl(totPreco())} · ${dur(totMin())}`;
+    $("barraBtn").textContent = "Escolher horário";
+    $("barraBtn").onclick = () => vai($("agendar"));
+  } else {
+    $("barraTx").innerHTML = `<b>${qtd}</b>${dataLonga(st.hora).split(",")[0]}, ${hora(st.hora)}`;
+    $("barraBtn").textContent = "Continuar";
+    $("barraBtn").onclick = () => { vai($("nome"), "center"); setTimeout(() => $("nome").focus({ preventScroll: true }), 450); };
+  }
+}
+new IntersectionObserver(([en]) => { botaoVisivel = en.isIntersecting; atualiza(); }, { threshold: 0.2 }).observe($("enviar"));
+
+const mascaraTel = (el) => el.addEventListener("input", () => { const d = el.value.replace(/\D/g, "").slice(0, 11); el.value = d.length > 6 ? `(${d.slice(0, 2)}) ${d.slice(2, d.length - 4)}-${d.slice(-4)}` : d.length > 2 ? `(${d.slice(0, 2)}) ${d.slice(2)}` : d; });
+mascaraTel($("tel")); mascaraTel($("mTel"));
+try { const c = JSON.parse(localStorage.getItem("et_cliente") || "{}"); $("nome").value = c.nome || ""; $("tel").value = c.tel || ""; if (c.nome) $("mNome").value = c.nome.split(" ")[0]; if (c.tel) $("mTel").value = c.tel; } catch {}
+
+/* ---------- agendar ---------- */
+$("enviar").onclick = async () => {
+  const msg = (t) => { $("msg").textContent = t; };
+  if ($("site").value) return; // robôs
+  const nome = $("nome").value.trim(), tel = $("tel").value.replace(/\D/g, ""), obs = $("obs").value.trim();
+  if (!st.sel.length) { msg("Escolha pelo menos um serviço."); return vai($("servicos")); }
+  if (!st.hora) { msg("Escolha o dia e o horário."); return vai($("agendar")); }
+  if (nome.length < 2) { msg("Escreva seu nome."); return $("nome").focus(); }
+  if (tel.length < 10) { msg("Escreva seu WhatsApp com DDD."); return $("tel").focus(); }
+  msg("");
+  $("enviar").disabled = true; $("enviar").textContent = "Reservando…";
+  const { data: id, error } = await sb.rpc("ad_agendar_varios", { p_slug: SLUG, p_servicos: st.sel.map((s) => s.id), p_inicio: st.hora, p_nome: nome, p_whatsapp: tel, p_obs: obs || null });
+  $("enviar").disabled = false; $("enviar").textContent = "Confirmar agendamento";
+  if (error) {
+    if (error.message.includes("disponível")) { msg("Esse horário acabou de ser ocupado. Escolha outro."); carregaSlots(); vai($("agendar")); }
+    else msg("Não foi possível agendar: " + error.message);
+    return;
+  }
+  try { localStorage.setItem("et_cliente", JSON.stringify({ nome, tel: $("tel").value })); } catch {}
+  st.ag = { id, nome, tel, obs, sel: [...st.sel], min: totMin(), preco: totPreco(), inicio: st.hora };
+  confirmado();
+};
+
+function confirmado() {
+  const a = st.ag, nomes = a.sel.map((s) => s.nome).join(" + ");
+  $("okResumo").innerHTML = `<b>${esc(nomes)}</b><br>${dataLonga(a.inicio)} às <b>${hora(a.inicio)}</b>`;
+  const texto = `Olá, ${NOME}! 💇‍♀️ Acabei de agendar pelo site:\n\n` +
+    `*Serviço:* ${nomes}\n*Dia:* ${dataLonga(a.inicio)}\n*Horário:* ${hora(a.inicio)}\n` +
+    `*Valor:* a partir de ${brl(a.preco)}\n*Nome:* ${a.nome}\n*WhatsApp:* ${fmtTel(a.tel)}` +
+    (a.obs ? `\n*Observação:* ${a.obs}` : "");
+  $("okWhats").href = `https://wa.me/${zapNum()}?text=${encodeURIComponent(texto)}`;
+  $("servicos").classList.add("hide"); $("agendar").classList.add("hide");
+  $("confirmado").classList.remove("hide", "rv"); $("confirmado").classList.add("mostra"); atualiza();
+  setTimeout(confete, 250);
+  vai($("confirmado"), "center");
+  $("confirmado").focus({ preventScroll: true });
+  meusHorarios(true);
+}
+
+$("lembrete").onclick = () => {
+  const a = st.ag, ini = new Date(a.inicio), fim = new Date(ini.getTime() + a.min * 60000);
+  const f = (d) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Eduardo Teccarelli Hair//PT-BR", "BEGIN:VEVENT",
+    `UID:${a.id}@eduardo-teccarelli`, `DTSTAMP:${f(new Date())}`, `DTSTART:${f(ini)}`, `DTEND:${f(fim)}`,
+    `SUMMARY:${a.sel.map((s) => s.nome).join(" + ")} · Eduardo Teccarelli Hair`,
+    `LOCATION:Av. Antônio Abreu Júnior\\, 625 A - Lundcéia\\, Lagoa Santa - MG`,
+    `DESCRIPTION:WhatsApp do salão: ${fmtTel(zapNum())}`,
+    "BEGIN:VALARM", "TRIGGER:-P1D", "ACTION:DISPLAY", "DESCRIPTION:Amanhã: horário no salão Eduardo Teccarelli", "END:VALARM",
+    "BEGIN:VALARM", "TRIGGER:-PT2H", "ACTION:DISPLAY", "DESCRIPTION:Daqui a 2 horas: horário no salão Eduardo Teccarelli", "END:VALARM",
+    "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+  const url = URL.createObjectURL(new Blob([ics], { type: "text/calendar" }));
+  const l = document.createElement("a"); l.href = url; l.download = "horario-eduardo-teccarelli.ics"; l.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+};
+
+$("novo").onclick = () => {
+  st.ag = null; st.sel = []; st.hora = null; $("obs").value = "";
+  desenhaLista(); carregaSlots();
+  $("confirmado").classList.add("hide"); $("servicos").classList.remove("hide"); $("agendar").classList.remove("hide");
+  vai($("servicos"));
+};
+
+/* ---------- a cliente vê e desmarca os próprios horários ---------- */
+async function meusHorarios(silencioso) {
+  const nome = $("mNome").value.trim(), tel = $("mTel").value.replace(/\D/g, "");
+  $("mMsg").textContent = "";
+  if (nome.length < 2 || tel.length < 10) { if (!silencioso) $("mMsg").textContent = "Digite seu primeiro nome e o WhatsApp com DDD."; return; }
+  $("mVer").disabled = true;
+  const { data, error } = await sb.rpc("ad_meus_horarios", { p_slug: SLUG, p_whatsapp: tel, p_nome: nome });
+  $("mVer").disabled = false;
+  if (error) { if (!silencioso) $("mMsg").textContent = "Não consegui buscar agora. Tente de novo."; return; }
+  if (!data.length) { $("meusLista").innerHTML = silencioso ? "" : `<p class="note" style="margin:6px 0 10px">Nenhum horário marcado com esse nome e WhatsApp. Confira se digitou igual ao agendamento.</p>`; return; }
+  $("meusLista").innerHTML = data.map((a) => `<div class="meu">
+      <div><b>${esc(a.servico)}</b><small>${dataLonga(a.inicio)} às <b>${hora(a.inicio)}</b> · ${a.status === "confirmado" ? "confirmado" : "a confirmar"}</small></div>
+      ${a.pode ? `<button type="button" class="btn2 des" data-des="${a.id}">Desmarcar</button>` : `<a class="btn2" target="_blank" rel="noopener" href="https://wa.me/${zapNum()}?text=${encodeURIComponent(`Oi, ${NOME}! Preciso desmarcar meu horário de ${dataLonga(a.inicio)} às ${hora(a.inicio)} (${a.servico}).`)}">Falar com o ${NOME}</a>`}
+    </div>`).join("") + (data.some((a) => !a.pode) ? `<p class="note">Falta menos de 2 horas para um dos horários: nesse caso, avise pelo WhatsApp.</p>` : "");
+  $("meusLista").querySelectorAll("[data-des]").forEach((b) => (b.onclick = () => desmarca(data.find((x) => x.id === b.dataset.des))));
+}
+function desmarca(a) {
+  $("modalCx").innerHTML = `<h3>Desmarcar horário?</h3>
+    <p style="margin-top:6px"><b style="color:var(--t)">${esc(a.servico)}</b><br>${dataLonga(a.inicio)} às ${hora(a.inicio)}</p>
+    <label class="f" for="mMot" style="margin-top:12px">Motivo <small>(opcional)</small></label><input id="mMot" maxlength="120" placeholder="Ex.: imprevisto no trabalho">
+    <div class="duo"><button type="button" data-volta>Voltar</button><button type="button" data-sim class="on">Sim, desmarcar</button></div>`;
+  $("modal").classList.remove("hide");
+  const fecha = () => $("modal").classList.add("hide");
+  $("modal").onclick = (e) => { if (e.target === $("modal")) fecha(); };
+  $("modalCx").querySelector("[data-volta]").onclick = fecha;
+  $("modalCx").querySelector("[data-sim]").onclick = async (e) => {
+    e.target.disabled = true; e.target.textContent = "Desmarcando…";
+    const { error } = await sb.rpc("ad_cliente_desmarcar", { p_id: a.id, p_whatsapp: $("mTel").value.replace(/\D/g, ""), p_motivo: $("mMot").value.trim() || null });
+    if (error) { e.target.disabled = false; e.target.textContent = "Sim, desmarcar"; $("modalCx").querySelector("p").insertAdjacentHTML("afterend", `<p style="color:var(--err);margin-top:8px">${esc(error.message.replace(/^.*?: /, ""))}</p>`); return; }
+    $("modalCx").innerHTML = `<h3>Horário desmarcado ✓</h3><p style="margin-top:6px">O salão já foi avisado e o horário ficou livre. Obrigado por avisar! 💜</p>
+      <div class="duo"><button type="button" data-fechar>Fechar</button><button type="button" class="on" data-outro>Marcar outro dia</button></div>`;
+    $("modalCx").querySelector("[data-fechar]").onclick = fecha;
+    $("modalCx").querySelector("[data-outro]").onclick = () => { fecha(); if (st.ag) $("novo").click(); else vai($("servicos")); };
+    meusHorarios(true); if (st.sel.length) carregaSlots();
+  };
+}
+$("mVer").onclick = () => meusHorarios(false);
+
+/* ---------- colocar o site na tela de início ---------- */
+const ICON_COMP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-1"/></svg>';
+const ICON_MAIS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/></svg>';
+const ICON_MENU = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+const naTelaInicio = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const ua = navigator.userAgent;
+const ehIOS = /iphone|ipad|ipod/i.test(ua) || (/macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
+const ehAndroid = /android/i.test(ua);
+const dentroDeApp = /instagram|fbav|fban|fb_iab|whatsapp|line\/|tiktok/i.test(ua);
+let pedidoInstalar = null;
+addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); pedidoInstalar = e; if ($("appCx").dataset.plat === "android") passosApp("android"); });
+addEventListener("appinstalled", () => { fechaApp(); $("btnApp").classList.add("hide"); });
+function passosApp(plat) {
+  const cx = $("appCx"); cx.dataset.plat = plat;
+  const ios = dentroDeApp
+    ? `<li>Toque nos <b>três pontinhos</b> ${ICON_MENU} no canto da tela</li><li>Escolha <b>"Abrir no navegador"</b> (Safari)</li><li>No Safari, toque em <b>Compartilhar</b> ${ICON_COMP} e depois em <b>"Adicionar à Tela de Início"</b> ${ICON_MAIS}</li>`
+    : `<li>Toque em <b>Compartilhar</b> ${ICON_COMP} (na barra de baixo ou nos <b>•••</b>)</li><li>Role e toque em <b>"Adicionar à Tela de Início"</b> ${ICON_MAIS}</li><li>Toque em <b>Adicionar</b>. Pronto! O ícone do salão aparece no seu celular 💜</li>`;
+  const android = pedidoInstalar
+    ? `<li>Toque no botão <b>"Instalar agora"</b> abaixo</li><li>Confirme em <b>Instalar</b>. O ícone do salão aparece na sua tela de início 💜</li>`
+    : `<li>Toque nos <b>três pontinhos</b> ${ICON_MENU} no canto de cima${dentroDeApp ? " e escolha <b>\"Abrir no Chrome\"</b>" : ""}</li><li>Toque em <b>"Adicionar à tela inicial"</b> ou <b>"Instalar app"</b></li><li>Confirme em <b>Adicionar</b>. Pronto! 💜</li>`;
+  cx.innerHTML = `<div class="app-top"><img src="icone-192.png" alt=""><div><h3 id="appTit">Tenha o salão no seu celular</h3><p>Agende com um toque, como um aplicativo, sem procurar o link.</p></div></div>
+    <div class="abas"><button type="button" data-p="ios" class="${plat === "ios" ? "on" : ""}">iPhone</button><button type="button" data-p="android" class="${plat === "android" ? "on" : ""}">Android</button></div>
+    <ol class="passos">${plat === "ios" ? ios : android}</ol>
+    <div class="duo">${plat === "android" && pedidoInstalar ? `<button type="button" data-depois>Agora não</button><button type="button" class="on" data-instalar>Instalar agora</button>` : `<button type="button" data-depois style="grid-column:1/-1">Entendi</button>`}</div>`;
+  cx.querySelectorAll("[data-p]").forEach((b) => (b.onclick = () => passosApp(b.dataset.p)));
+  cx.querySelector("[data-depois]").onclick = fechaApp;
+  cx.querySelector("[data-instalar]")?.addEventListener("click", async () => { pedidoInstalar.prompt(); const r = await pedidoInstalar.userChoice; pedidoInstalar = null; if (r.outcome === "accepted") fechaApp(); else passosApp("android"); });
+}
+function abreApp() { $("modalApp").classList.remove("hide"); passosApp(ehIOS ? "ios" : "android"); }
+function fechaApp() { $("modalApp").classList.add("hide"); try { localStorage.setItem("et_app_visto", "1"); } catch {} }
+$("modalApp").onclick = (e) => { if (e.target === $("modalApp")) fechaApp(); };
+if (!naTelaInicio()) {
+  $("btnApp").classList.remove("hide"); $("btnApp").onclick = abreApp;
+  let visto = false; try { visto = !!localStorage.getItem("et_app_visto"); } catch {}
+  if ((ehIOS || ehAndroid) && !visto) setTimeout(abreApp, 2500);
+}
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+
+/* ===== Animações ===== */
+const calma = matchMedia("(prefers-reduced-motion: reduce)").matches;
+function cascata(sel, passo = 0.04, base = 0) { document.querySelectorAll(sel).forEach((el, i) => (el.style.animationDelay = (base + Math.min(i, 30) * passo) + "s")); }
+if (!calma) {
+  const h = document.querySelector("header"), cores = ["#B795DB", "#4FBFB1", "#D9C6EF", "#8A5DB8"];
+  for (let i = 0; i < 18; i++) {
+    const p = document.createElement("span"); p.className = "particula";
+    const t = 5 + Math.random() * 6, s = 3 + Math.random() * 5;
+    p.style.cssText = `left:${Math.random() * 100}%;width:${s}px;height:${s}px;background:${cores[i % 4]};opacity:.7;animation-duration:${t}s;animation-delay:${-Math.random() * t}s`;
+    h.appendChild(p);
+  }
+}
+const obsRv = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); obsRv.unobserve(e.target); } }), { threshold: .1 });
+document.querySelectorAll("main > section").forEach((s) => { s.classList.add("rv"); obsRv.observe(s); });
+cascata(".bad div", 0.07, 1);
+function confete() {
+  if (calma) return;
+  const cores = ["#8A5DB8", "#B795DB", "#2E9C8F", "#4FBFB1", "#E9DDF6"];
+  const cx = innerWidth / 2, cy = innerHeight * 0.35;
+  for (let i = 0; i < 80; i++) {
+    const c = document.createElement("span"); c.className = "confete";
+    const ang = Math.random() * Math.PI * 2, dist = 120 + Math.random() * 260;
+    c.style.cssText = `left:${cx}px;top:${cy}px;background:${cores[i % cores.length]};--x:${Math.cos(ang) * dist}px;--y:${Math.sin(ang) * dist + 220}px;--r:${Math.random() * 720 - 360}deg;animation-delay:${Math.random() * 0.15}s`;
+    document.body.appendChild(c); setTimeout(() => c.remove(), 1700);
+  }
+}
+
+carregar();
+</script>
+</body>
+</html>
