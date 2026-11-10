@@ -387,7 +387,7 @@ async function telaInicio() {
         return `<div class="prox-item ${k === 0 ? "primeira" : ""}" data-ag="${a.id}" style="--cs:${corServico(a)}">
           <div class="prox-hora">${hora(a.inicio)}<small>${agoraAt ? "agora" : dia === hoje ? "hoje" : dia === amanha ? "amanhã" : dataCurta(a.inicio)}</small></div>
           <div class="cresce"><b>${esc(a.cliente_nome)}</b><div class="pequeno">${esc(a.servico_nome)} · ${brl(a.preco)}</div></div>
-          ${k === 0 ? `<a class="btn zap mini" target="_blank" rel="noopener" href="https://wa.me/${zapNum(a.cliente_whatsapp)}" data-parar>${IC.zap}</a>` : `<span class="chip ${a.status}">${STATUS[a.status]}</span>`}
+          ${k === 0 && a.cliente_whatsapp ? `<a class="btn zap mini" target="_blank" rel="noopener" href="https://wa.me/${zapNum(a.cliente_whatsapp)}" data-parar>${IC.zap}</a>` : `<span class="chip ${a.status}">${STATUS[a.status]}</span>`}
         </div>`; }).join("")}</div>`
       : `<div class="cartao calmo"><b>Nenhuma cliente marcada por agora</b><p class="mudo" style="margin-top:2px">${livresHoje.length ? `Ainda há ${livresHoje.length} horários livres hoje. Divulgue seu link.` : "Aproveite para descansar ou organizar o salão."}</p></div>`}
     <div class="cartao mes-resumo" data-ir="caixa">
@@ -561,7 +561,7 @@ async function detalheAg(id) {
         ${a.serie_id ? `<dt>Repete</dt><dd>🔁 ${esc(a.serie_regra || "Sim")}</dd>` : ""}
         <dt>Valor</dt><dd>${brl(a.preco)}</dd>
         <dt>Recebido</dt><dd>${pago ? brl(pago) + " · " + pags.map((p) => FORMAS[p.forma]).join(", ") : "—"}</dd>
-        <dt>Telefone</dt><dd><a href="tel:+${zapNum(a.cliente_whatsapp)}">${fmtTel(a.cliente_whatsapp)}</a></dd>
+        <dt>Telefone</dt><dd>${a.cliente_whatsapp ? `<a href="tel:+${zapNum(a.cliente_whatsapp)}">${fmtTel(a.cliente_whatsapp)}</a>` : "Sem telefone"}</dd>
       </dl>
       ${a.observacao ? `<p style="margin-top:12px;padding:10px 12px;background:var(--blush-2);border-radius:12px;font-size:14.5px">📝 ${esc(a.observacao)}</p>` : ""}
     </div>
@@ -569,7 +569,7 @@ async function detalheAg(id) {
     <div class="pilha">
       ${prox ? `<button class="btn ouro cheio" data-st="${prox[0]}">${prox[1]}</button>` : ""}
       ${["concluido", "atendendo", "chegou"].includes(a.status) && !a.pago ? `<button class="btn cheio" data-pagar>${IC.dinheiro}Registrar pagamento</button>` : ""}
-      <a class="btn zap cheio" target="_blank" rel="noopener" href="https://wa.me/${zapNum(a.cliente_whatsapp)}">${IC.zap}Conversar no WhatsApp</a>
+      ${a.cliente_whatsapp ? `<a class="btn zap cheio" target="_blank" rel="noopener" href="https://wa.me/${zapNum(a.cliente_whatsapp)}">${IC.zap}Conversar no WhatsApp</a>` : ""}
       <div class="grade2">
         <button class="btn claro" data-msgs>Mensagens prontas</button>
         <button class="btn claro" data-cli>Ver cliente</button>
@@ -678,7 +678,7 @@ async function novoAgendamento({ data, cliente }) {
       <label class="f">Cliente</label>
       <input class="campo" data-cli list="lista-clientes" placeholder="Digite o nome" value="${cli ? esc(cli.nome) : ""}" autocomplete="off">
       <datalist id="lista-clientes">${clientes.map((c) => `<option value="${esc(c.nome)}">${fmtTel(c.whatsapp)}</option>`).join("")}</datalist>
-      <label class="f">WhatsApp da cliente</label>
+      <label class="f">WhatsApp da cliente <span class="pequeno">(opcional)</span></label>
       <input class="campo" data-zap inputmode="tel" placeholder="(31) 99999-9999" value="${cli ? fmtTel(cli.whatsapp) : ""}">
       <label class="f">Serviço</label>
       <select class="campo" data-serv><option value="">Escolha…</option>${servs.map((s) => `<option value="${s.id}">${esc(s.nome)} · ${brl(s.preco)} · ${dur(s.duracao_min)}</option>`).join("")}</select>
@@ -699,7 +699,7 @@ async function novoAgendamento({ data, cliente }) {
     r.querySelector("[data-salvar]").onclick = async () => {
       const nome = r.querySelector("[data-cli]").value.trim(), zap = r.querySelector("[data-zap]").value.replace(/\D/g, ""), s = serv();
       if (nome.length < 2) return toast("Escreva o nome da cliente.", 1);
-      if (zap.length < 10) return toast("Escreva o WhatsApp com DDD.", 1);
+      if (zap.length && zap.length < 10) return toast("Escreva o WhatsApp com DDD (ou deixe em branco).", 1);
       if (!s) return toast("Escolha o serviço.", 1);
       if (!horario) return toast("Escolha o horário.", 1);
       const ini = new Date(horario);
@@ -714,7 +714,7 @@ async function novoAgendamento({ data, cliente }) {
         const linhas = await salvaSerie(base, inicios, s.duracao_min, rep.regra());
         if (!linhas) return;
         toast(`${linhas.length} horários agendados! 🔁`);
-        if (confirm("Enviar a lista de horários para a cliente no WhatsApp?")) abreZap(`https://wa.me/${zapNum(zap)}?text=${encodeURIComponent(msgSerie(base, linhas))}`);
+        if (zap && confirm("Enviar a lista de horários para a cliente no WhatsApp?")) abreZap(`https://wa.me/${zapNum(zap)}?text=${encodeURIComponent(msgSerie(base, linhas))}`);
         fechaFolha(); st.dia = isoDia(ini); atualizaTela(); return;
       }
       const { error } = await sb.from("ad_agendamentos").insert({
@@ -723,7 +723,7 @@ async function novoAgendamento({ data, cliente }) {
       if (error) return toast(erroMsg(error), 1);
       toast("Agendado!");
       const a = { cliente_nome: nome, cliente_whatsapp: zap, servico_nome: s.nome, inicio: ini.toISOString() };
-      if (confirm("Enviar a confirmação para a cliente no WhatsApp?")) abreZap(linkZap(a, "confirmacao"));
+      if (zap && confirm("Enviar a confirmação para a cliente no WhatsApp?")) abreZap(linkZap(a, "confirmacao"));
       fechaFolha(); st.dia = isoDia(ini); atualizaTela();
     };
   });
@@ -846,7 +846,7 @@ async function detalheCliente(id) {
     ${htmlFidelidade(c)}
     ${c.observacao ? `<div class="cartao"><b>Anotações</b><p class="mudo" style="margin-top:4px;white-space:pre-wrap">${esc(c.observacao)}</p></div>` : ""}
     <div class="pilha">
-      <a class="btn zap cheio" target="_blank" rel="noopener" href="https://wa.me/${zapNum(c.whatsapp)}">${IC.zap}Conversar no WhatsApp</a>
+      ${c.whatsapp ? `<a class="btn zap cheio" target="_blank" rel="noopener" href="https://wa.me/${zapNum(c.whatsapp)}">${IC.zap}Conversar no WhatsApp</a>` : `<p class="pequeno" style="text-align:center">Sem telefone cadastrado. Toque em Editar para adicionar.</p>`}
       <button class="btn ouro cheio" data-agendar>${IC.mais}Novo agendamento</button>
       <div class="grade2">
         <a class="btn claro" target="_blank" rel="noopener" href="https://wa.me/${zapNum(c.whatsapp)}?text=${encodeURIComponent(msgRetorno)}">Convidar a voltar</a>
@@ -869,7 +869,7 @@ function editaCliente(c) {
     <div class="cartao">
       <div class="linha" style="gap:12px;margin-bottom:6px"><div data-prev>${c ? avatarCli(c, 64) : `<div class="avatar" style="width:64px;height:64px">${IC.camera}</div>`}</div><label class="btn mini" style="cursor:pointer">${IC.camera}Foto<input type="file" accept="image/*" data-foto hidden></label></div>
       <label class="f">Nome completo</label><input class="campo" data-nome value="${esc(c?.nome || "")}" autocomplete="off">
-      <label class="f">WhatsApp</label><input class="campo" data-zap inputmode="tel" value="${c ? fmtTel(c.whatsapp) : ""}" placeholder="(31) 99999-9999">
+      <label class="f">WhatsApp <span class="pequeno">(opcional)</span></label><input class="campo" data-zap inputmode="tel" value="${c ? fmtTel(c.whatsapp) : ""}" placeholder="(31) 99999-9999">
       <label class="f">E-mail</label><input class="campo" data-email type="email" value="${esc(c?.email || "")}" placeholder="Opcional">
       <label class="f">Aniversário</label><input class="campo" data-aniver type="date" value="${c?.aniversario || ""}">
       <label class="f">Indicada por</label><input class="campo" data-ind value="${esc(c?.indicada_por || "")}" placeholder="Nome de quem indicou (opcional)">
@@ -883,7 +883,8 @@ function editaCliente(c) {
       const d = { nome: r.querySelector("[data-nome]").value.trim(), whatsapp: r.querySelector("[data-zap]").value.replace(/\D/g, ""), vip: r.querySelector("[data-vip]").checked, indicada_por: r.querySelector("[data-ind]").value.trim() || null,
         email: r.querySelector("[data-email]").value.trim() || null, aniversario: r.querySelector("[data-aniver]").value || null, observacao: r.querySelector("[data-obs]").value.trim() || null };
       if (d.nome.length < 2) return toast("Escreva o nome.", 1);
-      if (d.whatsapp.length < 10) return toast("Escreva o WhatsApp com DDD.", 1);
+      if (d.whatsapp.length && d.whatsapp.length < 10) return toast("Escreva o WhatsApp com DDD (ou deixe em branco).", 1);
+      if (!d.whatsapp) d.whatsapp = null;
       if (foto) { try { d.foto_url = await fotoCliente(foto); } catch { return; } }
       const { data, error } = c ? await sb.from("ad_clientes").update(d).eq("id", c.id).select().single()
         : await sb.from("ad_clientes").insert({ ...d, profissional_id: st.prof.id }).select().single();
