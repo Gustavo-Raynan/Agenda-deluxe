@@ -1,5 +1,5 @@
 // Site Eduardo Teccarelli Hair — permite instalar na tela de início (rede primeiro, sempre atualizado)
-const CACHE = "eduardo-site-v3";
+const CACHE = "eduardo-site-v4";
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(["./", "logo.jpg", "icone-192.png"])).then(() => self.skipWaiting())); });
 self.addEventListener("activate", (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener("fetch", (e) => {
