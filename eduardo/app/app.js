@@ -576,6 +576,7 @@ async function detalheAg(id) {
         <button class="btn claro" data-cli>Ver cliente</button>
       </div>
       ${ATIVOS.includes(a.status) || a.status === "concluido" ? `<div class="grade2">${!a.pago ? `<button class="btn claro" data-sinal>${a.sinal ? "Sinal: " + brl(a.sinal) : "Registrar sinal"}</button>` : ""}<button class="btn claro" data-atraso>${a.atrasou ? "Tirar atraso" : "Marcar atraso"}</button></div>` : ""}
+      ${ATIVOS.includes(a.status) ? `<button class="btn claro cheio" data-servtempo>✂️ Mudar serviços ou tempo</button>` : ""}
       ${ATIVOS.includes(a.status) ? `<div class="grade2"><button class="btn claro" data-remarcar>Remarcar</button>${passado ? `<button class="btn perigo" data-st="faltou">Não compareceu</button>` : `<button class="btn perigo" data-cancelar>Cancelar</button>`}</div>` : ""}
       ${a.status === "concluido" || a.pago ? `<button class="btn claro cheio" data-pagar>${IC.dinheiro}${a.pago ? "Registrar outro pagamento" : "Registrar pagamento"}</button>` : ""}
       ${["cancelado", "faltou"].includes(a.status) ? `<button class="btn claro cheio" data-reabrir>Reabrir agendamento</button>` : ""}
@@ -611,6 +612,7 @@ async function detalheAg(id) {
     r.querySelector("[data-sinal]")?.addEventListener("click", () => registraPagamento(a, false, true));
     r.querySelector("[data-atraso]")?.addEventListener("click", async () => { await q(sb.from("ad_agendamentos").update({ atrasou: !a.atrasou }).eq("id", a.id)); toast(a.atrasou ? "Atraso removido." : "Atraso registrado."); detalheAg(a.id); atualizaTela(); });
     r.querySelector("[data-remarcar]")?.addEventListener("click", () => remarcar(a));
+    r.querySelector("[data-servtempo]")?.addEventListener("click", () => editaServicosAg(a));
     r.querySelector("[data-cli]").onclick = () => a.cliente_id ? detalheCliente(a.cliente_id) : toast("Cliente sem cadastro.", 1);
     r.querySelector("[data-msgs]").onclick = () => mensagensProntas(a);
   });
@@ -687,8 +689,7 @@ async function novoAgendamento({ data, cliente }) {
       <label class="f">WhatsApp da cliente</label>
       <input class="campo" data-zap inputmode="tel" placeholder="(31) 99999-9999" value="${cli ? fmtTel(cli.whatsapp) : ""}">
       <div data-avisocli></div>
-      <label class="f">Serviço</label>
-      <select class="campo" data-serv><option value="">Escolha…</option>${servs.map((s) => `<option value="${s.id}">${esc(s.nome)} · ${brl(s.preco)} · ${dur(s.duracao_min)}</option>`).join("")}</select>
+      ${htmlServicos(servs)}
       <div data-horario></div>
       ${htmlRepetir()}
       <label class="f">Observação</label><textarea class="campo" data-obs placeholder="Opcional"></textarea>
@@ -701,9 +702,10 @@ async function novoAgendamento({ data, cliente }) {
         : cli ? `<p class="pequeno" style="margin:6px 2px 0">✅ Cliente já cadastrada: <b>${esc(cli.nome)}</b></p>` : "";
     };
     avisoCli();
-    const serv = () => servs.find((s) => s.id === r.querySelector("[data-serv]").value);
-    const sel = seletorHorario(r, () => serv()?.duracao_min, data || isoDia(), (t) => (horario = t));
-    r.querySelector("[data-serv]").onchange = () => sel.recarrega();
+    let sel = null;
+    const pac = ligaServicos(r, servs, () => sel?.recarrega());
+    const serv = () => pac.pacote();
+    sel = seletorHorario(r, () => pac.pacote()?.duracao_min, data || isoDia(), (t) => (horario = t));
     r.querySelector("[data-cli]").oninput = (e) => {
       const c = clientes.find((x) => x.nome.toLowerCase() === e.target.value.trim().toLowerCase());
       if (c) { cli = c; r.querySelector("[data-zap]").value = fmtTel(c.whatsapp); } else cli = null;
@@ -719,7 +721,7 @@ async function novoAgendamento({ data, cliente }) {
       const nome = r.querySelector("[data-cli]").value.trim(), zap = r.querySelector("[data-zap]").value.replace(/\D/g, ""), s = serv();
       if (nome.length < 2) return toast("Escreva o nome da cliente.", 1);
       if (zap.length < 10) return toast("Escreva o WhatsApp com DDD.", 1);
-      if (!s) return toast("Escolha o serviço.", 1);
+      if (!s) return toast("Escolha pelo menos um serviço.", 1);
       if (!horario) return toast("Escolha o horário.", 1);
       const ini = new Date(horario);
       let datas = [ini];
@@ -753,6 +755,76 @@ async function novoAgendamento({ data, cliente }) {
   });
 }
 
+
+
+// ---------- vários serviços num agendamento + tempo total ajustável ----------
+const OPC_TEMPO = Array.from({ length: 48 }, (_, i) => (i + 1) * 15); // 15 min até 12h
+function htmlServicos(servs, atual) {
+  return `<label class="f">Serviços <small class="mudo">(pode escolher vários)</small></label>
+    <div data-servsel></div>
+    <select class="campo" data-serv><option value="">+ Adicionar serviço…</option>${servs.map((s) => `<option value="${s.id}">${esc(s.nome)} · ${brl(s.preco)} · ${dur(s.duracao_min)}</option>`).join("")}</select>
+    <div class="grade2" data-servtot style="${atual ? "" : "display:none"}">
+      <div><label class="f">Tempo total</label><select class="campo" data-tempo>${OPC_TEMPO.map((m) => `<option value="${m}">${dur(m)}</option>`).join("")}</select></div>
+      <div><label class="f">Valor total</label><input class="campo" data-valor type="number" inputmode="decimal" min="0" step="0.01"></div>
+    </div>
+    <p class="pequeno" data-servsoma style="margin:6px 2px 0"></p>`;
+}
+// atual = { itens: [servico...], duracao_min, preco } para editar um agendamento existente
+function ligaServicos(r, servs, aoMudar, atual) {
+  const $r = (x) => r.querySelector(x);
+  const itens = atual?.itens ? [...atual.itens] : [];
+  let tempoManual = !!atual, valorManual = !!atual;
+  const soma = () => ({ min: itens.reduce((t, s) => t + Number(s.duracao_min || 0), 0), preco: itens.reduce((t, s) => t + Number(s.preco || 0), 0) });
+  const temOpcao = (m) => [...$r("[data-tempo]").options].some((o) => +o.value === m);
+  const poeTempo = (m) => { m = Math.max(15, Math.round(m / 5) * 5); if (!temOpcao(m)) { const o = document.createElement("option"); o.value = m; o.textContent = dur(m); $r("[data-tempo]").append(o); [...$r("[data-tempo]").options].sort((a, b) => a.value - b.value).forEach((x) => $r("[data-tempo]").append(x)); } $r("[data-tempo]").value = String(m); };
+  const desenha = () => {
+    const sm = soma();
+    $r("[data-servsel]").innerHTML = itens.map((s, i) => `<div class="linha entre" style="gap:8px;padding:9px 12px;margin-bottom:6px;border:1px solid var(--line2);border-radius:12px;background:var(--soft)"><span><b>${esc(s.nome)}</b> <span class="pequeno">${dur(s.duracao_min)} · ${brl(s.preco)}</span></span><button type="button" class="link" data-tira="${i}" aria-label="Tirar" style="font-size:18px;line-height:1">✕</button></div>`).join("");
+    r.querySelectorAll("[data-tira]").forEach((b) => (b.onclick = () => { itens.splice(+b.dataset.tira, 1); recalc(); }));
+    $r("[data-servtot]").style.display = itens.length ? "" : "none";
+    $r("[data-serv]").options[0].textContent = itens.length ? "+ Adicionar outro serviço…" : "Escolha o serviço…";
+    $r("[data-servsoma]").innerHTML = itens.length ? `Soma dos serviços: <b>${dur(sm.min)}</b> · <b>${brl(sm.preco)}</b>${tempoManual && +$r("[data-tempo]").value !== sm.min ? ` · <button type="button" class="link" data-volta>usar a soma</button>` : ". Se precisar de mais ou menos tempo, mude o Tempo total."}` : "";
+    $r("[data-volta]")?.addEventListener("click", () => { tempoManual = false; valorManual = false; recalc(); });
+  };
+  const recalc = () => {
+    const sm = soma();
+    if (!tempoManual && itens.length) poeTempo(sm.min);
+    if (!valorManual && itens.length) $r("[data-valor]").value = String(sm.preco);
+    desenha(); aoMudar?.();
+  };
+  $r("[data-serv]").onchange = (e) => { const s = servs.find((x) => x.id === e.target.value); e.target.value = ""; if (!s) return; if (itens.length >= 8) return toast("No máximo 8 serviços.", 1); itens.push(s); recalc(); };
+  $r("[data-tempo]").onchange = () => { tempoManual = true; desenha(); aoMudar?.(); };
+  $r("[data-valor]").oninput = () => { valorManual = true; };
+  if (atual) { poeTempo(atual.duracao_min); $r("[data-valor]").value = String(Number(atual.preco || 0)); }
+  desenha();
+  return {
+    pacote: () => itens.length ? { id: itens[0].id, nome: itens.map((s) => s.nome).join(" + ").slice(0, 200), duracao_min: +$r("[data-tempo]").value, preco: Number($r("[data-valor]").value || 0) } : null,
+  };
+}
+
+// muda serviços / tempo de um agendamento que já existe
+function editaServicosAg(a) {
+  const servs = st.servicos.filter((s) => s.ativo);
+  const nomes = String(a.servico_nome || "").split(" + ");
+  const itens = nomes.map((n) => st.servicos.find((s) => s.nome === n) || { id: a.servico_id, nome: n, duracao_min: 0, preco: 0 });
+  const mins = Math.round((new Date(a.fim) - new Date(a.inicio)) / 60000);
+  abreFolha(cabFolha("Serviços e tempo", `${esc(a.cliente_nome)} · ${dataLonga(a.inicio)} às ${hora(a.inicio)}`) + `
+    <div class="cartao">${htmlServicos(servs, true)}<p class="pequeno" data-conflito style="margin-top:8px"></p></div>
+    <button class="btn ouro cheio" data-salvar>Salvar</button>
+    <button class="btn claro cheio" data-voltar style="margin-top:10px">Voltar</button>`, (r) => {
+    const pac = ligaServicos(r, servs, null, { itens, duracao_min: mins, preco: a.preco });
+    r.querySelector("[data-voltar]").onclick = () => detalheAg(a.id);
+    r.querySelector("[data-salvar]").onclick = async () => {
+      const p = pac.pacote(); if (!p) return toast("Escolha pelo menos um serviço.", 1);
+      const ini = new Date(a.inicio), fim = new Date(ini.getTime() + p.duracao_min * 60000);
+      const ocup = await q(sb.from("ad_agendamentos").select("id,cliente_nome,inicio").in("status", ATIVOS).neq("id", a.id).lt("inicio", fim.toISOString()).gt("fim", ini.toISOString()));
+      if (ocup.length && !confirm(`Com esse tempo, vai encostar no horário de ${ocup.map((o) => `${o.cliente_nome} (${hora(o.inicio)})`).join(", ")}. Salvar mesmo assim?`)) return;
+      const { error } = await sb.from("ad_agendamentos").update({ servico_id: p.id, servico_nome: p.nome, preco: p.preco, fim: fim.toISOString() }).eq("id", a.id);
+      if (error) return toast(erroMsg(error), 1);
+      toast("Agendamento atualizado."); detalheAg(a.id); atualizaTela();
+    };
+  });
+}
 
 // ---------- agendamento recorrente ----------
 const SEM_CURTO = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
