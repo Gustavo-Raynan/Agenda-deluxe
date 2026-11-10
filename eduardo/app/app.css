@@ -45,7 +45,7 @@ a { color: inherit; }
 /* ---------- topo ---------- */
 .topo { position: sticky; top: 0; z-index: 20; padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px; background: var(--topbg);
   backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4); border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 12px; }
-.topo .marca { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex: none; box-shadow: 0 0 0 1px rgba(var(--accRGB), .5); }
+.topo .marca { width: 42px; height: 42px; border-radius: 12px; object-fit: cover; flex: none; box-shadow: 0 0 0 1px rgba(var(--accRGB), .5); }
 .topo h1 { font-size: 17.5px; font-weight: 700; letter-spacing: -.03em; line-height: 1.15; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .topo h1 small { display: block; font-size: 11.5px; font-weight: 500; color: var(--mute); letter-spacing: 0; }
 .topo .sino { position: relative; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--soft); display: grid; place-items: center; cursor: pointer; }
