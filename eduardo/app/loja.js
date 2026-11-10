@@ -60,7 +60,8 @@ async function telaEstoque() {
     const cats = [...new Set(lista.map((p) => p.categoria || "Outros"))].sort((x, y) => (CATS_LOJA.indexOf(x) + 1 || 99) - (CATS_LOJA.indexOf(y) + 1 || 99));
     const filt = lista.filter((p) => (!st.lojaCat || (p.categoria || "Outros") === st.lojaCat) && (!b || [p.nome, p.marca, p.categoria].join(" ").toLowerCase().includes(b)));
     corpo = `
-      <div class="grade2" style="margin-bottom:12px"><button class="btn prim" data-novo-prod>${IC.mais}Novo produto</button><button class="btn" data-balcao>${IC.dinheiro}Venda no balcão</button></div>
+      <div class="tres-bot"><button class="btn prim" data-catalogo>${IC.busca}Do catálogo</button><button class="btn" data-porfoto>${IC.camera}Por foto</button><button class="btn" data-novo-prod>${IC.mais}À mão</button></div>
+      <button class="btn cheio" data-balcao style="margin-bottom:12px">${IC.dinheiro}Venda no balcão</button>
       ${lista.length ? `<div class="busca">${IC.busca}<input class="campo" id="busca-loja" placeholder="Buscar produto ou marca" value="${esc(st.lojaBusca)}" autocomplete="off"></div>` : ""}
       ${cats.length > 1 ? `<div class="opcoes" style="margin-bottom:12px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px">${["", ...cats].map((c) => `<button type="button" data-cat="${esc(c)}" class="${st.lojaCat === c ? "on" : ""}" style="flex:none">${esc(c || "Todos")}</button>`).join("")}</div>` : ""}
       ${lista.length ? `<p class="pequeno" style="margin:0 4px 10px">${lista.length} produto${lista.length !== 1 ? "s" : ""} · ${lista.filter((p) => p.no_site).length} no site · <button class="link" data-ver-site>ver a loja no site ›</button></p>` : ""}
@@ -68,7 +69,7 @@ async function telaEstoque() {
           <div class="esm-foto"><img src="${p.foto_url ? esc(p.foto_url) : placeholderProd()}" alt="" loading="lazy"><span class="chip ${p.no_site ? d[1] : "cancelado"}">${p.no_site ? d[0] : "Fora do site"}</span>${p.destaque ? `<span class="chip concluido" style="left:auto;right:6px">★</span>` : ""}</div>
           <b>${esc(p.nome)}</b><small>${esc(p.marca || p.categoria || "")}</small>
           <small><b style="font-size:14.5px;color:var(--ink)">${brl(precoAtual(p))}</b>${promo ? ` <s>${brl(p.preco)}</s>` : ""} · ${p.quantidade} un</small></button>`; }).join("")}</div>`
-        : `<div class="vazio">${IC.caixa}<div>${lista.length ? "Nenhum produto encontrado." : "Cadastre os produtos que você vende (shampoo, máscara, óleo, finalizador…). Com foto e preço, eles aparecem no site e os clientes podem comprar."}</div></div>`}`;
+        : `<div class="vazio">${IC.caixa}<div>${lista.length ? "Nenhum produto encontrado." : "Toque em <b>Do catálogo</b> e só marque os produtos que você tem (são mais de 560, de 74 marcas), ou em <b>Por foto</b> para fotografar a embalagem. Com preço, eles aparecem no site para venda."}</div></div>`}`;
   } else if (seg === "pedidos") {
     const F = { abertos: abertos, entregues: peds.filter((p) => p.status === "entregue"), cancelados: peds.filter((p) => p.status === "cancelado") };
     const mostra = F[st.pedFiltro] || abertos;
@@ -106,6 +107,8 @@ async function telaEstoque() {
   r.querySelectorAll("[data-cat]").forEach((b) => (b.onclick = () => { st.lojaCat = b.dataset.cat; telaEstoque(); }));
   r.querySelectorAll("[data-pf]").forEach((b) => (b.onclick = () => { st.pedFiltro = b.dataset.pf; telaEstoque(); }));
   r.querySelector("[data-novo-prod]")?.addEventListener("click", () => editaProdutoLoja(null));
+  r.querySelector("[data-catalogo]")?.addEventListener("click", escolheDoCatalogo);
+  r.querySelector("[data-porfoto]")?.addEventListener("click", cadastroPorFoto);
   r.querySelector("[data-balcao]")?.addEventListener("click", () => novaVendaBalcao());
   r.querySelector("[data-ver-site]")?.addEventListener("click", () => window.open(SITE + "#loja", "_blank"));
   $("busca-loja")?.addEventListener("input", (e) => { st.lojaBusca = e.target.value; clearTimeout(st._tb); st._tb = setTimeout(async () => { await telaEstoque(); const i = $("busca-loja"); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 300); });
