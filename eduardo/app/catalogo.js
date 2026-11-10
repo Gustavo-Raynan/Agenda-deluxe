@@ -15,16 +15,18 @@ function descPadrao(p) {
 }
 async function catalogo() {
   if (CATALOGO) return CATALOGO;
-  const [arq, extra] = await Promise.all([
+  const [arq, extra, cache] = await Promise.all([
     fetch("catalogo.json").then((r) => r.json()).catch(() => ({ c: [], d: [] })),
     sb.from("ad_produtos_base").select("*").limit(3000).then((r) => r.data || []),
+    sb.from("ad_foto_cache").select("q,url").limit(5000).then((r) => r.data || []),
   ]);
+  const fotos = new Map(cache.map((x) => [x.q, x.url]));
   const lista = [];
   arq.d.forEach(([marca, linha, itens]) => itens.forEach(([n, c, t]) => lista.push({ marca, linha, nome: n[0] === "=" ? n.slice(1) : `${linha} ${n}`, categoria: arq.c[c], tamanho: t })));
   extra.forEach((p) => lista.push({ id: p.id, marca: p.marca, linha: p.linha, nome: p.nome, categoria: p.categoria, tamanho: p.tamanho, descricao: p.descricao, foto: p.foto_url, novo: true }));
   const vistos = new Set();
   CATALOGO = lista.filter((p) => { const k = chaveProd(p.marca, p.nome); if (vistos.has(k)) return false; vistos.add(k); return true; })
-    .map((p) => ({ ...p, k: chaveProd(p.marca, p.nome), busca: normC([p.marca, p.nome, p.categoria, p.tamanho].join(" ")) }));
+    .map((p) => ({ ...p, foto: p.foto || fotos.get(chaveFoto(textoFoto(p))) || null, k: chaveProd(p.marca, p.nome), busca: normC([p.marca, p.nome, p.categoria, p.tamanho].join(" ")) }));
   return CATALOGO;
 }
 async function contribuiCatalogo(p) {
@@ -128,7 +130,7 @@ function revisaNovos(itens) {
       for (const it of itens) {
         e.target.textContent = `Salvando ${ok + 1} de ${itens.length}…`;
         try {
-          const foto = it.canvas ? await enviaFoto(it.canvas) : it.foto || null;
+          const foto = it.canvas ? await enviaFoto(it.canvas) : it.foto || (await fotoDaNet(textoFoto(it))).url || null;
           const d = { profissional_id: st.prof.id, nome: it.nome.slice(0, 80), marca: it.marca || null, categoria: it.categoria || null,
             descricao: (it.descricao || (it.marca ? descPadrao({ ...it, categoria: it.categoria }) : null))?.slice(0, 300) || null,
             preco: it.preco || 0, quantidade: it.qtd, minimo: 1, no_site: !!it.preco, foto_url: foto, base_id: it.id || null };

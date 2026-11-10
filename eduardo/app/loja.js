@@ -16,35 +16,52 @@ const dispLoja = (p) => (Number(p.quantidade) <= 0 ? ["Esgotado", "cancelado"] :
 const fotoProd = (p, tam = 46) => p.foto_url
   ? `<img src="${esc(p.foto_url)}" alt="" loading="lazy" style="width:${tam}px;height:${tam}px;border-radius:14px;object-fit:cover;flex:none;border:1px solid var(--line2)">`
   : p.nome ? `<img src="${placeholderProd(p)}" alt="" style="width:${tam}px;height:${tam}px;border-radius:14px;object-fit:cover;flex:none;border:1px solid var(--line2)">` : `<span style="width:${tam}px;height:${tam}px;border-radius:14px;flex:none;display:grid;place-items:center;background:var(--soft);color:var(--mute);border:1px solid var(--line2)">${IC.caixa}</span>`;
-// Ilustração automática de produto (quando ainda não tem foto): embalagem por tipo + marca + nome
-function ilustraProduto(p) {
-  const e = (t) => String(t || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const cat = p.categoria || "", nome = String(p.nome || ""), marca = String(p.marca || "");
-  const paleta = { Shampoo: ["#8A5DB8", "#B48BEA"], Condicionador: ["#2E9C8F", "#5ED6C6"], "Máscara": ["#6B3E93", "#C29BEF"], "Leave-in": ["#3E7FA8", "#7FC3E8"], "Óleo e sérum": ["#B07A22", "#E9C27A"], Finalizador: ["#A0446B", "#E591B5"], "Protetor térmico": ["#B4553A", "#EE9C7E"], Tratamento: ["#4B5FB0", "#9AA8F0"], "Coloração": ["#7A2F5A", "#D27BAA"], Kit: ["#5A4478", "#B39BD8"], "Acessórios": ["#4A5560", "#A9B4BF"] }[cat] || ["#6A55B8", "#A99AE6"];
-  const [c1, c2] = paleta;
-  const formas = {
-    pote: `<rect x="62" y="96" width="76" height="14" rx="5" fill="#2A2433"/><rect x="54" y="108" width="92" height="70" rx="14" fill="url(#g)"/>`,
-    gotas: `<rect x="90" y="40" width="20" height="26" rx="8" fill="#2A2433"/><rect x="86" y="62" width="28" height="10" rx="3" fill="#3A3245"/><rect x="72" y="70" width="56" height="108" rx="16" fill="url(#g)"/>`,
-    tubo: `<rect x="86" y="160" width="28" height="18" rx="4" fill="#2A2433"/><path d="M70 50h60l-8 112H78z" fill="url(#g)"/><rect x="66" y="44" width="68" height="10" rx="3" fill="${c1}"/>`,
-    spray: `<rect x="88" y="30" width="18" height="12" rx="3" fill="#2A2433"/><path d="M106 34h14v6h-14z" fill="#2A2433"/><rect x="84" y="40" width="26" height="22" rx="5" fill="#3A3245"/><rect x="74" y="60" width="46" height="118" rx="14" fill="url(#g)"/>`,
-    frasco: `<rect x="84" y="36" width="32" height="22" rx="6" fill="#2A2433"/><path d="M78 58h44l8 14v100a8 8 0 0 1-8 8H78a8 8 0 0 1-8-8V72z" fill="url(#g)"/>`,
-    caixa: `<rect x="56" y="64" width="88" height="114" rx="10" fill="url(#g)"/><path d="M56 84h88" stroke="#ffffff55" stroke-width="2"/>`,
-    escova: `<rect x="90" y="110" width="20" height="72" rx="8" fill="#2A2433"/><rect x="66" y="40" width="68" height="78" rx="30" fill="url(#g)"/><g fill="#2A2433" opacity=".55">${[0, 1, 2, 3].map((i) => [0, 1, 2].map((j) => `<circle cx="${82 + i * 12}" cy="${60 + j * 16}" r="2.5"/>`).join("")).join("")}</g>`,
-  };
-  const forma = cat === "Máscara" ? "pote" : cat === "Óleo e sérum" ? "gotas" : cat === "Leave-in" || cat === "Coloração" ? "tubo" : cat === "Protetor térmico" || cat === "Finalizador" && /spray|fix|session|hairspray/i.test(nome) ? "spray" : cat === "Kit" ? "caixa" : cat === "Acessórios" ? "escova" : "frasco";
-  const quebra = (t, n) => { const w = t.split(/\s+/), l = []; let a = ""; w.forEach((x) => { if ((a + " " + x).trim().length > n) { if (a) l.push(a); a = x; } else a = (a + " " + x).trim(); }); if (a) l.push(a); return l.slice(0, 2); };
-  const linhasNome = quebra(nome, 18);
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="${c1}"/><stop offset=".55" stop-color="${c2}"/><stop offset="1" stop-color="${c1}"/></linearGradient><radialGradient id="f" cx=".5" cy=".35" r=".8"><stop offset="0" stop-color="#3A2A52"/><stop offset="1" stop-color="#1C1724"/></radialGradient></defs>
-<rect width="200" height="200" fill="url(#f)"/><g transform="translate(30,-20) scale(0.7)"><ellipse cx="100" cy="182" rx="60" ry="7" fill="#000" opacity=".35"/>${formas[forma]}
-<rect x="${forma === "pote" ? 64 : 78}" y="${forma === "pote" ? 128 : 112}" width="${forma === "pote" ? 72 : 44}" height="${forma === "pote" ? 26 : 34}" rx="4" fill="#ffffffd9"/>
-<text x="100" y="${forma === "pote" ? 145 : 133}" text-anchor="middle" font-family="Arial,sans-serif" font-size="${forma === "pote" ? 9 : 7}" font-weight="700" fill="#2A2433">${e(marca.split(" ")[0].toUpperCase().slice(0, 12))}</text></g>
-<text x="100" y="${linhasNome.length > 1 ? 150 : 158}" text-anchor="middle" font-family="Arial,sans-serif" font-size="12.5" font-weight="700" fill="#F5F1FB">${e(marca.slice(0, 26))}</text>
-${linhasNome.map((l, i) => `<text x="100" y="${(linhasNome.length > 1 ? 168 : 176) + i * 15}" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" fill="#C3BACF">${e(l)}</text>`).join("")}</svg>`;
-  return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
+// ---------------------------------------------------------------------
+// FOTOS REAIS DA INTERNET (função ad-foto-produto busca no Bing e guarda em cache)
+// ---------------------------------------------------------------------
+const chaveFoto = (t) => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+const textoFoto = (p) => [p.marca, p.nome, p.tamanho].filter(Boolean).join(" ");
+async function fotoDaNet(q, novas) {
+  try {
+    const r = await fetch(SUPA_URL + "/functions/v1/ad-foto-produto", { method: "POST", headers: { "content-type": "application/json", apikey: SUPA_KEY }, body: JSON.stringify({ q, novas: !!novas }) });
+    return await r.json();
+  } catch { return { url: null, fotos: [] }; }
 }
-
-const placeholderProd = (p) => ilustraProduto(p || {});
-const buscaFotoNet = (p) => { window.open("https://www.google.com/search?tbm=isch&q=" + encodeURIComponent([p.marca, p.nome, "produto"].filter(Boolean).join(" ")), "_blank"); toast("Escolha uma foto, segure o dedo nela e salve. Depois toque em Foto e escolha da galeria."); };
+// sem foto ainda: quadradinho neutro com o ícone (a foto real é buscada sozinha)
+const placeholderProd = () => "data:image/svg+xml;utf8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#1E1928"/><g fill="none" stroke="#6E6480" stroke-width="3" stroke-linejoin="round"><path d="M30 38 50 28l20 10v26L50 74 30 64z"/><path d="M30 38l20 10 20-10M50 48v26"/></g></svg>`);
+const ilustraProduto = placeholderProd;
+// mostra até 9 fotos reais para escolher, dentro de "el"
+async function gradeFotos(el, q, aoEscolher, novas) {
+  el.innerHTML = `<p class="pequeno" style="text-align:center;margin:10px 0">Procurando fotos de <b>${esc(q)}</b>…</p>`;
+  const r = await fotoDaNet(q, novas);
+  if (!r.fotos?.length) { el.innerHTML = `<p class="pequeno" style="text-align:center;margin:10px 0">Não achei fotos. Confira o nome e a marca.</p>`; return; }
+  el.innerHTML = `<p class="pequeno" style="margin:10px 2px 6px">Toque na foto certa:</p><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">${r.fotos.map((f, i) => `<button type="button" data-fi="${i}" style="padding:0;border:2px solid var(--line2);border-radius:12px;overflow:hidden;aspect-ratio:1;background:#fff"><img src="${esc(f.url)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:contain;display:block"></button>`).join("")}</div>
+    ${novas ? "" : `<button type="button" class="link" data-mais style="display:block;margin:8px auto 0">Buscar outras fotos</button>`}`;
+  el.querySelectorAll("[data-fi]").forEach((b) => (b.onclick = () => { el.querySelectorAll("[data-fi]").forEach((x) => (x.style.borderColor = x === b ? "var(--acc)" : "var(--line2)")); aoEscolher(r.fotos[+b.dataset.fi].url); }));
+  el.querySelector("[data-mais]")?.addEventListener("click", () => gradeFotos(el, q, aoEscolher, true));
+}
+function buscaFotoNet(p) {
+  abreFolha(cabFolha("Foto da internet", esc([p.marca, p.nome].filter(Boolean).join(" · "))) + `<div class="cartao" data-grade></div>`, (r) => {
+    gradeFotos(r.querySelector("[data-grade]"), textoFoto(p), async (url) => {
+      await q(sb.from("ad_loja").update({ foto_url: url }).eq("id", p.id));
+      toast("Foto colocada! Já aparece no site."); fichaLoja(p.id); if (st.aba === "estoque") telaEstoque();
+    });
+  });
+}
+// coloca foto real sozinho nos produtos que ainda estão sem foto
+let completandoFotos = false;
+async function completaFotos(lista) {
+  const sem = lista.filter((p) => !p.foto_url && p.nome);
+  if (!sem.length || completandoFotos) return;
+  completandoFotos = true;
+  let feitos = 0;
+  for (const p of sem.slice(0, 40)) {
+    const r = await fotoDaNet(textoFoto(p));
+    if (r.url) { await sb.from("ad_loja").update({ foto_url: r.url }).eq("id", p.id).is("foto_url", null); feitos++; }
+  }
+  completandoFotos = false;
+  if (feitos) { toast(`📷 Coloquei foto real em ${feitos} produto${feitos > 1 ? "s" : ""}.`); if (st.aba === "estoque") telaEstoque(); }
+}
 
 st.estSeg = st.estSeg || "produtos";
 st.lojaBusca = ""; st.lojaCat = ""; st.pedFiltro = "abertos";
@@ -77,6 +94,7 @@ async function telaEstoque() {
     produtosLoja(),
     q(sb.from("ad_pedidos").select("*").order("criado_em", { ascending: false }).limit(150)),
   ]);
+  setTimeout(() => completaFotos(lista), 600);
   const abertos = peds.filter((p) => p.status === "novo" || p.status === "separado");
   const novos = peds.filter((p) => p.status === "novo");
   const vendMes = peds.filter((p) => p.status !== "cancelado" && p.criado_em >= inicioDia(iniMes));
@@ -167,7 +185,7 @@ async function fichaLoja(id) {
       <div class="linha entre" style="margin-top:6px"><span>No site</span><b>${p.no_site ? "Sim, aparece para os clientes" : "Não (escondido)"}</b></div>
       ${p.descricao ? `<p class="pequeno" style="margin-top:10px">${esc(p.descricao)}</p>` : ""}
     </div>
-    ${p.foto_url ? "" : `<div class="cartao calmo" style="font-size:14px">📷 Ainda sem foto real: no site aparece uma ilustração.<div class="grade2" style="margin-top:10px"><label class="btn mini" style="cursor:pointer">${IC.camera}Pôr foto<input type="file" accept="image/*" data-foto-rapida hidden></label><button class="btn mini" data-net>${IC.busca}Buscar na internet</button></div></div>`}
+    ${p.foto_url ? "" : `<div class="cartao calmo" style="font-size:14px">📷 Ainda sem foto.<div class="grade2" style="margin-top:10px"><label class="btn mini" style="cursor:pointer">${IC.camera}Pôr foto<input type="file" accept="image/*" data-foto-rapida hidden></label><button class="btn mini" data-net>${IC.busca}Buscar na internet</button></div></div>`}
     <div class="grade2"><button class="btn prim" data-entrada>${IC.mais}Entrada</button><button class="btn" data-ajuste>Ajustar quantidade</button></div>
     <div class="grade2" style="margin-top:8px"><button class="btn" data-editar>Editar</button><button class="btn" data-site>${p.no_site ? "Tirar do site" : "Mostrar no site"}</button></div>
     <button class="btn cheio" data-zap style="margin-top:8px">${IC.zap}Divulgar no WhatsApp</button>`, (r) => {
@@ -229,6 +247,7 @@ function editaProdutoLoja(p) {
         <span data-prev style="position:absolute;inset:0;display:grid;place-items:center;color:var(--mute);text-align:center;font-size:13.5px">${p?.foto_url ? `<img src="${esc(p.foto_url)}" style="width:100%;height:100%;object-fit:cover">` : `<span>${IC.camera}<br>Toque para tirar<br>ou escolher a foto</span>`}</span>
         <input type="file" accept="image/*" data-foto hidden></label>
       <button type="button" class="link" data-net style="display:block;margin:8px auto 0">${IC.busca} Buscar foto na internet</button>
+      <div data-netgrade></div>
       <label class="f">Nome do produto</label><input class="campo" data-nome maxlength="80" value="${esc(p?.nome || "")}" placeholder="Ex.: Máscara de hidratação 250g">
       <div class="grade2"><div><label class="f">Marca</label><input class="campo" data-marca maxlength="60" value="${esc(p?.marca || "")}" placeholder="Ex.: Wella"></div>
         <div><label class="f">Categoria</label><input class="campo" data-cat list="cats-loja" maxlength="40" value="${esc(p?.categoria || "")}" placeholder="Ex.: Máscara"></div></div>
@@ -245,7 +264,14 @@ function editaProdutoLoja(p) {
     </div>
     <button class="btn prim cheio" data-salvar>Salvar</button>
     ${p ? `<button class="btn perigo cheio" data-excluir style="margin-top:10px">Excluir produto</button>` : ""}`, (r) => {
-    r.querySelector("[data-net]").onclick = () => { const n = r.querySelector("[data-nome]").value.trim(); if (!n) return toast("Escreva o nome do produto primeiro.", 1); buscaFotoNet({ marca: r.querySelector("[data-marca]").value.trim(), nome: n }); };
+    let fotoNet = null;
+    r.querySelector("[data-net]").onclick = () => {
+      const n = r.querySelector("[data-nome]").value.trim(); if (!n) return toast("Escreva o nome do produto primeiro.", 1);
+      gradeFotos(r.querySelector("[data-netgrade]"), textoFoto({ marca: r.querySelector("[data-marca]").value.trim(), nome: n }), (url) => {
+        fotoNet = url; fotoNova = null;
+        r.querySelector("[data-prev]").innerHTML = `<img src="${esc(url)}" style="width:100%;height:100%;object-fit:contain;background:#fff">`;
+      });
+    };
     r.querySelector("[data-foto]").onchange = async (e) => {
       const f = e.target.files[0]; if (!f) return;
       try {
@@ -266,6 +292,8 @@ function editaProdutoLoja(p) {
       const bt = r.querySelector("[data-salvar]"); bt.disabled = true; bt.textContent = "Salvando…";
       try {
         if (fotoNova) d.foto_url = await enviaFoto(fotoNova);
+        else if (fotoNet) d.foto_url = fotoNet;
+        else if (!p?.foto_url) { const fr = await fotoDaNet(textoFoto(d)); if (fr.url) d.foto_url = fr.url; }
         let id = p?.id;
         if (p) await q(sb.from("ad_loja").update(d).eq("id", p.id));
         else id = (await q(sb.from("ad_loja").insert({ ...d, profissional_id: st.prof.id, quantidade: Math.max(0, Math.round(Number(g("q") || 0))) }).select().single())).id;
