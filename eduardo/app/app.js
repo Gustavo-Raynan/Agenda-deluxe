@@ -6,6 +6,18 @@ const SITE = "https://agenda-deluxe.pages.dev/eduardo/";
 const CONFIRMAR = "https://agenda-deluxe.pages.dev/confirmar?id=";
 const GOOGLE = "https://share.google/qmBK4zE5wo7nWzIZN";
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY, { auth: { storageKey: "edu-gestao-auth" } });
+// Cada app mostra só os dados do próprio salão (uma mesma conta pode ter acesso a mais de um salão)
+const ESCOPO_SALAO = new Set(["ad_agendamentos", "ad_avisos", "ad_bloqueios", "ad_clientes", "ad_equipe", "ad_fidelidade", "ad_horarios", "ad_lancamentos", "ad_loja", "ad_movimentos", "ad_pagamentos", "ad_pedidos", "ad_produtos", "ad_servicos"]);
+{
+  const _from = sb.from.bind(sb);
+  sb.from = (t) => {
+    const b = _from(t);
+    if (!ESCOPO_SALAO.has(t)) return b;
+    const filtra = (r) => (st.prof ? r.eq("profissional_id", st.prof.id) : r);
+    return { select: (...a) => filtra(b.select(...a)), update: (...a) => filtra(b.update(...a)), delete: (...a) => filtra(b.delete(...a)), insert: (...a) => b.insert(...a), upsert: (...a) => b.upsert(...a) };
+  };
+}
+
 const TZ = "America/Sao_Paulo";
 
 // ---------- utilidades ----------
@@ -147,7 +159,8 @@ function semAcesso() {
 async function iniciar() {
   if (!st.user) { $("v-app").classList.add("hide"); $("v-login").classList.remove("hide"); return; }
   const { data: salao } = await sb.rpc("ad_meu_salao");
-  const { data: prof } = salao ? await sb.from("ad_profissionais").select("*").eq("id", salao).maybeSingle() : { data: null };
+  // este app é sempre do salão do Eduardo, mesmo que a conta também tenha acesso a outro salão
+  const { data: prof } = await sb.from("ad_profissionais").select("*").eq("slug", "eduardoteccarelli").maybeSingle();
   if (!prof) { semAcesso(); return; }
   st.prof = prof;
   $("b-perfil").textContent = iniciais(prof.nome);
@@ -314,7 +327,7 @@ async function telaInicio() {
     livres(hoje, 30),
     q(sb.from("ad_agendamentos").select("id,preco").eq("status", "concluido").eq("pago", false)),
     pagsEntre(iniMes, amanha),
-    q(sb.from("ad_lancamentos").select("valor,pago").eq("tipo", "saida").gte("data", iniMes).lt("data", amanha)),
+    q(sb.from("ad_lancamentos").select("valor,pago,categoria").eq("tipo", "saida").gte("data", iniMes).lt("data", amanha)),
     dadosLojaInicio(),
     q(sb.from("ad_agendamentos").select("id").gte("criado_em", new Date(Date.now() - 864e5).toISOString()).neq("status", "cancelado")),
     q(sb.from("ad_lancamentos").select("id,valor,vencimento").eq("tipo", "saida").eq("pago", false).lte("vencimento", somaDias(hoje, 7))),
@@ -332,7 +345,7 @@ async function telaInicio() {
   const aniv = clis.filter((c) => c.aniversario).map((c) => { const [, mm, dd] = c.aniversario.split("-"); let alvo = `${hoje.slice(0, 4)}-${mm}-${dd}`; if (alvo < hoje) alvo = `${Number(hoje.slice(0, 4)) + 1}-${mm}-${dd}`; return { ...c, alvo, falta: Math.round((meioDia(alvo) - meioDia(hoje)) / 864e5) }; })
     .filter((c) => c.falta <= 7).sort((x, y) => x.falta - y.falta);
   const recMes = pagsMes.reduce((s, p) => s + Number(p.valor), 0);
-  const gastoMes = despMes.filter((l) => l.pago !== false).reduce((s, l) => s + Number(l.valor), 0);
+  const gastoMes = despMes.filter((l) => l.pago !== false && !CATS_DIV.includes(l.categoria)).reduce((s, l) => s + Number(l.valor), 0);
   const estq = resumoEstoque(prods);
   const ativos = ags.filter((a) => a.status !== "cancelado");
   const agora = Date.now();
@@ -385,6 +398,7 @@ async function telaInicio() {
         <div><small>Despesas</small><b>${brl(gastoMes)}</b></div>
         <div><small>Lucro</small><b class="${recMes - gastoMes < 0 ? "neg" : "ouro-t"}">${brl(recMes - gastoMes)}</b></div>
       </div>
+      ${linhaDivisaoInicio(recMes - gastoMes)}
       <div class="mes-nums" style="margin-top:10px">
         <div><small>Clientes atendidas</small><b>${clientesMes}</b></div>
         <div><small>A receber</small><b class="${pendenteValor ? "neg" : ""}">${brl(pendenteValor)}</b></div>
@@ -446,7 +460,7 @@ async function resumoValores(ags, despesas) {
   return `<div class="resumo-val"><div><small>Previsto</small><b>${brl(previsto)}</b></div><div><small>Já recebido</small><b class="pos">${brl(recebido)}</b></div><div><small>Falta receber</small><b>${brl(falta)}</b></div></div>`;
 }
 async function despesasEntre(deIso, ateIso) {
-  return (await q(sb.from("ad_lancamentos").select("valor").eq("tipo", "saida").gte("data", deIso).lt("data", ateIso))).reduce((s, l) => s + Number(l.valor), 0);
+  return (await q(sb.from("ad_lancamentos").select("valor,categoria").eq("tipo", "saida").gte("data", deIso).lt("data", ateIso))).filter((l) => !CATS_DIV.includes(l.categoria)).reduce((s, l) => s + Number(l.valor), 0);
 }
 
 // =====================================================================
@@ -874,13 +888,14 @@ async function telaCaixa() {
   const fim = somaDias(hoje, 1);
   const [a0, m0] = hoje.split("-").map(Number);
   const fimMes = new Date(Date.UTC(a0, m0, 1)).toISOString().slice(0, 10);
-  const [pags, ags, desp, agsMesTodo, pagsMesAnt] = await Promise.all([
+  const [pags, ags, desp0, agsMesTodo, pagsMesAnt] = await Promise.all([
     pagsEntre(ini, fim), agsEntre(ini, fim),
     q(sb.from("ad_lancamentos").select("*").eq("tipo", "saida").eq("pago", true).gte("data", ini).lt("data", fim).order("data", { ascending: false })),
     per === "mes" ? agsEntre(ini, fimMes) : Promise.resolve(null),
     per === "mes" ? (async () => { const i = new Date(Date.UTC(a0, m0 - 2, 1)).toISOString().slice(0, 10); const d = Math.min(Number(hoje.slice(8)), new Date(Date.UTC(a0, m0 - 1, 0)).getUTCDate()); return pagsEntre(i, somaDias(i, d)); })() : Promise.resolve(null),
   ]);
   const aPagar = await q(sb.from("ad_lancamentos").select("*").eq("tipo", "saida").eq("pago", false).order("vencimento"));
+  const desp = desp0.filter((l) => !CATS_DIV.includes(l.categoria)), movDiv = desp0.filter((l) => CATS_DIV.includes(l.categoria));
   const recebido = pags.reduce((s, p) => s + Number(p.valor), 0);
   const despesas = desp.reduce((s, l) => s + Number(l.valor), 0);
   // Lucro real: bruto − taxas da maquininha − material gasto nos atendimentos − despesas.
@@ -924,6 +939,7 @@ async function telaCaixa() {
       ${per === "mes" ? `<div class="meta">${meta ? `<small><span>Meta do mês: ${brl(meta)}</span><span>${pctMeta}%</span></small><div class="barra"><span style="width:${pctMeta}%"></span></div>` : ""}
         <small style="margin-top:8px"><span>Previsão do mês (recebido + agendado): <b>${brl(recebido + aindaVem)}</b></span></small></div>` : ""}
     </div>
+    <div id="divisao"></div>
     <div class="grade2" style="margin-bottom:12px">
       <button class="btn prim" id="pag-avulso">${IC.mais}Recebimento</button>
       <button class="btn" id="nova-desp">${IC.mais}Despesa</button>
@@ -966,6 +982,7 @@ async function telaCaixa() {
   r.querySelectorAll("[data-pagou]").forEach((b) => (b.onclick = async () => { await q(sb.from("ad_lancamentos").update({ pago: true, data: isoDia() }).eq("id", b.dataset.pagou)); toast("Conta paga e lançada nas despesas."); telaCaixa(); }));
   r.querySelectorAll("[data-del-desp]").forEach((b) => (b.onclick = async () => { if (!confirm("Apagar esta despesa?")) return; await q(sb.from("ad_lancamentos").delete().eq("id", b.dataset.delDesp)); toast("Despesa apagada."); telaCaixa(); }));
   dicas().then((h) => { if ($("dicas")) $("dicas").innerHTML = h; });
+  cartaoDivisao({ lucro, rot, movDiv, per });
 }
 
 const CATS_DESP = ["Compra de produtos", "Compra de materiais", "Produtos de limpeza", "Aluguel", "Energia", "Água", "Internet", "Manutenção", "Outras despesas"];
@@ -977,7 +994,7 @@ async function telaRelatorios() {
   const fimTudo = new Date(Date.UTC(a0, m0, 1)).toISOString().slice(0, 10);
   const [pags, desp, ags] = await Promise.all([
     pagsEntre(meses[0], fimTudo),
-    q(sb.from("ad_lancamentos").select("valor,data,categoria,fixa").eq("tipo", "saida").eq("pago", true).gte("data", meses[0]).lt("data", fimTudo)),
+    q(sb.from("ad_lancamentos").select("valor,data,categoria,fixa").eq("tipo", "saida").eq("pago", true).gte("data", meses[0]).lt("data", fimTudo)).then((l) => l.filter((x) => !CATS_DIV.includes(x.categoria))),
     agsEntre(meses[0], fimTudo),
   ]);
   const chaveMes = (iso) => iso.slice(0, 7);
@@ -1110,6 +1127,7 @@ function telaMais() {
     ["Gestão", [
       ["estoque", IC.caixa, "Loja e pedidos", "Produtos que você vende no site, estoque e pedidos"],
       ["relatorios", IC.grafico, "Relatórios", "Lucro real, fluxo de caixa, meses e PDF"],
+      ["divisao", IC.dinheiro, "Divisão do lucro", `${pctSalao()}% salão (reinvestir) · ${100 - pctSalao()}% seu`],
       ["taxas", IC.dinheiro, "Taxas e custos", "Maquininha e material de cada serviço"],
       ["fidelidade", IC.estrela, "Fidelidade", fid().ativo ? `A cada ${fid().a_cada} atendimentos: ${fid().recompensa}` : "Cartão fidelidade, aniversário e indicação"],
     ]],
@@ -1130,7 +1148,7 @@ function telaMais() {
   const r = tela(grupos.map(([g, itens]) => `<div class="tit-linha"><h2>${g}</h2></div><div class="lista">${itens.map(([k, ic, t, s]) => `<button class="item" data-m="${k}"><div class="ic">${ic}</div><div class="cresce"><b>${t}</b>${s ? `<div class="pequeno">${esc(s)}</div>` : ""}</div><span class="seta">›</span></button>`).join("")}</div>`).join("") + `
     <p class="pequeno" style="text-align:center;margin-top:20px">Eduardo Hair Gestão · versão 1.0<br>Mesma agenda do site de agendamento</p>`);
   r.querySelectorAll("[data-m]").forEach((b) => (b.onclick = () => ({
-    estoque: () => vaiPara("estoque"), relatorios: telaRelatorios, taxas: telaTaxas, fidelidade: telaFidelidade, equipe: telaEquipe, servicos: telaServicos, horarios: telaHorarios, notificacoes: telaNotificacoes, chegar: comoChegar, site: telaSite, salao: dadosSalao, instalar: instrucoesInstalar, senha: novaSenha, seguranca: telaSeguranca, aparencia: telaAparencia, automacoes: telaAutomacoes, tutorial: () => mostraTutorial(),
+    estoque: () => vaiPara("estoque"), relatorios: telaRelatorios, divisao: ajustaDivisao, taxas: telaTaxas, fidelidade: telaFidelidade, equipe: telaEquipe, servicos: telaServicos, horarios: telaHorarios, notificacoes: telaNotificacoes, chegar: comoChegar, site: telaSite, salao: dadosSalao, instalar: instrucoesInstalar, senha: novaSenha, seguranca: telaSeguranca, aparencia: telaAparencia, automacoes: telaAutomacoes, tutorial: () => mostraTutorial(),
     sair: async () => { if (confirm("Sair do app?")) { await sb.auth.signOut(); location.reload(); } },
   })[b.dataset.m]()));
 }

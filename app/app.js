@@ -6,6 +6,18 @@ const SITE = "https://agenda-deluxe.pages.dev/nayara/";
 const CONFIRMAR = "https://agenda-deluxe.pages.dev/confirmar?id=";
 const GOOGLE = "https://share.google/AJ7Rs87t4wpcrDhNh";
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+// Cada app mostra só os dados do próprio salão (uma mesma conta pode ter acesso a mais de um salão)
+const ESCOPO_SALAO = new Set(["ad_agendamentos", "ad_avisos", "ad_bloqueios", "ad_clientes", "ad_equipe", "ad_fidelidade", "ad_horarios", "ad_lancamentos", "ad_loja", "ad_movimentos", "ad_pagamentos", "ad_pedidos", "ad_produtos", "ad_servicos"]);
+{
+  const _from = sb.from.bind(sb);
+  sb.from = (t) => {
+    const b = _from(t);
+    if (!ESCOPO_SALAO.has(t)) return b;
+    const filtra = (r) => (st.prof ? r.eq("profissional_id", st.prof.id) : r);
+    return { select: (...a) => filtra(b.select(...a)), update: (...a) => filtra(b.update(...a)), delete: (...a) => filtra(b.delete(...a)), insert: (...a) => b.insert(...a), upsert: (...a) => b.upsert(...a) };
+  };
+}
+
 const TZ = "America/Sao_Paulo";
 
 // ---------- utilidades ----------
