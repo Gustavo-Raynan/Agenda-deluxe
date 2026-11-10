@@ -207,3 +207,126 @@ function salvaPDF(titulo) {
   const antes = document.title; document.title = titulo || "Nay Nails Gestão";
   setTimeout(() => { print(); document.title = antes; document.body.classList.remove("imprimindo"); }, 100);
 }
+
+// =====================================================================
+// AGENDAMENTO RECORRENTE
+// =====================================================================
+const REPETE = [["nao", "Não repete"], ["semana", "Toda semana"], ["2semanas", "A cada 2 semanas"], ["mes", "Todo mês"], ["dia", "Todo dia"], ["dias", "Dias da semana"], ["datas", "Datas específicas"]];
+const SEM_CURTO = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const diasEntre = (a, b) => Math.round((Date.UTC(...b.split("-").map((n, i) => i === 1 ? n - 1 : +n)) - Date.UTC(...a.split("-").map((n, i) => i === 1 ? n - 1 : +n))) / 864e5);
+const semanaDe = (iso) => new Date(iso + "T12:00:00Z").getUTCDay();
+function somaMes(iso, n) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const alvo = new Date(Date.UTC(y, m - 1 + n, 1)); const ult = new Date(Date.UTC(alvo.getUTCFullYear(), alvo.getUTCMonth() + 1, 0)).getUTCDate();
+  alvo.setUTCDate(Math.min(d, ult)); return alvo.toISOString().slice(0, 10);
+}
+
+function htmlRepetir() {
+  return `<label class="f">Repetir</label>
+    <select class="campo" data-rep>${REPETE.map(([v, t]) => `<option value="${v}">${t}</option>`).join("")}</select>
+    <div class="hide" data-rep-dias style="margin-top:10px"><div class="opcoes">${SEM_CURTO.map((t, i) => `<button type="button" data-sem="${i}">${t}</button>`).join("")}</div></div>
+    <div class="hide" data-rep-datas style="margin-top:10px">
+      <div style="display:flex;gap:8px"><input class="campo" type="date" data-nova-data min="${isoDia()}"><button type="button" class="btn claro" data-add-data style="flex:none">Adicionar</button></div>
+      <div class="opcoes" data-lista-datas style="margin-top:8px"></div>
+    </div>
+    <div class="hide" data-rep-fim>
+      <label class="f">Termina</label>
+      <div class="seg" data-fim-tipo><button type="button" class="on" data-v="vezes">Depois de</button><button type="button" data-v="data">Em uma data</button></div>
+      <div data-fim-vezes style="display:flex;align-items:center;gap:10px"><input class="campo" type="number" min="2" max="60" value="8" data-vezes style="width:110px"><span>vezes</span></div>
+      <div class="hide" data-fim-data><input class="campo" type="date" data-ate min="${isoDia()}"></div>
+    </div>
+    <p class="pequeno hide" data-rep-prev style="margin-top:10px;padding:10px 12px;background:var(--soft);border-radius:12px"></p>`;
+}
+
+// liga os controles; primeiro() devolve o ISO do 1º horário (ou null)
+function ligaRepetir(r, primeiro) {
+  const $ = (s) => r.querySelector(s);
+  const sems = new Set(), extras = new Set(); let fimTipo = "vezes";
+  const tipo = () => $("[data-rep]").value;
+  const ocorrencias = () => {
+    const p = primeiro(); if (!p) return [];
+    const base = isoDia(p), t = tipo(), out = [base];
+    if (t === "nao") return [p];
+    if (t === "datas") [...extras].filter((d) => d > base).sort().forEach((d) => out.push(d));
+    else {
+      const max = fimTipo === "vezes" ? Math.max(2, Math.min(60, Number($("[data-vezes]").value) || 2)) : 60;
+      const ate = fimTipo === "data" ? $("[data-ate]").value : null;
+      if (fimTipo === "data" && !ate) return [p];
+      let i = 0, d = base;
+      while (out.length < max && i < 400) {
+        i++;
+        d = t === "dia" || t === "dias" ? somaDias(base, i) : t === "semana" ? somaDias(base, i * 7) : t === "2semanas" ? somaDias(base, i * 14) : somaMes(base, i);
+        if (ate && d > ate) break;
+        if (t === "dias" && !sems.has(semanaDe(d))) continue;
+        out.push(d);
+      }
+    }
+    return out.map((d) => new Date(new Date(p).getTime() + diasEntre(base, d) * 864e5).toISOString());
+  };
+  const regra = () => {
+    const t = tipo(), h = primeiro() ? hora(primeiro()) : "";
+    if (t === "dias") return `${[...sems].sort().map((i) => SEM_CURTO[i]).join(", ")} às ${h}`;
+    if (t === "datas") return "Datas específicas";
+    return `${REPETE.find((x) => x[0] === t)[1]} às ${h}`;
+  };
+  const prev = () => {
+    const t = tipo(), el = $("[data-rep-prev]");
+    $("[data-rep-dias]").classList.toggle("hide", t !== "dias");
+    $("[data-rep-datas]").classList.toggle("hide", t !== "datas");
+    $("[data-rep-fim]").classList.toggle("hide", t === "nao" || t === "datas");
+    if (t === "nao") return el.classList.add("hide");
+    el.classList.remove("hide");
+    const oc = ocorrencias();
+    if (!primeiro()) { el.textContent = "Escolha o dia e o horário do primeiro atendimento."; return; }
+    if (oc.length < 2) { el.textContent = t === "datas" ? "Adicione as outras datas." : t === "dias" ? "Toque nos dias da semana." : "Escolha quando a série termina."; return; }
+    const lista = oc.slice(0, 6).map((x) => `${SEM_CURTO[semanaDe(isoDia(x))]} ${dataCurta(x)}`).join(" · ");
+    el.innerHTML = `🔁 Serão criados <b>${oc.length} horários</b> às ${hora(oc[0])}:<br>${lista}${oc.length > 6 ? ` … até ${dataCurta(oc[oc.length - 1])}` : ""}`;
+  };
+  $("[data-rep]").onchange = () => {
+    if (tipo() === "dias" && !sems.size && primeiro()) { sems.add(semanaDe(isoDia(primeiro()))); r.querySelector(`[data-sem="${semanaDe(isoDia(primeiro()))}"]`).classList.add("on"); }
+    prev();
+  };
+  r.querySelectorAll("[data-sem]").forEach((b) => (b.onclick = () => { const i = +b.dataset.sem; sems.has(i) ? sems.delete(i) : sems.add(i); b.classList.toggle("on", sems.has(i)); prev(); }));
+  r.querySelectorAll("[data-fim-tipo] button").forEach((b) => (b.onclick = () => {
+    fimTipo = b.dataset.v; r.querySelectorAll("[data-fim-tipo] button").forEach((x) => x.classList.toggle("on", x === b));
+    $("[data-fim-vezes]").classList.toggle("hide", fimTipo !== "vezes"); $("[data-fim-data]").classList.toggle("hide", fimTipo !== "data"); prev();
+  }));
+  $("[data-vezes]").oninput = prev; $("[data-ate]").onchange = prev;
+  const desenhaDatas = () => {
+    $("[data-lista-datas]").innerHTML = [...extras].sort().map((d) => `<button type="button" class="on" data-tira="${d}">${dataCurta(d + "T12:00:00-03:00")} ✕</button>`).join("");
+    r.querySelectorAll("[data-tira]").forEach((b) => (b.onclick = () => { extras.delete(b.dataset.tira); desenhaDatas(); prev(); }));
+  };
+  $("[data-add-data]").onclick = () => { const v = $("[data-nova-data]").value; if (!v) return toast("Escolha a data.", 1); extras.add(v); $("[data-nova-data]").value = ""; desenhaDatas(); prev(); };
+  return { ocorrencias, regra, atualiza: prev, repete: () => tipo() !== "nao" };
+}
+
+// cria a série pulando horários que já têm cliente
+async function salvaSerie(linhaBase, inicios, minutos, regra) {
+  const fins = inicios.map((i) => new Date(new Date(i).getTime() + minutos * 60000).toISOString());
+  const ocupados = await q(sb.from("ad_agendamentos").select("inicio,fim").in("status", ATIVOS).lt("inicio", fins[fins.length - 1]).gt("fim", inicios[0]));
+  const bate = (i) => ocupados.some((o) => new Date(o.inicio) < new Date(fins[i]) && new Date(o.fim) > new Date(inicios[i]));
+  const livres = inicios.map((x, i) => i).filter((i) => !bate(i)), choques = inicios.filter((x, i) => bate(i));
+  if (choques.length && !confirm(`${choques.length} data(s) já têm cliente nesse horário:\n${choques.map(dataCurta).join(", ")}\n\nCriar as outras ${livres.length} e pular essas?`)) return null;
+  if (!livres.length) { toast("Todos esses horários já estão ocupados.", 1); return null; }
+  const serie = crypto.randomUUID();
+  const linhas = livres.map((i) => ({ ...linhaBase, inicio: inicios[i], fim: fins[i], serie_id: serie, serie_regra: regra }));
+  const { error } = await sb.from("ad_agendamentos").insert(linhas);
+  if (error) { toast(erroMsg(error), 1); return null; }
+  return linhas;
+}
+
+function msgSerie(a, linhas) {
+  const n = primeiroNome(a.cliente_nome);
+  const datas = linhas.map((l) => `• ${diaSemana(l.inicio).slice(0, 3)} ${dataCurta(l.inicio)} às ${hora(l.inicio)}`).join("\n");
+  return `Olá, ${n}! 💅 Seus horários fixos de *${a.servico_nome}* estão confirmados (${linhas[0].serie_regra.toLowerCase()}):\n\n${datas}\n\n⚠️ *Política de cancelamento:* cancelamentos com menos de 24h de antecedência têm taxa de 100% do valor do serviço.\n\nAté lá! Nayara Fernandes · Nails e cuidados`;
+}
+
+// cancela este e os próximos da série
+async function cancelaSerie(a) {
+  const prox = await q(sb.from("ad_agendamentos").select("id,inicio").eq("serie_id", a.serie_id).in("status", ATIVOS).gte("inicio", a.inicio).order("inicio"));
+  if (!prox.length) return toast("Não há próximos horários nesta série.", 1);
+  if (!confirm(`Cancelar ${prox.length} horário(s) desta série, de ${dataCurta(prox[0].inicio)} até ${dataCurta(prox[prox.length - 1].inicio)}?`)) return;
+  const { error } = await sb.from("ad_agendamentos").update({ status: "cancelado" }).in("id", prox.map((p) => p.id));
+  if (error) return toast(erroMsg(error), 1);
+  toast(`${prox.length} horário(s) cancelados.`); fechaFolha(); atualizaTela();
+}

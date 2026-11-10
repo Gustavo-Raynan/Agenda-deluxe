@@ -308,7 +308,7 @@ function cartaoAg(a, mostraData) {
   const pago = a.pago ? ` · <span class="chip pago">Pago</span>` : "";
   return `<div class="ag ${a.status}" data-ag="${a.id}" style="--cs:${corServico(a)}">
     <div class="h">${hora(a.inicio)}<small>${mostraData ? dataCurta(a.inicio) : "até " + hora(a.fim)}</small></div>
-    <div class="cresce"><div class="n">${esc(a.cliente_nome)}${a.atrasou ? ' <span class="chip faltou" style="font-size:10.5px">Atrasou</span>' : ""}</div><div class="s"><i class="bola" style="background:${corServico(a)}"></i>${esc(a.servico_nome)}</div></div>
+    <div class="cresce"><div class="n">${esc(a.cliente_nome)}${a.serie_id ? ' <span title="Horário fixo" style="font-size:12px">🔁</span>' : ""}${a.atrasou ? ' <span class="chip faltou" style="font-size:10.5px">Atrasou</span>' : ""}</div><div class="s"><i class="bola" style="background:${corServico(a)}"></i>${esc(a.servico_nome)}</div></div>
     <div class="d"><span class="chip ${a.status}">${STATUS[a.status]}</span><span class="v">${brl(a.preco)}</span></div>
   </div>`;
 }
@@ -558,6 +558,7 @@ async function detalheAg(id) {
         <dt>Serviço</dt><dd>${esc(a.servico_nome)}</dd>
         <dt>Data</dt><dd>${dataLonga(a.inicio)}</dd>
         <dt>Horário</dt><dd>${hora(a.inicio)} às ${hora(a.fim)} · ${dur(Math.round((new Date(a.fim) - new Date(a.inicio)) / 60000))}</dd>
+        ${a.serie_id ? `<dt>Repete</dt><dd>🔁 ${esc(a.serie_regra || "Sim")}</dd>` : ""}
         <dt>Valor</dt><dd>${brl(a.preco)}</dd>
         <dt>Recebido</dt><dd>${pago ? brl(pago) + " · " + pags.map((p) => FORMAS[p.forma]).join(", ") : "—"}</dd>
         <dt>Telefone</dt><dd><a href="tel:+${zapNum(a.cliente_whatsapp)}">${fmtTel(a.cliente_whatsapp)}</a></dd>
@@ -575,6 +576,7 @@ async function detalheAg(id) {
       </div>
       ${ATIVOS.includes(a.status) || a.status === "concluido" ? `<div class="grade2">${!a.pago ? `<button class="btn claro" data-sinal>${a.sinal ? "Sinal: " + brl(a.sinal) : "Registrar sinal"}</button>` : ""}<button class="btn claro" data-atraso>${a.atrasou ? "Tirar atraso" : "Marcar atraso"}</button></div>` : ""}
       ${ATIVOS.includes(a.status) ? `<div class="grade2"><button class="btn claro" data-remarcar>Remarcar</button>${passado ? `<button class="btn perigo" data-st="faltou">Não compareceu</button>` : `<button class="btn perigo" data-cancelar>Cancelar</button>`}</div>` : ""}
+      ${a.serie_id && ATIVOS.includes(a.status) ? `<button class="btn claro cheio" data-cancela-serie>🔁 Cancelar este e os próximos da série</button>` : ""}
       ${a.status === "concluido" || a.pago ? `<button class="btn claro cheio" data-pagar>${IC.dinheiro}${a.pago ? "Registrar outro pagamento" : "Registrar pagamento"}</button>` : ""}
       ${["cancelado", "faltou"].includes(a.status) ? `<button class="btn claro cheio" data-reabrir>Reabrir agendamento</button>` : ""}
     </div>`, (r) => {
@@ -602,6 +604,7 @@ async function detalheAg(id) {
     r.querySelector("[data-sinal]")?.addEventListener("click", () => registraPagamento(a, false, true));
     r.querySelector("[data-atraso]")?.addEventListener("click", async () => { await q(sb.from("ad_agendamentos").update({ atrasou: !a.atrasou }).eq("id", a.id)); toast(a.atrasou ? "Atraso removido." : "Atraso registrado."); detalheAg(a.id); atualizaTela(); });
     r.querySelector("[data-remarcar]")?.addEventListener("click", () => remarcar(a));
+    r.querySelector("[data-cancela-serie]")?.addEventListener("click", () => cancelaSerie(a));
     r.querySelector("[data-cli]").onclick = () => a.cliente_id ? detalheCliente(a.cliente_id) : toast("Cliente sem cadastro.", 1);
     r.querySelector("[data-msgs]").onclick = () => mensagensProntas(a);
   });
@@ -680,11 +683,14 @@ async function novoAgendamento({ data, cliente }) {
       <label class="f">Serviço</label>
       <select class="campo" data-serv><option value="">Escolha…</option>${servs.map((s) => `<option value="${s.id}">${esc(s.nome)} · ${brl(s.preco)} · ${dur(s.duracao_min)}</option>`).join("")}</select>
       <div data-horario></div>
+      ${htmlRepetir()}
       <label class="f">Observação</label><textarea class="campo" data-obs placeholder="Opcional"></textarea>
     </div>
     <button class="btn ouro cheio" data-salvar>Agendar</button>`, (r) => {
     const serv = () => servs.find((s) => s.id === r.querySelector("[data-serv]").value);
-    const sel = seletorHorario(r, () => serv()?.duracao_min, data || isoDia(), (t) => (horario = t));
+    let rep = null;
+    const sel = seletorHorario(r, () => serv()?.duracao_min, data || isoDia(), (t) => { horario = t; rep?.atualiza(); });
+    rep = ligaRepetir(r, () => horario);
     r.querySelector("[data-serv]").onchange = () => sel.recarrega();
     r.querySelector("[data-cli]").oninput = (e) => {
       const c = clientes.find((x) => x.nome.toLowerCase() === e.target.value.trim().toLowerCase());
@@ -697,11 +703,22 @@ async function novoAgendamento({ data, cliente }) {
       if (!s) return toast("Escolha o serviço.", 1);
       if (!horario) return toast("Escolha o horário.", 1);
       const ini = new Date(horario);
-      const { error } = await sb.from("ad_agendamentos").insert({
+      const base = {
         profissional_id: st.prof.id, servico_id: s.id, servico_nome: s.nome, preco: s.preco,
         cliente_nome: nome, cliente_whatsapp: zap, cliente_id: cli?.id || null, status: "confirmado",
-        inicio: ini.toISOString(), fim: new Date(ini.getTime() + s.duracao_min * 60000).toISOString(),
         observacao: r.querySelector("[data-obs]").value.trim() || null,
+      };
+      if (rep.repete()) {
+        const inicios = rep.ocorrencias();
+        if (inicios.length < 2) return toast("Complete a repetição (dias, datas ou quando termina).", 1);
+        const linhas = await salvaSerie(base, inicios, s.duracao_min, rep.regra());
+        if (!linhas) return;
+        toast(`${linhas.length} horários agendados! 🔁`);
+        if (confirm("Enviar a lista de horários para a cliente no WhatsApp?")) abreZap(`https://wa.me/${zapNum(zap)}?text=${encodeURIComponent(msgSerie(base, linhas))}`);
+        fechaFolha(); st.dia = isoDia(ini); atualizaTela(); return;
+      }
+      const { error } = await sb.from("ad_agendamentos").insert({
+        ...base, inicio: ini.toISOString(), fim: new Date(ini.getTime() + s.duracao_min * 60000).toISOString(),
       });
       if (error) return toast(erroMsg(error), 1);
       toast("Agendado!");
