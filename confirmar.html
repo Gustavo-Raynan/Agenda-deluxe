@@ -37,10 +37,12 @@ async function acao(a) {
       <div class="stack" style="margin-top:16px">
         ${data.status === "marcado" ? `<button class="btn-gold btn-full" id="b-ok">Confirmar presença</button>` : ""}
         <button class="btn-line btn-full" id="b-cancel" style="color:var(--bad)">Não vou poder ir</button>
-      </div>` : ""}`;
+      </div>
+      ${data.slug === "nayfernandes" ? `<p style="margin-top:16px;padding:12px 14px;border-radius:14px;background:#D5A85C1F;border:1px solid #D5A85C66;font-size:.92rem;text-align:left">⚠️ <b>Política de cancelamento:</b> cancelamentos com menos de 24 horas de antecedência têm taxa de 100% do valor do serviço.</p>` : ""}` : ""}`;
   const ok = document.getElementById("b-ok"), c = document.getElementById("b-cancel");
   if (ok) ok.onclick = () => acao("confirmar");
-  if (c) c.onclick = () => { if (confirm("Desmarcar este horário? Ele ficará livre para outra pessoa.")) acao("cancelar"); };
+  const tardio = new Date(data.inicio) - new Date() < 864e5;
+  if (c) c.onclick = () => { if (confirm(data.slug === "nayfernandes" && tardio ? "Falta menos de 24 horas. Pela política do salão, o cancelamento tem taxa de 100% do valor do serviço. Desmarcar mesmo assim?" : "Desmarcar este horário? Ele ficará livre para outra pessoa.")) acao("cancelar"); };
 }
 if (id && /^[0-9a-f-]{36}$/i.test(id)) acao("ver"); else box.innerHTML = `<h2>Link inválido</h2>`;
 </script>

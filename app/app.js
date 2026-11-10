@@ -518,10 +518,11 @@ async function telaAgenda() {
 function mensagem(a, tipo) {
   const n = primeiroNome(a.cliente_nome), d = dataLonga(a.inicio), h = hora(a.inicio);
   const end = st.prof.endereco ? `\n📍 ${st.prof.endereco}` : "";
+  const pol = `\n\n⚠️ *Política de cancelamento:* cancelamentos com menos de 24h de antecedência têm taxa de 100% do valor do serviço.`;
   return ({
-    confirmacao: `Olá, ${n}! 💅 Seu horário de *${a.servico_nome}* está confirmado para *${d}* às *${h}*.${end}\n\nAté lá! Nayara Fernandes · Nails e cuidados`,
-    lembrete: `Olá, ${n}! 😊 Passando para lembrar do seu horário de *${a.servico_nome}* ${isoDia(a.inicio) === somaDias(isoDia(), 1) ? "amanhã" : "em " + d} às *${h}*.\n\nConfirme ou desmarque por aqui:\n${CONFIRMAR}${a.id}`,
-    alteracao: `Olá, ${n}! Seu horário de *${a.servico_nome}* foi alterado para *${d}* às *${h}*. Se não puder, me avise por aqui. 💗`,
+    confirmacao: `Olá, ${n}! 💅 Seu horário de *${a.servico_nome}* está confirmado para *${d}* às *${h}*.${end}${pol}\n\nAté lá! Nayara Fernandes · Nails e cuidados`,
+    lembrete: `Olá, ${n}! 😊 Passando para lembrar do seu horário de *${a.servico_nome}* ${isoDia(a.inicio) === somaDias(isoDia(), 1) ? "amanhã" : "em " + d} às *${h}*.\n\nConfirme ou desmarque por aqui:\n${CONFIRMAR}${a.id}${pol}`,
+    alteracao: `Olá, ${n}! Seu horário de *${a.servico_nome}* foi alterado para *${d}* às *${h}*. Se não puder, me avise por aqui. 💗${pol}`,
     cancelamento: `Olá, ${n}! Precisei cancelar seu horário de *${a.servico_nome}* de ${d} às ${h}. Desculpe! Você pode escolher outro horário aqui: ${SITE}`,
     agradecimento: `Obrigada pela visita, ${n}! 💗 Foi um prazer cuidar de você. Quando quiser voltar, é só agendar: ${SITE}`,
     avaliacao: `Oi, ${n}! Se gostou do atendimento, me ajuda muito deixar sua avaliação no Google ⭐: ${GOOGLE}\nObrigada! 💗`,

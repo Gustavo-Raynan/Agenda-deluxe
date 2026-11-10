@@ -252,6 +252,12 @@ header .cta::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:4
 .meu{display:flex;flex-direction:column;gap:10px;background:var(--field);border:1px solid var(--b);border-radius:16px;padding:14px;margin:8px 0}
 .meu b{font-weight:600}.meu small{display:block;color:var(--m);font-size:14px;margin-top:3px}
 .meu .des{border-color:#C8757566;color:#E59A9A}
+.politica{background:#D5A85C1A;border:1px solid #D5A85C55;border-radius:16px;padding:13px 14px;margin:16px 0 4px;font-size:14px;line-height:1.5;color:var(--t)}
+.politica b{color:#E8C27D}.politica p{margin:4px 0 0;color:var(--t)}
+.aceite{margin:12px 0 4px;font-weight:500}.aceite.pisca{animation:pisca .4s 3;color:#E8C27D}
+@keyframes pisca{50%{transform:translateX(4px)}}
+.check input[type=checkbox]{width:22px!important;height:22px;min-width:22px;padding:0!important;margin:0;border-radius:6px;accent-color:#C9A86A;-webkit-appearance:checkbox;appearance:auto;background:none;box-shadow:none}
+.aceite{display:flex;gap:10px;align-items:center;cursor:pointer;font-size:15px}
 </style>
 </head>
 <body>
@@ -294,6 +300,8 @@ header .cta::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:4
   <textarea id="obs" maxlength="200" placeholder="Ex.: quero esmalte vermelho, unha quebrada…"></textarea>
   <input class="hp" id="site" tabindex="-1" autocomplete="off" aria-hidden="true">
   <div class="escolha hide" id="escolha"></div>
+  <div class="politica"><b>⚠️ Política de cancelamento</b><p>Cancelamentos com <b>menos de 24 horas</b> de antecedência têm <b>taxa de 100% do valor do serviço</b>. Por isso a Nayara envia a mensagem de confirmação um dia antes. Imprevistos acontecem, é só avisar o quanto antes! 💗</p></div>
+  <label class="check aceite"><input type="checkbox" id="aceite"> Li e concordo com a política de cancelamento</label>
   <p class="msg" id="msg" role="alert"></p>
   <button class="go" id="enviar" type="button">Confirmar agendamento</button>
   <p class="note" style="text-align:center">Seu horário fica reservado na hora. Depois é só enviar o resumo no WhatsApp.</p>
@@ -301,7 +309,8 @@ header .cta::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:4
 
 <section id="meus">
   <h2>Precisa desmarcar?</h2>
-  <p class="sub">Digite o mesmo nome e WhatsApp que usou no agendamento para ver seus horários. Dá para desmarcar até 2 horas antes.</p>
+  <p class="sub">Digite o mesmo nome e WhatsApp que usou no agendamento para ver seus horários.</p>
+  <div class="politica"><b>⚠️ Política de cancelamento</b><p>Cancelamentos com <b>menos de 24 horas</b> de antecedência têm <b>taxa de 100% do valor do serviço</b>. Por isso a Nayara envia a mensagem de confirmação um dia antes. Imprevistos acontecem, é só avisar o quanto antes! 💗</p></div>
   <div id="meusLista"></div>
   <div id="meusForm">
     <label class="f" for="mNome" style="margin-top:6px">Seu primeiro nome</label><input id="mNome" autocomplete="given-name" placeholder="Ex.: Juliana">
@@ -332,7 +341,8 @@ header .cta::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:4
     Enviar resumo no WhatsApp</a>
   <button type="button" class="btn2" id="lembrete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>Salvar lembrete no meu celular</button>
   <button type="button" class="btn2" id="novo">Fazer outro agendamento</button>
-  <p class="note" style="text-align:center;margin-top:10px">Imprevisto? Você pode desmarcar aqui mesmo no site, em <b>Precisa desmarcar?</b>, até 2 horas antes.</p>
+  <div class="politica" style="margin-top:14px;text-align:left"><b>⚠️ Política de cancelamento</b><p>Cancelamentos com <b>menos de 24 horas</b> de antecedência têm <b>taxa de 100% do valor do serviço</b>. Por isso a Nayara envia a mensagem de confirmação um dia antes. Imprevistos acontecem, é só avisar o quanto antes! 💗</p></div>
+  <p class="note" style="text-align:center;margin-top:10px">Imprevisto? Desmarque aqui mesmo no site, em <b>Precisa desmarcar?</b>.</p>
 </section>
 
 <section id="como-chegar">
@@ -456,6 +466,7 @@ async function meusHorarios(silencioso) {
   if (!data.length) { if (!silencioso) $("meusLista").innerHTML = `<p class="note" style="margin:6px 0 10px">Nenhum horário marcado com esse nome e WhatsApp. Confira se digitou igual ao agendamento.</p>`; return; }
   $("meusLista").innerHTML = data.map((a) => `<div class="meu" data-id="${a.id}">
       <div><b>${esc(a.servico)}</b><small>${dataLonga(a.inicio)} às <b>${hora(a.inicio)}</b> · ${a.status === "confirmado" ? "confirmado" : "a confirmar"}</small></div>
+      ${a.pode && a.tardio ? `<small style="color:#E3BE7E">⚠️ Falta menos de 24h: desmarcar agora tem taxa de 100% (${brl(a.preco)}).</small>` : ""}
       ${a.pode ? `<button type="button" class="btn2 des" data-des="${a.id}">Desmarcar</button>` : `<a class="btn2" target="_blank" rel="noopener" href="https://wa.me/${String(st.pag?.whatsapp || "5531992746599").replace(/\D/g, "")}?text=${encodeURIComponent(`Oi, Nayara! Preciso desmarcar meu horário de ${dataLonga(a.inicio)} às ${hora(a.inicio)} (${a.servico}).`)}">Falar com a Nayara</a>`}
     </div>`).join("") + (data.some((a) => !a.pode) ? `<p class="note">Falta menos de 2 horas para um dos horários: nesse caso, avise a Nayara pelo WhatsApp.</p>` : "");
   $("meusLista").querySelectorAll("[data-des]").forEach((b) => (b.onclick = () => desmarca(data.find((x) => x.id === b.dataset.des))));
@@ -463,8 +474,9 @@ async function meusHorarios(silencioso) {
 function desmarca(a) {
   $("modalCx").innerHTML = `<h3 style="margin-top:0">Desmarcar horário?</h3>
     <p style="margin-top:6px"><b style="color:var(--t)">${esc(a.servico)}</b><br>${dataLonga(a.inicio)} às ${hora(a.inicio)}</p>
+    ${a.tardio ? `<p class="politica" style="margin-top:12px"><b>⚠️ Cancelamento com menos de 24h</b><br>Pela política do salão, será cobrada a <b>taxa de 100% (${brl(a.preco)})</b>.</p>` : `<p style="margin-top:8px;font-size:13.5px">Faltam mais de 24h: sem taxa de cancelamento. ✓</p>`}
     <label class="f" for="mMot" style="margin-top:12px">Motivo <small>(opcional)</small></label><input id="mMot" maxlength="120" placeholder="Ex.: imprevisto no trabalho">
-    <div class="papeis"><button type="button" data-volta>Voltar</button><button type="button" data-sim class="on">Sim, desmarcar</button></div>`;
+    <div class="papeis"><button type="button" data-volta>Voltar</button><button type="button" data-sim class="on">${a.tardio ? "Desmarcar mesmo assim" : "Sim, desmarcar"}</button></div>`;
   $("modalCor").classList.remove("hide");
   const fecha = () => $("modalCor").classList.add("hide");
   $("modalCor").onclick = (e) => { if (e.target === $("modalCor")) fecha(); };
@@ -473,7 +485,7 @@ function desmarca(a) {
     e.target.disabled = true; e.target.textContent = "Desmarcando…";
     const { error } = await sb.rpc("ad_cliente_desmarcar", { p_id: a.id, p_whatsapp: $("mTel").value.replace(/\D/g, ""), p_motivo: $("mMot").value.trim() || null });
     if (error) { e.target.disabled = false; e.target.textContent = "Sim, desmarcar"; $("modalCx").querySelector("p").insertAdjacentHTML("afterend", `<p style="color:#E59A9A;margin-top:8px">${esc(error.message.replace(/^.*?: /, ""))}</p>`); return; }
-    $("modalCx").innerHTML = `<h3 style="margin-top:0">Horário desmarcado ✓</h3><p style="margin-top:6px">A Nayara já foi avisada. O horário ficou livre para outra cliente.</p>
+    $("modalCx").innerHTML = `<h3 style="margin-top:0">Horário desmarcado ✓</h3><p style="margin-top:6px">A Nayara já foi avisada. O horário ficou livre para outra cliente.${a.tardio ? `<br><br>Como foi com menos de 24h, a taxa de ${brl(a.preco)} será combinada com a Nayara pelo WhatsApp.` : ""}</p>
       <div class="papeis"><button type="button" data-fechar>Fechar</button><button type="button" class="on" data-outro>Marcar outro dia</button></div>`;
     $("modalCx").querySelector("[data-fechar]").onclick = fecha;
     $("modalCx").querySelector("[data-outro]").onclick = () => { fecha(); vai($("servicos")); };
@@ -613,6 +625,7 @@ $("enviar").onclick = async () => {
   if (!st.hora) { msg("Escolha o dia e o horário."); return vai($("agendar")); }
   if (nome.length < 2) { msg("Escreva seu nome."); return $("nome").focus(); }
   if (tel.length < 10) { msg("Escreva seu WhatsApp com DDD."); return $("tel").focus(); }
+  if (!$("aceite").checked) { msg("Leia e marque que concorda com a política de cancelamento."); $("aceite").closest("label").classList.add("pisca"); setTimeout(() => $("aceite").closest("label").classList.remove("pisca"), 1200); return $("aceite").focus(); }
   msg("");
   $("enviar").disabled = true; $("enviar").textContent = "Reservando…";
   const { data: id, error } = await sb.rpc("ad_agendar_varios", { p_slug: SLUG, p_servicos: [st.serv.id], p_inicio: st.hora, p_nome: nome, p_whatsapp: tel, p_obs: obs || null });
@@ -633,7 +646,8 @@ function confirmado() {
   const texto = `Olá, Nayara! 💅 Acabei de agendar pelo site:\n\n` +
     `*Serviço:* ${a.serv.nome}\n*Dia:* ${dataLonga(a.inicio)}\n*Horário:* ${hora(a.inicio)}\n` +
     `*Valor:* a partir de ${brl(a.serv.preco)}\n*Nome:* ${a.nome}\n*WhatsApp:* ${fmtTel(a.tel)}` +
-    (a.obs ? `\n*Observação:* ${a.obs}` : "");
+    (a.obs ? `\n*Observação:* ${a.obs}` : "") +
+    `\n\n✅ Li e concordo com a política de cancelamento: cancelamentos com menos de 24h têm taxa de 100% do valor do serviço.`;
   $("okWhats").href = `https://wa.me/${st.pag.whatsapp}?text=${encodeURIComponent(texto)}`;
   $("servicos").classList.add("hide"); $("agendar").classList.add("hide");
   $("confirmado").classList.remove("hide", "rv"); $("confirmado").classList.add("mostra"); atualiza();
