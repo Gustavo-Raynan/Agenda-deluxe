@@ -34,8 +34,8 @@ const somaDias = (iso, n) => { const d = new Date(iso + "T12:00:00Z"); d.setUTCD
 const inicioDia = (iso) => new Date(iso + "T00:00:00-03:00").toISOString();
 const meioDia = (iso) => new Date(iso + "T12:00:00Z");
 const dur = (m) => (m < 60 ? m + " min" : Math.floor(m / 60) + "h" + (m % 60 ? String(m % 60).padStart(2, "0") : ""));
-const zapNum = (n) => { n = String(n || "").replace(/\D/g, ""); return n.length <= 11 ? "55" + n : n; };
-const fmtTel = (z) => { z = String(z || "").replace(/\D/g, "").replace(/^55(?=\d{10,11}$)/, ""); return z.length >= 10 ? `(${z.slice(0, 2)}) ${z.slice(2, -4)}-${z.slice(-4)}` : z; };
+const zapNum = (n) => { n = String(n || "").replace(/\D/g, "").replace(/^0+/, ""); return n.length <= 11 ? "55" + n : n; };
+const fmtTel = (z) => { z = String(z || "").replace(/\D/g, "").replace(/^0+/, "").replace(/^55(?=\d{10,11}$)/, ""); return z.length >= 10 ? `(${z.slice(0, 2)}) ${z.slice(2, -4)}-${z.slice(-4)}` : z; };
 const iniciais = (n) => String(n || "?").trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join("").toUpperCase();
 const primeiroNome = (n) => String(n || "").trim().split(/\s+/)[0];
 const STATUS = { marcado: "A confirmar", confirmado: "Confirmado", chegou: "Chegou", atendendo: "Em atendimento", concluido: "Concluído", faltou: "Não compareceu", cancelado: "Cancelado" };
@@ -576,9 +576,9 @@ async function detalheAg(id) {
         <button class="btn claro" data-cli>Ver cliente</button>
       </div>
       ${ATIVOS.includes(a.status) || a.status === "concluido" ? `<div class="grade2">${!a.pago ? `<button class="btn claro" data-sinal>${a.sinal ? "Sinal: " + brl(a.sinal) : "Registrar sinal"}</button>` : ""}<button class="btn claro" data-atraso>${a.atrasou ? "Tirar atraso" : "Marcar atraso"}</button></div>` : ""}
-      ${ATIVOS.includes(a.status) ? `<button class="btn claro cheio" data-servtempo>✂️ Mudar serviços ou tempo</button>` : ""}
+      ${a.status !== "cancelado" && a.status !== "faltou" ? `<button class="btn claro cheio" data-servtempo>✏️ Editar serviço, tempo ou valor</button>` : ""}
       ${ATIVOS.includes(a.status) ? `<div class="grade2"><button class="btn claro" data-remarcar>Remarcar</button>${passado ? `<button class="btn perigo" data-st="faltou">Não compareceu</button>` : `<button class="btn perigo" data-cancelar>Cancelar</button>`}</div>` : ""}
-      ${a.status === "concluido" || a.pago ? `<button class="btn claro cheio" data-pagar>${IC.dinheiro}${a.pago ? "Registrar outro pagamento" : "Registrar pagamento"}</button>` : ""}
+      ${a.pago ? `<button class="btn claro cheio" data-pagar>${IC.dinheiro}Registrar outro pagamento</button>` : ""}
       ${["cancelado", "faltou"].includes(a.status) ? `<button class="btn claro cheio" data-reabrir>Reabrir agendamento</button>` : ""}
       ${a.serie_id && ATIVOS.includes(a.status) ? `<button class="btn perigo cheio" data-cancserie>🔁 Cancelar este e os próximos da série</button>` : ""}
     </div>`, (r) => {
@@ -718,7 +718,7 @@ async function novoAgendamento({ data, cliente }) {
       if (c) { cli = c; r.querySelector("[data-cli]").value = c.nome; e.target.value = fmtTel(c.whatsapp); avisoCli(); }
     };
     r.querySelector("[data-salvar]").onclick = async () => {
-      const nome = r.querySelector("[data-cli]").value.trim(), zap = r.querySelector("[data-zap]").value.replace(/\D/g, ""), s = serv();
+      const nome = r.querySelector("[data-cli]").value.trim(), zap = r.querySelector("[data-zap]").value.replace(/\D/g, "").replace(/^0+/, "").replace(/^55(?=\d{10,11}$)/, ""), s = serv();
       if (nome.length < 2) return toast("Escreva o nome da cliente.", 1);
       if (zap.length < 10) return toast("Escreva o WhatsApp com DDD.", 1);
       if (!s) return toast("Escolha pelo menos um serviço.", 1);
@@ -828,7 +828,7 @@ function editaServicosAg(a) {
   const nomes = String(a.servico_nome || "").split(" + ");
   const itens = nomes.map((n) => st.servicos.find((s) => s.nome === n) || { id: a.servico_id, nome: n, duracao_min: 0, preco: 0 });
   const mins = Math.round((new Date(a.fim) - new Date(a.inicio)) / 60000);
-  abreFolha(cabFolha("Serviços e tempo", `${esc(a.cliente_nome)} · ${dataLonga(a.inicio)} às ${hora(a.inicio)}`) + `
+  abreFolha(cabFolha("Editar serviço", `${esc(a.cliente_nome)} · ${dataLonga(a.inicio)} às ${hora(a.inicio)}`) + `
     <div class="cartao">${htmlServicos(servs, true)}<p class="pequeno" data-conflito style="margin-top:8px"></p></div>
     <button class="btn ouro cheio" data-salvar>Salvar</button>
     <button class="btn claro cheio" data-voltar style="margin-top:10px">Voltar</button>`, (r) => {
