@@ -1,14 +1,31 @@
 {
-  "name": "Nayara Fernandes · Agendamento",
-  "short_name": "Nayara Nails",
-  "start_url": "./",
-  "scope": "./",
+  "name": "Agenda Nay",
+  "short_name": "Agenda Nay",
+  "start_url": "/nayara/",
+  "scope": "/nayara/",
   "display": "standalone",
   "background_color": "#12160F",
   "theme_color": "#12160F",
   "lang": "pt-BR",
   "icons": [
-    { "src": "icone-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icone-512.png", "sizes": "512x512", "type": "image/png" }
-  ]
+    {
+      "src": "icone-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icone-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icone-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "id": "/nayara/",
+  "description": "Agende seu horário com a Nayara Fernandes · Nails e cuidados, em Lagoa Santa.",
+  "orientation": "portrait"
 }

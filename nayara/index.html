@@ -13,6 +13,10 @@
 <link rel="icon" href="icone-192.png">
 <link rel="apple-touch-icon" href="icone-192.png">
 <link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Agenda Nay">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preload" as="image" href="logo.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -258,6 +262,22 @@ header .cta::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:4
 @keyframes pisca{50%{transform:translateX(4px)}}
 .check input[type=checkbox]{width:22px!important;height:22px;min-width:22px;padding:0!important;margin:0;border-radius:6px;accent-color:#C9A86A;-webkit-appearance:checkbox;appearance:auto;background:none;box-shadow:none}
 .aceite{display:flex;gap:10px;align-items:center;cursor:pointer;font-size:15px}
+.app-cx{text-align:left}
+.app-top{display:flex;gap:14px;align-items:center}
+.modal .cx.app-cx .app-top img{width:64px!important;height:64px!important;max-height:none;border-radius:16px;box-shadow:0 8px 24px #0007;flex:none;object-fit:cover}
+.app-top h3{margin:0!important;font-size:20px}.app-top p{margin:2px 0 0}
+.passos{list-style:none;padding:0;margin:16px 0 4px;display:flex;flex-direction:column;gap:10px;counter-reset:p}
+.passos li{position:relative;display:block;padding-left:52px!important;min-height:50px;background:var(--field);border:1px solid var(--b);border-radius:14px;padding:11px 12px;font-size:15px;line-height:1.35;color:var(--t)}
+.passos li::before{counter-increment:p;content:counter(p);position:absolute;left:12px;top:50%;margin-top:-14px;width:28px;height:28px;border-radius:50%;background:var(--ouro);color:#1B1608;font-weight:700;display:grid;place-items:center;font-size:14px}
+.passos svg{width:20px;height:20px;vertical-align:-4px;color:var(--gt)}
+.passos b{color:var(--t)}
+.app-abas{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--field);border-radius:14px;padding:4px;margin-top:14px}
+.app-abas button{border:0;background:none;color:var(--m);font:600 14px var(--font);padding:9px;border-radius:10px;cursor:pointer}
+.app-abas button.on{background:var(--raise);color:var(--t)}
+.app-seta{position:fixed;left:50%;bottom:calc(8px + var(--safe));transform:translateX(-50%);z-index:61;font-size:30px;animation:quica 1s infinite;pointer-events:none}
+@keyframes quica{50%{transform:translate(-50%,8px)}}
+.btn-app{display:inline-flex;align-items:center;gap:8px;margin-top:14px;padding:10px 16px;border-radius:99px;border:1px solid var(--b2);background:var(--raise);color:var(--t);font:600 14px var(--font);cursor:pointer}
+.btn-app svg{width:18px;height:18px;color:var(--gt)}
 </style>
 </head>
 <body>
@@ -272,6 +292,7 @@ header .cta::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:4
     <a href="#meus"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18M9.5 14.5l5 5M14.5 14.5l-5 5"/></svg></span>Desmarcar</a>
     <a href="#como-chegar"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg></span>Como chegar</a>
   </nav>
+  <button type="button" class="btn-app hide" id="btnApp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M12 8v6M9 11l3 3 3-3"/></svg>Colocar o site na tela de início</button>
 </header>
 
 <div class="info" id="info"></div>
@@ -376,6 +397,7 @@ header .cta::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:4
 <footer><span class="marca">Nayara Fernandes · Nails e cuidados</span><br>Lagoa Santa - MG<br><a id="rodapeInsta" target="_blank" rel="noopener">@nayfernandes.nails</a></footer>
 </main>
 
+<div class="modal hide" id="modalApp" role="dialog" aria-modal="true" aria-labelledby="appTit"><div class="cx app-cx" id="appCx"></div></div>
 <div class="modal hide" id="modalCor" role="dialog" aria-modal="true"><div class="cx" id="modalCx"></div></div>
 <div class="barra" id="barra" aria-hidden="true"><div class="in">
   <div class="tx" id="barraTx"></div>
@@ -492,6 +514,47 @@ function desmarca(a) {
     meusHorarios(true); if (st.serv) carregaSlots();
   };
 }
+
+// ---------- "instalar" o site na tela de início (aparece sempre, menos quando já abriu pelo ícone) ----------
+const ICON_COMP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-1"/></svg>';
+const ICON_MAIS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/></svg>';
+const ICON_MENU = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+const naTelaInicio = () => matchMedia("(display-mode: standalone)").matches || matchMedia("(display-mode: fullscreen)").matches || navigator.standalone === true;
+const ua = navigator.userAgent;
+const ehIOS = /iphone|ipad|ipod/i.test(ua) || (/macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
+const ehAndroid = /android/i.test(ua);
+const dentroDeApp = /instagram|fbav|fban|fb_iab|whatsapp|line\/|tiktok|musical_ly|snapchat/i.test(ua);
+let pedidoInstalar = null;
+addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); pedidoInstalar = e; if ($("appCx")?.dataset.plat === "android") passosApp("android"); });
+addEventListener("appinstalled", () => { $("modalApp").classList.add("hide"); $("btnApp").classList.add("hide"); });
+function passosApp(plat) {
+  const cx = $("appCx"); cx.dataset.plat = plat;
+  const ios = dentroDeApp
+    ? `<li>Toque nos <b>três pontinhos</b> ${ICON_MENU} ou no ícone do navegador, no canto da tela</li><li>Escolha <b>"Abrir no navegador"</b> (Safari)</li><li>No Safari, toque em <b>Compartilhar</b> ${ICON_COMP} e depois em <b>"Adicionar à Tela de Início"</b> ${ICON_MAIS}</li>`
+    : `<li>Toque em <b>Compartilhar</b> ${ICON_COMP} na barra do Safari (embaixo da tela${/crios/i.test(ua) ? " ou no topo, no Chrome" : ""})</li><li>Role a lista e toque em <b>"Adicionar à Tela de Início"</b> ${ICON_MAIS}</li><li>O nome já vem como <b>Agenda Nay</b>. Toque em <b>Adicionar</b>, no canto de cima. Pronto! 💅</li>`;
+  const android = pedidoInstalar
+    ? `<li>Toque no botão abaixo <b>"Instalar agora"</b></li><li>Confirme em <b>Instalar</b>. O ícone <b>Agenda Nay</b> aparece na sua tela de início 💅</li>`
+    : dentroDeApp
+      ? `<li>Toque nos <b>três pontinhos</b> ${ICON_MENU} no canto de cima</li><li>Escolha <b>"Abrir no Chrome"</b> (ou no navegador)</li><li>No Chrome, toque em ${ICON_MENU} e em <b>"Adicionar à tela inicial"</b> ou <b>"Instalar app"</b></li>`
+      : `<li>Toque nos <b>três pontinhos</b> ${ICON_MENU} no canto de cima do Chrome</li><li>Toque em <b>"Adicionar à tela inicial"</b> ou <b>"Instalar app"</b></li><li>Confirme em <b>Adicionar</b>. O ícone <b>Agenda Nay</b> aparece na sua tela de início 💅</li>`;
+  cx.innerHTML = `<div class="app-top"><img src="icone-192.png" alt=""><div><h3 id="appTit">Tenha a Nayara no seu celular</h3><p>Coloque a <b>Agenda Nay</b> na tela de início e agende com um toque, como um aplicativo. Sem precisar procurar o link no WhatsApp.</p></div></div>
+    <div class="app-abas"><button type="button" data-p="ios" class="${plat === "ios" ? "on" : ""}">iPhone</button><button type="button" data-p="android" class="${plat === "android" ? "on" : ""}">Android</button></div>
+    <ol class="passos">${plat === "ios" ? ios : android}</ol>
+    <div class="papeis">${plat === "android" && pedidoInstalar ? `<button type="button" data-depois>Agora não</button><button type="button" class="on" data-instalar>Instalar agora</button>` : `<button type="button" data-depois style="grid-column:1/-1">Entendi, vou fazer agora</button>`}</div>`;
+  cx.querySelectorAll("[data-p]").forEach((b) => (b.onclick = () => passosApp(b.dataset.p)));
+  cx.querySelector("[data-depois]").onclick = fechaApp;
+  cx.querySelector("[data-instalar]")?.addEventListener("click", async () => { pedidoInstalar.prompt(); const r = await pedidoInstalar.userChoice; pedidoInstalar = null; if (r.outcome === "accepted") fechaApp(); else passosApp("android"); });
+  document.querySelector(".app-seta")?.remove();
+  if (plat === "ios" && !dentroDeApp && !/crios|fxios|edgios/i.test(ua)) { const s = document.createElement("div"); s.className = "app-seta"; s.textContent = "⬇"; document.body.appendChild(s); }
+}
+function abreApp() { $("modalApp").classList.remove("hide"); passosApp(ehIOS ? "ios" : ehAndroid ? "android" : "ios"); }
+function fechaApp() { $("modalApp").classList.add("hide"); document.querySelector(".app-seta")?.remove(); }
+$("modalApp").onclick = (e) => { if (e.target === $("modalApp")) fechaApp(); };
+if (!naTelaInicio()) {
+  $("btnApp").classList.remove("hide"); $("btnApp").onclick = abreApp;
+  if (ehIOS || ehAndroid) setTimeout(abreApp, 1200);
+}
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 $("mVer").onclick = () => meusHorarios(false);
 mascaraTel($("mTel"));
 try { const c = JSON.parse(localStorage.getItem("nay_cliente") || "{}"); if (c.nome) $("mNome").value = c.nome.split(" ")[0]; if (c.tel) $("mTel").value = c.tel; } catch {}
