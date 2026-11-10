@@ -981,7 +981,34 @@ function confete() {
 const lj = { prods: [], cat: "", sac: {} };
 try { lj.sac = JSON.parse(localStorage.getItem("et_sacola") || "{}"); } catch {}
 const precoP = (p) => Number(p.preco_promo ?? p.preco);
-const fotoP = (p) => p.foto || "data:image/svg+xml;utf8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#2A2433"/><path d="M38 22h24v10l6 8v38a6 6 0 0 1-6 6H38a6 6 0 0 1-6-6V40l6-8z" fill="#8A5DB8" opacity=".6"/><rect x="40" y="14" width="20" height="10" rx="3" fill="#5ED6C6" opacity=".75"/></svg>');
+// Ilustração automática de produto (quando ainda não tem foto): embalagem por tipo + marca + nome
+function ilustraProduto(p) {
+  const e = (t) => String(t || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const cat = p.categoria || "", nome = String(p.nome || ""), marca = String(p.marca || "");
+  const paleta = { Shampoo: ["#8A5DB8", "#B48BEA"], Condicionador: ["#2E9C8F", "#5ED6C6"], "Máscara": ["#6B3E93", "#C29BEF"], "Leave-in": ["#3E7FA8", "#7FC3E8"], "Óleo e sérum": ["#B07A22", "#E9C27A"], Finalizador: ["#A0446B", "#E591B5"], "Protetor térmico": ["#B4553A", "#EE9C7E"], Tratamento: ["#4B5FB0", "#9AA8F0"], "Coloração": ["#7A2F5A", "#D27BAA"], Kit: ["#5A4478", "#B39BD8"], "Acessórios": ["#4A5560", "#A9B4BF"] }[cat] || ["#6A55B8", "#A99AE6"];
+  const [c1, c2] = paleta;
+  const formas = {
+    pote: `<rect x="62" y="96" width="76" height="14" rx="5" fill="#2A2433"/><rect x="54" y="108" width="92" height="70" rx="14" fill="url(#g)"/>`,
+    gotas: `<rect x="90" y="40" width="20" height="26" rx="8" fill="#2A2433"/><rect x="86" y="62" width="28" height="10" rx="3" fill="#3A3245"/><rect x="72" y="70" width="56" height="108" rx="16" fill="url(#g)"/>`,
+    tubo: `<rect x="86" y="160" width="28" height="18" rx="4" fill="#2A2433"/><path d="M70 50h60l-8 112H78z" fill="url(#g)"/><rect x="66" y="44" width="68" height="10" rx="3" fill="${c1}"/>`,
+    spray: `<rect x="88" y="30" width="18" height="12" rx="3" fill="#2A2433"/><path d="M106 34h14v6h-14z" fill="#2A2433"/><rect x="84" y="40" width="26" height="22" rx="5" fill="#3A3245"/><rect x="74" y="60" width="46" height="118" rx="14" fill="url(#g)"/>`,
+    frasco: `<rect x="84" y="36" width="32" height="22" rx="6" fill="#2A2433"/><path d="M78 58h44l8 14v100a8 8 0 0 1-8 8H78a8 8 0 0 1-8-8V72z" fill="url(#g)"/>`,
+    caixa: `<rect x="56" y="64" width="88" height="114" rx="10" fill="url(#g)"/><path d="M56 84h88" stroke="#ffffff55" stroke-width="2"/>`,
+    escova: `<rect x="90" y="110" width="20" height="72" rx="8" fill="#2A2433"/><rect x="66" y="40" width="68" height="78" rx="30" fill="url(#g)"/><g fill="#2A2433" opacity=".55">${[0, 1, 2, 3].map((i) => [0, 1, 2].map((j) => `<circle cx="${82 + i * 12}" cy="${60 + j * 16}" r="2.5"/>`).join("")).join("")}</g>`,
+  };
+  const forma = cat === "Máscara" ? "pote" : cat === "Óleo e sérum" ? "gotas" : cat === "Leave-in" || cat === "Coloração" ? "tubo" : cat === "Protetor térmico" || cat === "Finalizador" && /spray|fix|session|hairspray/i.test(nome) ? "spray" : cat === "Kit" ? "caixa" : cat === "Acessórios" ? "escova" : "frasco";
+  const quebra = (t, n) => { const w = t.split(/\s+/), l = []; let a = ""; w.forEach((x) => { if ((a + " " + x).trim().length > n) { if (a) l.push(a); a = x; } else a = (a + " " + x).trim(); }); if (a) l.push(a); return l.slice(0, 2); };
+  const linhasNome = quebra(nome, 18);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="${c1}"/><stop offset=".55" stop-color="${c2}"/><stop offset="1" stop-color="${c1}"/></linearGradient><radialGradient id="f" cx=".5" cy=".35" r=".8"><stop offset="0" stop-color="#3A2A52"/><stop offset="1" stop-color="#1C1724"/></radialGradient></defs>
+<rect width="200" height="200" fill="url(#f)"/><g transform="translate(30,-20) scale(0.7)"><ellipse cx="100" cy="182" rx="60" ry="7" fill="#000" opacity=".35"/>${formas[forma]}
+<rect x="${forma === "pote" ? 64 : 78}" y="${forma === "pote" ? 128 : 112}" width="${forma === "pote" ? 72 : 44}" height="${forma === "pote" ? 26 : 34}" rx="4" fill="#ffffffd9"/>
+<text x="100" y="${forma === "pote" ? 145 : 133}" text-anchor="middle" font-family="Arial,sans-serif" font-size="${forma === "pote" ? 9 : 7}" font-weight="700" fill="#2A2433">${e(marca.split(" ")[0].toUpperCase().slice(0, 12))}</text></g>
+<text x="100" y="${linhasNome.length > 1 ? 150 : 158}" text-anchor="middle" font-family="Arial,sans-serif" font-size="12.5" font-weight="700" fill="#F5F1FB">${e(marca.slice(0, 26))}</text>
+${linhasNome.map((l, i) => `<text x="100" y="${(linhasNome.length > 1 ? 168 : 176) + i * 15}" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" fill="#C3BACF">${e(l)}</text>`).join("")}</svg>`;
+  return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
+}
+
+const fotoP = (p) => p.foto || ilustraProduto(p);
 const salvaSac = () => { try { localStorage.setItem("et_sacola", JSON.stringify(lj.sac)); } catch {} };
 const itensSac = () => Object.entries(lj.sac).map(([id, n]) => ({ p: lj.prods.find((x) => x.id === id), n })).filter((x) => x.p && x.n > 0);
 async function carregaLoja() {

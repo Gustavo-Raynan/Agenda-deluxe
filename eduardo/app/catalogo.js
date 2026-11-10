@@ -58,7 +58,7 @@ async function escolheDoCatalogo() {
       const mostra = lista.slice(0, f.ver);
       r.querySelector("[data-lista]").innerHTML = mostra.length ? `<div class="lista">${mostra.map((p) => {
         const ja = tenho.has(p.k), on = sel.has(p.k);
-        return `<label class="item" style="${ja ? "opacity:.55" : ""}">${p.foto ? `<img src="${esc(p.foto)}" style="width:40px;height:40px;border-radius:10px;object-fit:cover">` : `<div class="ic">${IC.caixa}</div>`}
+        return `<label class="item" style="${ja ? "opacity:.55" : ""}"><img src="${p.foto ? esc(p.foto) : ilustraProduto(p)}" loading="lazy" style="width:44px;height:44px;border-radius:10px;object-fit:cover;flex:none">
           <div class="cresce"><b>${esc(p.nome)}</b><div class="pequeno">${esc(p.marca)} · ${esc(p.categoria || "")}${p.tamanho ? " · " + esc(p.tamanho) : ""}${ja ? " · <b>você já tem</b>" : ""}</div></div>
           <input type="checkbox" data-k="${esc(p.k)}" ${on || ja ? "checked" : ""} ${ja ? "disabled" : ""} style="width:24px;height:24px;flex:none;accent-color:var(--acc)"></label>`;
       }).join("")}</div>${lista.length > f.ver ? `<button class="btn cheio" data-mais style="margin-top:10px">Ver mais (${lista.length - f.ver})</button>` : ""}`

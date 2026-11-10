@@ -15,8 +15,36 @@ const precoAtual = (p) => (p.preco_promo != null && p.preco_promo !== "" ? Numbe
 const dispLoja = (p) => (Number(p.quantidade) <= 0 ? ["Esgotado", "cancelado"] : Number(p.quantidade) <= Number(p.minimo) ? ["Acabando", "marcado"] : ["Em estoque", "confirmado"]);
 const fotoProd = (p, tam = 46) => p.foto_url
   ? `<img src="${esc(p.foto_url)}" alt="" loading="lazy" style="width:${tam}px;height:${tam}px;border-radius:14px;object-fit:cover;flex:none;border:1px solid var(--line2)">`
-  : `<span style="width:${tam}px;height:${tam}px;border-radius:14px;flex:none;display:grid;place-items:center;background:var(--soft);color:var(--mute);border:1px solid var(--line2)">${IC.caixa}</span>`;
-const placeholderProd = () => "data:image/svg+xml;utf8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#2A2433"/><path d="M38 22h24v10l6 8v38a6 6 0 0 1-6 6H38a6 6 0 0 1-6-6V40l6-8z" fill="#8A5DB8" opacity=".55"/><rect x="40" y="14" width="20" height="10" rx="3" fill="#5ED6C6" opacity=".7"/></svg>');
+  : p.nome ? `<img src="${placeholderProd(p)}" alt="" style="width:${tam}px;height:${tam}px;border-radius:14px;object-fit:cover;flex:none;border:1px solid var(--line2)">` : `<span style="width:${tam}px;height:${tam}px;border-radius:14px;flex:none;display:grid;place-items:center;background:var(--soft);color:var(--mute);border:1px solid var(--line2)">${IC.caixa}</span>`;
+// Ilustração automática de produto (quando ainda não tem foto): embalagem por tipo + marca + nome
+function ilustraProduto(p) {
+  const e = (t) => String(t || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const cat = p.categoria || "", nome = String(p.nome || ""), marca = String(p.marca || "");
+  const paleta = { Shampoo: ["#8A5DB8", "#B48BEA"], Condicionador: ["#2E9C8F", "#5ED6C6"], "Máscara": ["#6B3E93", "#C29BEF"], "Leave-in": ["#3E7FA8", "#7FC3E8"], "Óleo e sérum": ["#B07A22", "#E9C27A"], Finalizador: ["#A0446B", "#E591B5"], "Protetor térmico": ["#B4553A", "#EE9C7E"], Tratamento: ["#4B5FB0", "#9AA8F0"], "Coloração": ["#7A2F5A", "#D27BAA"], Kit: ["#5A4478", "#B39BD8"], "Acessórios": ["#4A5560", "#A9B4BF"] }[cat] || ["#6A55B8", "#A99AE6"];
+  const [c1, c2] = paleta;
+  const formas = {
+    pote: `<rect x="62" y="96" width="76" height="14" rx="5" fill="#2A2433"/><rect x="54" y="108" width="92" height="70" rx="14" fill="url(#g)"/>`,
+    gotas: `<rect x="90" y="40" width="20" height="26" rx="8" fill="#2A2433"/><rect x="86" y="62" width="28" height="10" rx="3" fill="#3A3245"/><rect x="72" y="70" width="56" height="108" rx="16" fill="url(#g)"/>`,
+    tubo: `<rect x="86" y="160" width="28" height="18" rx="4" fill="#2A2433"/><path d="M70 50h60l-8 112H78z" fill="url(#g)"/><rect x="66" y="44" width="68" height="10" rx="3" fill="${c1}"/>`,
+    spray: `<rect x="88" y="30" width="18" height="12" rx="3" fill="#2A2433"/><path d="M106 34h14v6h-14z" fill="#2A2433"/><rect x="84" y="40" width="26" height="22" rx="5" fill="#3A3245"/><rect x="74" y="60" width="46" height="118" rx="14" fill="url(#g)"/>`,
+    frasco: `<rect x="84" y="36" width="32" height="22" rx="6" fill="#2A2433"/><path d="M78 58h44l8 14v100a8 8 0 0 1-8 8H78a8 8 0 0 1-8-8V72z" fill="url(#g)"/>`,
+    caixa: `<rect x="56" y="64" width="88" height="114" rx="10" fill="url(#g)"/><path d="M56 84h88" stroke="#ffffff55" stroke-width="2"/>`,
+    escova: `<rect x="90" y="110" width="20" height="72" rx="8" fill="#2A2433"/><rect x="66" y="40" width="68" height="78" rx="30" fill="url(#g)"/><g fill="#2A2433" opacity=".55">${[0, 1, 2, 3].map((i) => [0, 1, 2].map((j) => `<circle cx="${82 + i * 12}" cy="${60 + j * 16}" r="2.5"/>`).join("")).join("")}</g>`,
+  };
+  const forma = cat === "Máscara" ? "pote" : cat === "Óleo e sérum" ? "gotas" : cat === "Leave-in" || cat === "Coloração" ? "tubo" : cat === "Protetor térmico" || cat === "Finalizador" && /spray|fix|session|hairspray/i.test(nome) ? "spray" : cat === "Kit" ? "caixa" : cat === "Acessórios" ? "escova" : "frasco";
+  const quebra = (t, n) => { const w = t.split(/\s+/), l = []; let a = ""; w.forEach((x) => { if ((a + " " + x).trim().length > n) { if (a) l.push(a); a = x; } else a = (a + " " + x).trim(); }); if (a) l.push(a); return l.slice(0, 2); };
+  const linhasNome = quebra(nome, 18);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="${c1}"/><stop offset=".55" stop-color="${c2}"/><stop offset="1" stop-color="${c1}"/></linearGradient><radialGradient id="f" cx=".5" cy=".35" r=".8"><stop offset="0" stop-color="#3A2A52"/><stop offset="1" stop-color="#1C1724"/></radialGradient></defs>
+<rect width="200" height="200" fill="url(#f)"/><g transform="translate(30,-20) scale(0.7)"><ellipse cx="100" cy="182" rx="60" ry="7" fill="#000" opacity=".35"/>${formas[forma]}
+<rect x="${forma === "pote" ? 64 : 78}" y="${forma === "pote" ? 128 : 112}" width="${forma === "pote" ? 72 : 44}" height="${forma === "pote" ? 26 : 34}" rx="4" fill="#ffffffd9"/>
+<text x="100" y="${forma === "pote" ? 145 : 133}" text-anchor="middle" font-family="Arial,sans-serif" font-size="${forma === "pote" ? 9 : 7}" font-weight="700" fill="#2A2433">${e(marca.split(" ")[0].toUpperCase().slice(0, 12))}</text></g>
+<text x="100" y="${linhasNome.length > 1 ? 150 : 158}" text-anchor="middle" font-family="Arial,sans-serif" font-size="12.5" font-weight="700" fill="#F5F1FB">${e(marca.slice(0, 26))}</text>
+${linhasNome.map((l, i) => `<text x="100" y="${(linhasNome.length > 1 ? 168 : 176) + i * 15}" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" fill="#C3BACF">${e(l)}</text>`).join("")}</svg>`;
+  return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
+}
+
+const placeholderProd = (p) => ilustraProduto(p || {});
+const buscaFotoNet = (p) => { window.open("https://www.google.com/search?tbm=isch&q=" + encodeURIComponent([p.marca, p.nome, "produto"].filter(Boolean).join(" ")), "_blank"); toast("Escolha uma foto, segure o dedo nela e salve. Depois toque em Foto e escolha da galeria."); };
 
 st.estSeg = st.estSeg || "produtos";
 st.lojaBusca = ""; st.lojaCat = ""; st.pedFiltro = "abertos";
@@ -66,7 +94,7 @@ async function telaEstoque() {
       ${cats.length > 1 ? `<div class="opcoes" style="margin-bottom:12px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px">${["", ...cats].map((c) => `<button type="button" data-cat="${esc(c)}" class="${st.lojaCat === c ? "on" : ""}" style="flex:none">${esc(c || "Todos")}</button>`).join("")}</div>` : ""}
       ${lista.length ? `<p class="pequeno" style="margin:0 4px 10px">${lista.length} produto${lista.length !== 1 ? "s" : ""} · ${lista.filter((p) => p.no_site).length} no site · <button class="link" data-ver-site>ver a loja no site ›</button></p>` : ""}
       ${filt.length ? `<div class="grade-esm">${filt.map((p) => { const d = dispLoja(p); const promo = p.preco_promo != null; return `<button class="esm" data-p="${p.id}">
-          <div class="esm-foto"><img src="${p.foto_url ? esc(p.foto_url) : placeholderProd()}" alt="" loading="lazy"><span class="chip ${p.no_site ? d[1] : "cancelado"}">${p.no_site ? d[0] : "Fora do site"}</span>${p.destaque ? `<span class="chip concluido" style="left:auto;right:6px">★</span>` : ""}</div>
+          <div class="esm-foto"><img src="${p.foto_url ? esc(p.foto_url) : placeholderProd(p)}" alt="" loading="lazy"><span class="chip ${p.no_site ? d[1] : "cancelado"}">${p.no_site ? d[0] : "Fora do site"}</span>${p.destaque ? `<span class="chip concluido" style="left:auto;right:6px">★</span>` : ""}</div>
           <b>${esc(p.nome)}</b><small>${esc(p.marca || p.categoria || "")}</small>
           <small><b style="font-size:14.5px;color:var(--ink)">${brl(precoAtual(p))}</b>${promo ? ` <s>${brl(p.preco)}</s>` : ""} · ${p.quantidade} un</small></button>`; }).join("")}</div>`
         : `<div class="vazio">${IC.caixa}<div>${lista.length ? "Nenhum produto encontrado." : "Toque em <b>Do catálogo</b> e só marque os produtos que você tem (são mais de 560, de 74 marcas), ou em <b>Por foto</b> para fotografar a embalagem. Com preço, eles aparecem no site para venda."}</div></div>`}`;
@@ -131,7 +159,7 @@ async function fichaLoja(id) {
   const p = await q(sb.from("ad_loja").select("*").eq("id", id).single());
   const d = dispLoja(p);
   abreFolha(cabFolha(esc(p.nome), esc([p.marca, p.categoria].filter(Boolean).join(" · "))) + `
-    <div class="cartao" style="padding:0;overflow:hidden"><img src="${p.foto_url ? esc(p.foto_url) : placeholderProd()}" alt="" style="width:100%;max-height:300px;object-fit:cover;display:block"></div>
+    <div class="cartao" style="padding:0;overflow:hidden"><img src="${p.foto_url ? esc(p.foto_url) : placeholderProd(p)}" alt="" style="width:100%;max-height:300px;object-fit:cover;display:block"></div>
     <div class="cartao">
       <div class="linha entre"><span>Preço no site</span><b style="font-size:20px">${brl(precoAtual(p))}${p.preco_promo != null ? ` <s class="pequeno">${brl(p.preco)}</s>` : ""}</b></div>
       <div class="linha entre" style="margin-top:6px"><span>Estoque</span><b>${p.quantidade} un <span class="chip ${d[1]}">${d[0]}</span></b></div>
@@ -139,10 +167,19 @@ async function fichaLoja(id) {
       <div class="linha entre" style="margin-top:6px"><span>No site</span><b>${p.no_site ? "Sim, aparece para os clientes" : "Não (escondido)"}</b></div>
       ${p.descricao ? `<p class="pequeno" style="margin-top:10px">${esc(p.descricao)}</p>` : ""}
     </div>
+    ${p.foto_url ? "" : `<div class="cartao calmo" style="font-size:14px">📷 Ainda sem foto real: no site aparece uma ilustração.<div class="grade2" style="margin-top:10px"><label class="btn mini" style="cursor:pointer">${IC.camera}Pôr foto<input type="file" accept="image/*" data-foto-rapida hidden></label><button class="btn mini" data-net>${IC.busca}Buscar na internet</button></div></div>`}
     <div class="grade2"><button class="btn prim" data-entrada>${IC.mais}Entrada</button><button class="btn" data-ajuste>Ajustar quantidade</button></div>
     <div class="grade2" style="margin-top:8px"><button class="btn" data-editar>Editar</button><button class="btn" data-site>${p.no_site ? "Tirar do site" : "Mostrar no site"}</button></div>
     <button class="btn cheio" data-zap style="margin-top:8px">${IC.zap}Divulgar no WhatsApp</button>`, (r) => {
     r.querySelector("[data-editar]").onclick = () => editaProdutoLoja(p);
+    r.querySelector("[data-net]")?.addEventListener("click", () => buscaFotoNet(p));
+    r.querySelector("[data-foto-rapida]")?.addEventListener("change", async (e) => {
+      const f = e.target.files[0]; if (!f) return;
+      try { const img = await carregaImagem(f); const W = img.naturalWidth, H = img.naturalHeight, lado = Math.min(W, H);
+        const url = await enviaFoto(paraCanvas(img, 900, [(W - lado) / 2, (H - lado) / 2, lado, lado]));
+        await q(sb.from("ad_loja").update({ foto_url: url }).eq("id", p.id)); toast("Foto colocada! Já aparece no site."); fichaLoja(p.id); if (st.aba === "estoque") telaEstoque();
+      } catch { toast("Não consegui usar essa foto.", 1); }
+    });
     r.querySelector("[data-entrada]").onclick = () => ajustaQtd(p, "entrada");
     r.querySelector("[data-ajuste]").onclick = () => ajustaQtd(p, "ajuste");
     r.querySelector("[data-site]").onclick = async () => { await q(sb.from("ad_loja").update({ no_site: !p.no_site }).eq("id", p.id)); toast(p.no_site ? "Produto escondido do site." : "Produto aparece no site."); fichaLoja(p.id); if (st.aba === "estoque") telaEstoque(); };
@@ -191,6 +228,7 @@ function editaProdutoLoja(p) {
       <label class="foto-prod" style="display:block;cursor:pointer;border:1.5px dashed var(--line2);border-radius:18px;overflow:hidden;aspect-ratio:1;max-width:220px;margin:0 auto;position:relative;background:var(--soft)">
         <span data-prev style="position:absolute;inset:0;display:grid;place-items:center;color:var(--mute);text-align:center;font-size:13.5px">${p?.foto_url ? `<img src="${esc(p.foto_url)}" style="width:100%;height:100%;object-fit:cover">` : `<span>${IC.camera}<br>Toque para tirar<br>ou escolher a foto</span>`}</span>
         <input type="file" accept="image/*" data-foto hidden></label>
+      <button type="button" class="link" data-net style="display:block;margin:8px auto 0">${IC.busca} Buscar foto na internet</button>
       <label class="f">Nome do produto</label><input class="campo" data-nome maxlength="80" value="${esc(p?.nome || "")}" placeholder="Ex.: Máscara de hidratação 250g">
       <div class="grade2"><div><label class="f">Marca</label><input class="campo" data-marca maxlength="60" value="${esc(p?.marca || "")}" placeholder="Ex.: Wella"></div>
         <div><label class="f">Categoria</label><input class="campo" data-cat list="cats-loja" maxlength="40" value="${esc(p?.categoria || "")}" placeholder="Ex.: Máscara"></div></div>
@@ -207,6 +245,7 @@ function editaProdutoLoja(p) {
     </div>
     <button class="btn prim cheio" data-salvar>Salvar</button>
     ${p ? `<button class="btn perigo cheio" data-excluir style="margin-top:10px">Excluir produto</button>` : ""}`, (r) => {
+    r.querySelector("[data-net]").onclick = () => { const n = r.querySelector("[data-nome]").value.trim(); if (!n) return toast("Escreva o nome do produto primeiro.", 1); buscaFotoNet({ marca: r.querySelector("[data-marca]").value.trim(), nome: n }); };
     r.querySelector("[data-foto]").onchange = async (e) => {
       const f = e.target.files[0]; if (!f) return;
       try {
