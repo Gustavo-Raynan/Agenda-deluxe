@@ -760,9 +760,15 @@ async function novoAgendamento({ data, cliente }) {
 // ---------- vários serviços num agendamento + tempo total ajustável ----------
 const OPC_TEMPO = Array.from({ length: 48 }, (_, i) => (i + 1) * 15); // 15 min até 12h
 function htmlServicos(servs, atual) {
-  return `<label class="f">Serviços <small class="mudo">(pode escolher vários)</small></label>
+  const cats = [...new Set(servs.map((s) => s.categoria || "Serviços"))];
+  return `<label class="f">Serviços <small class="mudo">(toque em quantos quiser)</small></label>
     <div data-servsel></div>
-    <select class="campo" data-serv><option value="">+ Adicionar serviço…</option>${servs.map((s) => `<option value="${s.id}">${esc(s.nome)} · ${brl(s.preco)} · ${dur(s.duracao_min)}</option>`).join("")}</select>
+    <button type="button" class="btn claro cheio ${atual ? "" : "hide"}" data-abreserv>+ Escolher serviços</button>
+    <div class="${atual ? "hide" : ""}" data-servpainel style="margin-top:8px;border:1px solid var(--line2);border-radius:16px;overflow:hidden">
+      <input class="campo" data-servbusca placeholder="🔍 Buscar serviço…" style="border:0;border-bottom:1px solid var(--line2);border-radius:0">
+      <div data-servlista style="max-height:46vh;overflow:auto;overscroll-behavior:contain">${cats.map((c) => `<div data-cat><p class="pequeno" style="margin:12px 14px 4px;font-weight:700;letter-spacing:.04em;text-transform:uppercase">${esc(c)}</p>${servs.filter((s) => (s.categoria || "Serviços") === c).map((s) => `<button type="button" data-sid="${s.id}" data-nm="${esc(normC(s.nome))}" style="display:flex;width:100%;align-items:center;gap:12px;padding:11px 14px;background:none;border:0;border-top:1px solid var(--line2);color:inherit;font:inherit;text-align:left;cursor:pointer"><span data-ck style="flex:none;width:24px;height:24px;border-radius:8px;border:2px solid var(--line2);display:grid;place-items:center;font-size:15px;font-weight:800"></span><span style="flex:1"><b style="font-weight:600">${esc(s.nome)}</b><br><span class="pequeno">${dur(s.duracao_min)} · ${brl(s.preco)}</span></span></button>`).join("")}</div>`).join("")}</div>
+      <button type="button" class="btn ouro cheio" data-fechaserv style="border-radius:0">Pronto</button>
+    </div>
     <div class="grade2" data-servtot style="${atual ? "" : "display:none"}">
       <div><label class="f">Tempo total</label><select class="campo" data-tempo>${OPC_TEMPO.map((m) => `<option value="${m}">${dur(m)}</option>`).join("")}</select></div>
       <div><label class="f">Valor total</label><input class="campo" data-valor type="number" inputmode="decimal" min="0" step="0.01"></div>
@@ -782,7 +788,8 @@ function ligaServicos(r, servs, aoMudar, atual) {
     $r("[data-servsel]").innerHTML = itens.map((s, i) => `<div class="linha entre" style="gap:8px;padding:9px 12px;margin-bottom:6px;border:1px solid var(--line2);border-radius:12px;background:var(--soft)"><span><b>${esc(s.nome)}</b> <span class="pequeno">${dur(s.duracao_min)} · ${brl(s.preco)}</span></span><button type="button" class="link" data-tira="${i}" aria-label="Tirar" style="font-size:18px;line-height:1">✕</button></div>`).join("");
     r.querySelectorAll("[data-tira]").forEach((b) => (b.onclick = () => { itens.splice(+b.dataset.tira, 1); recalc(); }));
     $r("[data-servtot]").style.display = itens.length ? "" : "none";
-    $r("[data-serv]").options[0].textContent = itens.length ? "+ Adicionar outro serviço…" : "Escolha o serviço…";
+    $r("[data-abreserv]").textContent = itens.length ? `+ Adicionar ou tirar serviços (${itens.length})` : "+ Escolher serviços";
+    r.querySelectorAll("[data-sid]").forEach((b) => { const on = itens.some((s) => s.id === b.dataset.sid); const ck = b.querySelector("[data-ck]"); ck.textContent = on ? "✓" : ""; ck.style.background = on ? "var(--acc)" : "none"; ck.style.borderColor = on ? "var(--acc)" : "var(--line2)"; ck.style.color = on ? "#fff" : ""; });
     $r("[data-servsoma]").innerHTML = itens.length ? `Soma dos serviços: <b>${dur(sm.min)}</b> · <b>${brl(sm.preco)}</b>${tempoManual && +$r("[data-tempo]").value !== sm.min ? ` · <button type="button" class="link" data-volta>usar a soma</button>` : ". Se precisar de mais ou menos tempo, mude o Tempo total."}` : "";
     $r("[data-volta]")?.addEventListener("click", () => { tempoManual = false; valorManual = false; recalc(); });
   };
@@ -792,7 +799,20 @@ function ligaServicos(r, servs, aoMudar, atual) {
     if (!valorManual && itens.length) $r("[data-valor]").value = String(sm.preco);
     desenha(); aoMudar?.();
   };
-  $r("[data-serv]").onchange = (e) => { const s = servs.find((x) => x.id === e.target.value); e.target.value = ""; if (!s) return; if (itens.length >= 8) return toast("No máximo 8 serviços.", 1); itens.push(s); recalc(); };
+  const painel = $r("[data-servpainel]");
+  $r("[data-abreserv]").onclick = () => { painel.classList.toggle("hide"); if (!painel.classList.contains("hide")) painel.scrollIntoView({ block: "nearest", behavior: "smooth" }); };
+  $r("[data-fechaserv]").onclick = () => { if (!itens.length) return toast("Toque nos serviços para escolher.", 1); painel.classList.add("hide"); $r("[data-abreserv]").classList.remove("hide"); $r("[data-servtot]").scrollIntoView({ block: "center", behavior: "smooth" }); };
+  $r("[data-servbusca]").oninput = (e) => {
+    const t = normC(e.target.value);
+    r.querySelectorAll("[data-sid]").forEach((b) => (b.style.display = !t || b.dataset.nm.includes(t) ? "" : "none"));
+    r.querySelectorAll("[data-cat]").forEach((c) => (c.style.display = [...c.querySelectorAll("[data-sid]")].some((b) => b.style.display !== "none") ? "" : "none"));
+  };
+  r.querySelectorAll("[data-sid]").forEach((b) => (b.onclick = () => {
+    const i = itens.findIndex((s) => s.id === b.dataset.sid);
+    if (i >= 0) itens.splice(i, 1);
+    else { if (itens.length >= 8) return toast("No máximo 8 serviços.", 1); itens.push(servs.find((x) => x.id === b.dataset.sid)); }
+    recalc();
+  }));
   $r("[data-tempo]").onchange = () => { tempoManual = true; desenha(); aoMudar?.(); };
   $r("[data-valor]").oninput = () => { valorManual = true; };
   if (atual) { poeTempo(atual.duracao_min); $r("[data-valor]").value = String(Number(atual.preco || 0)); }
