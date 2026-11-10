@@ -156,6 +156,49 @@ input:focus,textarea:focus{outline:none;border-color:var(--roxo);box-shadow:0 0 
 .aceite input{width:22px;height:22px;flex:none;accent-color:#8A5DB8}
 .aceite.pisca{animation:pisca .4s 3;color:var(--roxo2)}
 @keyframes pisca{50%{transform:translateX(5px)}}
+
+/* ===== Loja ===== */
+.prods{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+@media(min-width:560px){.prods{grid-template-columns:repeat(3,1fr)}}
+.prod{position:relative;background:var(--field);border:1px solid var(--b);border-radius:18px;padding:8px 8px 10px;display:flex;flex-direction:column;gap:3px;text-align:left;cursor:pointer;animation:surge .4s both}
+.prod.off{opacity:.55}
+.prod .ft{aspect-ratio:1;border-radius:13px;overflow:hidden;background:#2A2433;margin-bottom:5px;position:relative}
+.prod .ft img{width:100%;height:100%;object-fit:cover;display:block}
+.prod .tag{position:absolute;left:6px;top:6px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:99px;background:#000a;color:#fff;backdrop-filter:blur(4px)}
+.prod .tag.promo{background:var(--marca)}
+.prod .tag.pouco{background:#F2C46Bdd;color:#2E2412}
+.prod b{font-size:14.5px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.prod small{font-size:12.5px;color:var(--m);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prod .pr{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;margin-top:2px}
+.prod .pr strong{font-size:16.5px;color:var(--roxo2)}
+.prod .pr s{font-size:12.5px;color:var(--m)}
+.prod .add{width:100%;margin-top:6px;min-height:42px;border-radius:12px;border:0;background:var(--marca);color:#fff;font:600 14.5px var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.prod .add svg{width:17px;height:17px}
+.prod .add:disabled{background:var(--b);color:var(--m)}
+.qtd{display:flex;align-items:center;justify-content:space-between;margin-top:6px;border:1px solid var(--b2);border-radius:12px;overflow:hidden;min-height:40px}
+.qtd button{width:42px;height:40px;border:0;background:var(--card);font:600 20px var(--font);cursor:pointer;color:var(--roxo2)}
+.qtd b{flex:1;text-align:center;font-size:15px}
+.sacola-bar{position:fixed;left:12px;right:12px;bottom:calc(12px + var(--safe));z-index:11;max-width:640px;margin:auto;display:flex;align-items:center;gap:12px;padding:10px 10px 10px 16px;border-radius:20px;background:#2A2140f2;border:1px solid #5A4478;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 18px 40px -16px #000;transform:translateY(160%);transition:transform .3s cubic-bezier(.2,.8,.2,1),bottom .25s}
+.sacola-bar.on{transform:none}
+body.com-barra .sacola-bar{bottom:calc(82px + var(--safe))}
+.sacola-bar .ic{position:relative;color:var(--roxo2)}
+.sacola-bar .ic svg{width:26px;height:26px}
+.sacola-bar .ic i{position:absolute;top:-6px;right:-8px;min-width:19px;height:19px;border-radius:99px;background:var(--verde);color:#0E2B27;font:700 11.5px/19px var(--font);font-style:normal;text-align:center;padding:0 5px}
+.sacola-bar .tx{flex:1;font-size:13px;color:var(--m);line-height:1.25}
+.sacola-bar .tx b{display:block;color:var(--t);font-size:16px}
+.sacola-bar button{background:var(--marca);color:#fff;border:0;border-radius:14px;padding:12px 16px;font:600 15px var(--font);cursor:pointer;min-height:46px}
+.item-sac{display:flex;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--b)}
+.item-sac img{width:54px;height:54px;border-radius:12px;object-fit:cover;flex:none;background:#2A2433}
+.item-sac .cresce{flex:1;min-width:0}
+.item-sac .cresce b{display:block;font-size:15px;line-height:1.25}
+.item-sac .cresce small{color:var(--m);font-size:13px}
+.item-sac .qtd{margin:0;width:118px;flex:none;min-height:36px}
+.item-sac .qtd button{width:36px;height:36px;font-size:18px}
+.tot-sac{display:flex;justify-content:space-between;align-items:baseline;padding-top:12px;border-top:1px solid var(--b2);margin-top:4px;font-size:16px}
+.tot-sac b{font-size:22px;color:var(--roxo2)}
+.retira{background:#173430;border:1px solid #2E6D64;border-radius:16px;padding:12px 14px;font-size:14px;margin-top:12px;line-height:1.45}
+.retira b{color:#7FE3D5}
+.prod-big{width:100%;aspect-ratio:1;max-height:46vh;object-fit:cover;border-radius:18px;display:block;background:#2A2433}
 /* barra fixa */
 .barra{position:fixed;left:0;right:0;bottom:0;z-index:10;padding:10px 12px calc(10px + var(--safe));background:#17121Fee;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--b);transform:translateY(120%);transition:transform .25s ease;box-shadow:0 -10px 30px -20px #6B3E9366}
 .barra.on{transform:none}
@@ -387,6 +430,7 @@ header .nota{animation:surge .7s .66s both}
     <a id="atZap" target="_blank" rel="noopener"><span><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.4a.5.5 0 0 0 0-.4l-.8-1.9c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.7a2.8 2.8 0 0 0 1.8-1.3 2.3 2.3 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3Z"/></svg></span>WhatsApp</a>
     <a id="atInsta" target="_blank" rel="noopener"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg></span>Instagram</a>
     <a href="#meus"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18M9.5 14.5l5 5M14.5 14.5l-5 5"/></svg></span>Desmarcar</a>
+    <a href="#loja" id="atLoja" class="hide"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1 12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></span>Loja</a>
     <a href="#como-chegar"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg></span>Como chegar</a>
   </nav>
   <button type="button" class="btn-app hide" id="btnApp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M12 8v6M9 11l3 3 3-3"/></svg>Colocar o site na tela de início</button>
@@ -455,6 +499,13 @@ header .nota{animation:surge .7s .66s both}
   </div>
 </section>
 
+<section id="loja" class="hide">
+  <h2>Produtos para levar</h2>
+  <p class="sub">Os mesmos produtos que usamos no salão. Escolha, finalize o pedido e retire no salão: o pagamento é feito na retirada.</p>
+  <div class="cats" id="lojaCats"></div>
+  <div class="prods" id="prods"></div>
+</section>
+
 <section id="avaliacoes">
   <h2>Quem vem, volta</h2>
   <div class="aval" style="margin-top:12px">
@@ -506,6 +557,7 @@ header .nota{animation:surge .7s .66s both}
   <div><b>Instale o app do salão</b><span>Agende com um toque, direto da tela de início.</span></div>
   <div class="bt"><button type="button" id="instNao">Agora não</button><button type="button" class="on" id="instSim">Instalar</button></div>
 </div>
+<div class="sacola-bar" id="sacolaBar"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1 12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg><i id="sacN">0</i></div><div class="tx">Sua sacola<b id="sacTot">R$ 0,00</b></div><button type="button" id="sacVer">Ver sacola</button></div>
 <div class="barra" id="barra" aria-hidden="true"><div class="in">
   <div class="tx" id="barraTx"></div>
   <button type="button" id="barraBtn">Continuar</button>
@@ -849,7 +901,7 @@ $("modalApp").onclick = (e) => { if (e.target === $("modalApp")) fechaApp(); };
 function escondeInst() { $("inst").classList.remove("on"); }
 function mostraInst() {
   let ultimo = 0; try { ultimo = +localStorage.getItem("et_inst_nao") || 0; } catch {}
-  if (Date.now() - ultimo < 7 * 864e5 || naTelaInicio() || st.ag || $("barra").classList.contains("on") || !$("modalApp").classList.contains("hide")) return;
+  if (Date.now() - ultimo < 7 * 864e5 || naTelaInicio() || st.ag || $("barra").classList.contains("on") || $("sacolaBar").classList.contains("on") || !$("modalApp").classList.contains("hide")) return;
   $("inst").classList.add("on");
 }
 $("instNao").onclick = () => { escondeInst(); try { localStorage.setItem("et_inst_nao", Date.now()); } catch {} };
@@ -870,7 +922,8 @@ function rolou() {
   $("topo").classList.toggle("on", passouTopo);
   const f = $("filtros").getBoundingClientRect().top;
   $("filtros").classList.toggle("colado", passouTopo && f <= 70 && f > -40);
-  $("fab").classList.toggle("on", passouTopo && !$("barra").classList.contains("on") && !$("inst").classList.contains("on"));
+  document.body.classList.toggle("com-barra", $("barra").classList.contains("on"));
+  $("fab").classList.toggle("on", passouTopo && !$("barra").classList.contains("on") && !$("inst").classList.contains("on") && !$("sacolaBar").classList.contains("on"));
 }
 addEventListener("scroll", () => requestAnimationFrame(rolou), { passive: true });
 new MutationObserver(rolou).observe($("barra"), { attributes: true, attributeFilter: ["class"] });
@@ -906,7 +959,137 @@ function confete() {
   }
 }
 
+/* ---------- LOJA: produtos, sacola e pedido ---------- */
+const lj = { prods: [], cat: "", sac: {} };
+try { lj.sac = JSON.parse(localStorage.getItem("et_sacola") || "{}"); } catch {}
+const precoP = (p) => Number(p.preco_promo ?? p.preco);
+const fotoP = (p) => p.foto || "data:image/svg+xml;utf8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#2A2433"/><path d="M38 22h24v10l6 8v38a6 6 0 0 1-6 6H38a6 6 0 0 1-6-6V40l6-8z" fill="#8A5DB8" opacity=".6"/><rect x="40" y="14" width="20" height="10" rx="3" fill="#5ED6C6" opacity=".75"/></svg>');
+const salvaSac = () => { try { localStorage.setItem("et_sacola", JSON.stringify(lj.sac)); } catch {} };
+const itensSac = () => Object.entries(lj.sac).map(([id, n]) => ({ p: lj.prods.find((x) => x.id === id), n })).filter((x) => x.p && x.n > 0);
+async function carregaLoja() {
+  const { data, error } = await sb.rpc("ad_loja_publica", { p_slug: SLUG });
+  if (error || !data || !data.length) return;
+  lj.prods = data;
+  // tira da sacola o que acabou
+  Object.keys(lj.sac).forEach((id) => { const p = lj.prods.find((x) => x.id === id); if (!p || p.estoque === "esgotado") delete lj.sac[id]; else lj.sac[id] = Math.min(lj.sac[id], p.max); });
+  salvaSac();
+  $("loja").classList.remove("hide"); $("atLoja").classList.remove("hide");
+  const cats = [...new Set(lj.prods.map((p) => p.categoria).filter(Boolean))];
+  if (cats.length > 1) {
+    $("lojaCats").innerHTML = ["", ...cats].map((c) => `<button type="button" data-c="${esc(c)}" class="${lj.cat === c ? "on" : ""}">${esc(c || "Todos")}</button>`).join("");
+    $("lojaCats").onclick = (e) => { const b = e.target.closest("button"); if (!b) return; lj.cat = b.dataset.c; $("lojaCats").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); desenhaProds(); };
+  } else $("lojaCats").classList.add("hide");
+  desenhaProds(); atualizaSac();
+  if (location.hash === "#loja") setTimeout(() => vai($("loja")), 300);
+}
+function botaoProd(p) {
+  const n = lj.sac[p.id] || 0;
+  if (p.estoque === "esgotado") return `<button type="button" class="add" disabled>Esgotado</button>`;
+  return n ? `<div class="qtd" data-q="${p.id}"><button type="button" data-m="-1" aria-label="Menos">−</button><b>${n}</b><button type="button" data-m="1" aria-label="Mais">+</button></div>`
+    : `<button type="button" class="add" data-add="${p.id}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Adicionar</button>`;
+}
+function desenhaProds() {
+  const lista = lj.prods.filter((p) => !lj.cat || p.categoria === lj.cat);
+  $("prods").innerHTML = lista.map((p, i) => `<div class="prod ${p.estoque === "esgotado" ? "off" : ""}" data-p="${p.id}" style="animation-delay:${Math.min(i, 12) * 0.04}s">
+      <div class="ft"><img src="${esc(fotoP(p))}" alt="${esc(p.nome)}" loading="lazy">${p.estoque === "esgotado" ? `<span class="tag">Esgotado</span>` : p.preco_promo != null ? `<span class="tag promo">Oferta</span>` : p.estoque === "poucas" ? `<span class="tag pouco">Últimas unidades</span>` : ""}</div>
+      <b>${esc(p.nome)}</b><small>${esc(p.marca || p.categoria || "")}</small>
+      <div class="pr"><strong>${brl(precoP(p))}</strong>${p.preco_promo != null ? `<s>${brl(p.preco)}</s>` : ""}</div>
+      <div data-bt>${botaoProd(p)}</div></div>`).join("");
+  ligaBotoes($("prods"));
+}
+function ligaBotoes(raiz) {
+  raiz.querySelectorAll(".prod").forEach((el) => (el.onclick = (e) => { if (e.target.closest("[data-bt]")) return; abreProd(el.dataset.p); }));
+  raiz.querySelectorAll("[data-add]").forEach((b) => (b.onclick = (e) => { e.stopPropagation(); mudaQtd(b.dataset.add, 1); }));
+  raiz.querySelectorAll("[data-q]").forEach((q) => q.querySelectorAll("[data-m]").forEach((b) => (b.onclick = (e) => { e.stopPropagation(); mudaQtd(q.dataset.q, Number(b.dataset.m)); })));
+}
+function mudaQtd(id, d) {
+  const p = lj.prods.find((x) => x.id === id); if (!p) return;
+  const n = Math.max(0, Math.min((lj.sac[id] || 0) + d, p.max));
+  if (d > 0 && n === (lj.sac[id] || 0)) toast(`Temos só ${p.max} unidade${p.max > 1 ? "s" : ""} desse produto agora.`);
+  if (n) lj.sac[id] = n; else delete lj.sac[id];
+  salvaSac();
+  document.querySelectorAll(`.prod[data-p="${id}"] [data-bt]`).forEach((el) => { el.innerHTML = botaoProd(p); ligaBotoes(el.closest(".prod").parentElement); });
+  atualizaSac();
+  if (d > 0 && n === 1) toast("Adicionado à sacola 🛍️");
+}
+function atualizaSac() {
+  const its = itensSac(), n = its.reduce((s, x) => s + x.n, 0), tot = its.reduce((s, x) => s + x.n * precoP(x.p), 0);
+  $("sacN").textContent = n; $("sacTot").textContent = brl(tot);
+  $("sacolaBar").classList.toggle("on", n > 0 && !st.pedidoFeito);
+  if (typeof rolou === "function") rolou();
+}
+function abreProd(id) {
+  const p = lj.prods.find((x) => x.id === id); if (!p) return;
+  $("modalCx").innerHTML = `<img class="prod-big" src="${esc(fotoP(p))}" alt="">
+    <h3 style="margin-top:12px">${esc(p.nome)}</h3><p>${esc([p.marca, p.categoria].filter(Boolean).join(" · "))}</p>
+    <div class="pr" style="display:flex;gap:8px;align-items:baseline;margin-top:8px"><strong style="font-size:22px;color:var(--roxo2)">${brl(precoP(p))}</strong>${p.preco_promo != null ? `<s style="color:var(--m)">${brl(p.preco)}</s>` : ""}</div>
+    ${p.descricao ? `<p style="margin-top:8px;color:var(--t)">${esc(p.descricao)}</p>` : ""}
+    ${p.estoque === "poucas" ? `<p style="margin-top:6px;color:#F2C46B">Últimas unidades!</p>` : ""}
+    <div class="prod" style="background:none;border:0;padding:0;margin-top:8px;cursor:default;animation:none" data-p="${p.id}"><div data-bt>${botaoProd(p)}</div></div>
+    <div class="duo"><button type="button" data-fechar>Continuar olhando</button><button type="button" class="on" data-sacola>Ver sacola</button></div>`;
+  $("modal").classList.remove("hide");
+  const fecha = () => $("modal").classList.add("hide");
+  $("modal").onclick = (e) => { if (e.target === $("modal")) fecha(); };
+  ligaBotoes($("modalCx"));
+  $("modalCx").querySelector("[data-fechar]").onclick = fecha;
+  $("modalCx").querySelector("[data-sacola]").onclick = () => { if (!itensSac().length) mudaQtd(p.id, 1); abreSacola(); };
+}
+function abreSacola() {
+  const its = itensSac();
+  if (!its.length) { $("modal").classList.add("hide"); return toast("Sua sacola está vazia."); }
+  const tot = its.reduce((s, x) => s + x.n * precoP(x.p), 0);
+  let c = {}; try { c = JSON.parse(localStorage.getItem("et_cliente") || "{}"); } catch {}
+  $("modalCx").innerHTML = `<h3>Sua sacola 🛍️</h3>
+    <div style="margin-top:8px">${its.map(({ p, n }) => `<div class="item-sac"><img src="${esc(fotoP(p))}" alt=""><div class="cresce"><b>${esc(p.nome)}</b><small>${brl(precoP(p))} cada</small></div>
+      <div class="qtd" data-sq="${p.id}"><button type="button" data-m="-1">−</button><b>${n}</b><button type="button" data-m="1">+</button></div></div>`).join("")}</div>
+    <div class="tot-sac"><span>Total</span><b>${brl(tot)}</b></div>
+    <div class="retira"><b>Retirada no salão</b> · Av. Antônio Abreu Júnior, 625 A, Lundcéia. Você paga na retirada: Pix, dinheiro ou cartão. Separamos e avisamos pelo WhatsApp.</div>
+    <label class="f" for="pNome">Seu nome</label><input id="pNome" autocomplete="name" placeholder="Nome completo" value="${esc(c.nome || "")}">
+    <label class="f" for="pTel">Seu WhatsApp</label><input id="pTel" type="tel" inputmode="tel" autocomplete="tel" maxlength="15" placeholder="(31) 99999-9999" value="${esc(c.tel || "")}">
+    <label class="f" for="pObs">Observação <small>(opcional)</small></label><input id="pObs" maxlength="200" placeholder="Ex.: retiro sexta à tarde">
+    <p class="msg" id="pMsg" role="alert"></p>
+    <button type="button" class="go" id="pFinal">Finalizar pedido · ${brl(tot)}</button>
+    <button type="button" class="btn2" style="margin-top:10px" data-fechar>Continuar comprando</button>`;
+  $("modal").classList.remove("hide");
+  const fecha = () => $("modal").classList.add("hide");
+  $("modal").onclick = (e) => { if (e.target === $("modal")) fecha(); };
+  $("modalCx").querySelector("[data-fechar]").onclick = fecha;
+  mascaraTel($("pTel"));
+  $("modalCx").querySelectorAll("[data-sq]").forEach((q) => q.querySelectorAll("[data-m]").forEach((b) => (b.onclick = () => { mudaQtd(q.dataset.sq, Number(b.dataset.m)); itensSac().length ? abreSacola() : fecha(); })));
+  $("pFinal").onclick = finalizaPedido;
+}
+async function finalizaPedido() {
+  const nome = $("pNome").value.trim(), tel = $("pTel").value.replace(/\D/g, ""), obs = $("pObs").value.trim();
+  const msg = (t) => ($("pMsg").textContent = t);
+  if (nome.length < 2) { msg("Escreva seu nome."); return $("pNome").focus(); }
+  if (tel.length < 10) { msg("Escreva seu WhatsApp com DDD."); return $("pTel").focus(); }
+  const its = itensSac();
+  $("pFinal").disabled = true; $("pFinal").textContent = "Enviando pedido…";
+  const { data, error } = await sb.rpc("ad_comprar", { p_slug: SLUG, p_itens: its.map(({ p, n }) => ({ id: p.id, qtd: n })), p_nome: nome, p_whatsapp: tel, p_obs: obs || null });
+  if (error) {
+    $("pFinal").disabled = false; $("pFinal").textContent = "Finalizar pedido";
+    msg(error.message.replace(/^.*?: /, "")); carregaLoja(); return;
+  }
+  try { localStorage.setItem("et_cliente", JSON.stringify({ nome, tel: $("pTel").value })); } catch {}
+  const texto = `Olá, ${NOME}! 🛍️ Fiz um pedido pelo site:\n\n*Pedido #${data.codigo}*\n` +
+    its.map(({ p, n }) => `• ${n}x ${p.nome} — ${brl(n * precoP(p))}`).join("\n") +
+    `\n\n*Total:* ${brl(data.total)}\n*Nome:* ${nome}\n*WhatsApp:* ${fmtTel(tel)}` + (obs ? `\n*Observação:* ${obs}` : "") + `\n\nVou retirar no salão e pagar na retirada.`;
+  lj.sac = {}; salvaSac(); atualizaSac();
+  $("modalCx").innerHTML = `<div class="okbox" style="background:none;border:0;padding:0">
+    <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+    <h2>Pedido #${esc(data.codigo)} feito!</h2>
+    <p class="resumo">Total <b>${brl(data.total)}</b><br>Os produtos já ficaram reservados para você.</p>
+    <p class="note" style="font-size:15px">Agora toque no botão verde e envie o pedido no WhatsApp. Avisamos quando estiver pronto para retirar.</p>
+    <a class="zap" target="_blank" rel="noopener" href="https://wa.me/${zapNum()}?text=${encodeURIComponent(texto)}">Enviar pedido no WhatsApp</a>
+    <button type="button" class="btn2" style="margin-top:10px" data-fechar>Fechar</button></div>`;
+  $("modalCx").querySelector("[data-fechar]").onclick = () => $("modal").classList.add("hide");
+  setTimeout(confete, 200);
+  carregaLoja();
+}
+$("sacVer").onclick = abreSacola;
+
 carregar();
+carregaLoja();
 </script>
 </body>
 </html>

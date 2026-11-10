@@ -1,0 +1,26 @@
+{
+  "name": "Eduardo Hair Gestão",
+  "short_name": "Eduardo Gestão",
+  "description": "Gestão do salão Eduardo Teccarelli Hair: agenda, clientes, caixa, loja e pedidos.",
+  "id": "/eduardo/app/",
+  "start_url": "/eduardo/app/",
+  "scope": "/eduardo/app/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#121110",
+  "theme_color": "#121110",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "icone-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icone-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icone-mask-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "display_override": ["standalone", "minimal-ui"],
+  "categories": ["business", "productivity", "lifestyle"],
+  "shortcuts": [
+    { "name": "Agenda", "short_name": "Agenda", "url": "/eduardo/app/#agenda", "icons": [{ "src": "icone-192.png", "sizes": "192x192" }] },
+    { "name": "Novo agendamento", "short_name": "Agendar", "url": "/eduardo/app/#novo", "icons": [{ "src": "icone-192.png", "sizes": "192x192" }] },
+    { "name": "Pedidos da loja", "short_name": "Pedidos", "url": "/eduardo/app/#pedidos", "icons": [{ "src": "icone-192.png", "sizes": "192x192" }] }
+  ],
+  "prefer_related_applications": false
+}

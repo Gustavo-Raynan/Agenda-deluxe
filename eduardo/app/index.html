@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pt-BR" data-tema="escuro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Eduardo Hair Gestão</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#121110">
+<script>try{var t=localStorage.getItem("edu.tema2")||"escuro";document.documentElement.dataset.tema=t;document.querySelector('meta[name=theme-color]').content=t==="claro"?"#F6F2EC":"#121110"}catch(e){}</script>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Eduardo Hair">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icone-192.png">
+<link rel="apple-touch-icon" href="icone-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+
+<!-- Entrar -->
+<section id="v-login" class="login hide">
+  <img src="../icone-512.png" alt="Eduardo Teccarelli Hair">
+  <h1>Eduardo Hair Gestão</h1>
+  <p class="mudo" style="margin-top:6px">Sua agenda, suas clientes e o caixa do salão, no celular.</p>
+  <div class="cartao" id="l-cartao">
+    <h2 id="l-titulo-form" style="font-size:19px;margin-bottom:4px">Entrar</h2>
+    <label class="f" for="l-email">E-mail</label>
+    <input class="campo" id="l-email" type="email" autocomplete="username" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <label class="f" for="l-senha">Senha</label>
+    <div style="position:relative"><input class="campo" id="l-senha" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" style="padding-right:84px">
+      <button type="button" class="link" id="l-ver" style="position:absolute;right:14px;top:50%;transform:translateY(-50%)">Mostrar</button></div>
+    <button class="btn ouro cheio" id="l-entrar" style="margin-top:18px">Entrar</button>
+    <button class="link" id="l-esqueci" style="display:block;margin:12px auto 0">Esqueci minha senha</button>
+    <button class="btn cheio" id="l-criar" style="margin-top:14px">Primeiro acesso? Criar minha conta</button>
+  </div>
+</section>
+
+<!-- App -->
+<section id="v-app" class="hide">
+  <header class="topo">
+    <img class="marca" src="../icone-192.png" alt="Eduardo Hair">
+    <h1 id="titulo">Início</h1>
+    <button class="sino" id="b-sino" aria-label="Avisos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10.3 20a1.9 1.9 0 0 0 3.4 0"/></svg><b id="n-avisos" class="hide">0</b></button>
+    <button class="perfil" id="b-perfil" aria-label="Perfil">ET</button>
+  </header>
+  <main id="conteudo"></main>
+  <nav class="abas" id="abas">
+    <button data-aba="inicio" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Início</button>
+    <button data-aba="agenda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>Agenda</button>
+    <button data-aba="clientes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg>Clientes</button>
+    <button data-aba="caixa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="13" rx="3"/><path d="M2.5 10h19M7 15h3"/></svg>Caixa</button>
+    <button data-aba="mais"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>Mais</button>
+  </nav>
+</section>
+
+<div class="fundo" id="fundo"></div>
+<div class="folha" id="folha" role="dialog" aria-modal="true"><div class="pega"></div><div id="folha-conteudo"></div></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="app.js"></script>
+<script src="loja.js"></script>
+<script src="extras.js"></script>
+<script>try{aplicaVisual()}catch(e){}</script>
+</body>
+</html>
