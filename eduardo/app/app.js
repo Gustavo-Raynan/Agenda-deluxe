@@ -557,7 +557,7 @@ async function detalheAg(id) {
   abreFolha(cabFolha(esc(a.cliente_nome), `<span class="chip ${a.status}">${STATUS[a.status]}</span>${a.pago ? ' <span class="chip pago">Pago</span>' : ""}`) + `
     <div class="cartao">
       <dl class="info-ag">
-        <dt>Serviço</dt><dd>${esc(a.servico_nome)}</dd>
+        <dt>Serviço</dt><dd>${esc(a.servico_nome)}${a.serie_id ? ' <span class="chip">🔁 Recorrente</span>' : ""}</dd>
         <dt>Data</dt><dd>${dataLonga(a.inicio)}</dd>
         <dt>Horário</dt><dd>${hora(a.inicio)} às ${hora(a.fim)} · ${dur(Math.round((new Date(a.fim) - new Date(a.inicio)) / 60000))}</dd>
         <dt>Valor</dt><dd>${brl(a.preco)}</dd>
@@ -579,7 +579,14 @@ async function detalheAg(id) {
       ${ATIVOS.includes(a.status) ? `<div class="grade2"><button class="btn claro" data-remarcar>Remarcar</button>${passado ? `<button class="btn perigo" data-st="faltou">Não compareceu</button>` : `<button class="btn perigo" data-cancelar>Cancelar</button>`}</div>` : ""}
       ${a.status === "concluido" || a.pago ? `<button class="btn claro cheio" data-pagar>${IC.dinheiro}${a.pago ? "Registrar outro pagamento" : "Registrar pagamento"}</button>` : ""}
       ${["cancelado", "faltou"].includes(a.status) ? `<button class="btn claro cheio" data-reabrir>Reabrir agendamento</button>` : ""}
+      ${a.serie_id && ATIVOS.includes(a.status) ? `<button class="btn perigo cheio" data-cancserie>🔁 Cancelar este e os próximos da série</button>` : ""}
     </div>`, (r) => {
+    r.querySelector("[data-cancserie]")?.addEventListener("click", async () => {
+      const prox = await q(sb.from("ad_agendamentos").select("id").eq("serie_id", a.serie_id).in("status", ATIVOS).gte("inicio", a.inicio));
+      if (!confirm(`Cancelar ${prox.length} agendamento${prox.length > 1 ? "s" : ""} desta série (a partir de ${dataCurta(a.inicio)})? Os horários voltam a ficar livres.`)) return;
+      await q(sb.from("ad_agendamentos").update({ status: "cancelado" }).in("id", prox.map((x) => x.id)));
+      toast("Série cancelada."); fechaFolha(); atualizaTela();
+    });
     r.querySelectorAll("[data-st]").forEach((b) => (b.onclick = async () => {
       const novo = b.dataset.st;
       if (novo === "faltou" && !confirm("Marcar que a cliente não compareceu?")) return;
@@ -669,7 +676,7 @@ async function remarcar(a) {
 // NOVO AGENDAMENTO
 // =====================================================================
 async function novoAgendamento({ data, cliente }) {
-  const clientes = await q(sb.from("ad_clientes").select("id,nome,whatsapp").order("nome"));
+  const clientes = await q(sb.from("ad_clientes").select("id,nome,whatsapp,bloqueado").order("nome"));
   let horario = null, cli = cliente || null;
   const servs = st.servicos.filter((s) => s.ativo);
   abreFolha(cabFolha("Novo agendamento") + `
@@ -679,18 +686,34 @@ async function novoAgendamento({ data, cliente }) {
       <datalist id="lista-clientes">${clientes.map((c) => `<option value="${esc(c.nome)}">${fmtTel(c.whatsapp)}</option>`).join("")}</datalist>
       <label class="f">WhatsApp da cliente</label>
       <input class="campo" data-zap inputmode="tel" placeholder="(31) 99999-9999" value="${cli ? fmtTel(cli.whatsapp) : ""}">
+      <div data-avisocli></div>
       <label class="f">Serviço</label>
       <select class="campo" data-serv><option value="">Escolha…</option>${servs.map((s) => `<option value="${s.id}">${esc(s.nome)} · ${brl(s.preco)} · ${dur(s.duracao_min)}</option>`).join("")}</select>
       <div data-horario></div>
+      ${htmlRepetir()}
       <label class="f">Observação</label><textarea class="campo" data-obs placeholder="Opcional"></textarea>
     </div>
     <button class="btn ouro cheio" data-salvar>Agendar</button>`, (r) => {
+    const rep = ligaRepetir(r, () => horario);
+    const avisoCli = () => {
+      const box = r.querySelector("[data-avisocli]");
+      box.innerHTML = cli?.bloqueado ? `<p class="cartao" style="background:var(--alerta-bg);color:var(--alerta);font-size:14px;margin:8px 0 0">🚫 Essa cliente está bloqueada. Você ainda pode agendar por aqui, mas ela não consegue marcar pelo site.</p>`
+        : cli ? `<p class="pequeno" style="margin:6px 2px 0">✅ Cliente já cadastrada: <b>${esc(cli.nome)}</b></p>` : "";
+    };
+    avisoCli();
     const serv = () => servs.find((s) => s.id === r.querySelector("[data-serv]").value);
     const sel = seletorHorario(r, () => serv()?.duracao_min, data || isoDia(), (t) => (horario = t));
     r.querySelector("[data-serv]").onchange = () => sel.recarrega();
     r.querySelector("[data-cli]").oninput = (e) => {
       const c = clientes.find((x) => x.nome.toLowerCase() === e.target.value.trim().toLowerCase());
       if (c) { cli = c; r.querySelector("[data-zap]").value = fmtTel(c.whatsapp); } else cli = null;
+      avisoCli();
+    };
+    r.querySelector("[data-zap]").oninput = (e) => {
+      const d = e.target.value.replace(/\D/g, "");
+      if (d.length < 10) return;
+      const c = clientes.find((x) => x.whatsapp === d || x.whatsapp.slice(-10) === d.slice(-10) || x.whatsapp.slice(-11) === d.slice(-11));
+      if (c) { cli = c; r.querySelector("[data-cli]").value = c.nome; e.target.value = fmtTel(c.whatsapp); avisoCli(); }
     };
     r.querySelector("[data-salvar]").onclick = async () => {
       const nome = r.querySelector("[data-cli]").value.trim(), zap = r.querySelector("[data-zap]").value.replace(/\D/g, ""), s = serv();
@@ -699,19 +722,110 @@ async function novoAgendamento({ data, cliente }) {
       if (!s) return toast("Escolha o serviço.", 1);
       if (!horario) return toast("Escolha o horário.", 1);
       const ini = new Date(horario);
-      const { error } = await sb.from("ad_agendamentos").insert({
+      let datas = [ini];
+      try { datas = datas.concat(rep.gera(ini)); } catch (e) { return toast(e.message, 1); }
+      let pulados = [];
+      if (datas.length > 1) {
+        const ult = datas[datas.length - 1];
+        const ocup = await q(sb.from("ad_agendamentos").select("inicio,fim,status").in("status", ATIVOS).gte("fim", ini.toISOString()).lte("inicio", new Date(ult.getTime() + 864e5).toISOString()));
+        const livre = (d) => { const f = d.getTime() + s.duracao_min * 60000; return !ocup.some((o) => new Date(o.inicio).getTime() < f && new Date(o.fim).getTime() > d.getTime()); };
+        pulados = datas.slice(1).filter((d) => !livre(d));
+        datas = [ini, ...datas.slice(1).filter(livre)];
+        if (!confirm(`Criar ${datas.length} agendamentos (${rep.descricao()})?` + (pulados.length ? `\n\n${pulados.length} data${pulados.length > 1 ? "s" : ""} já ocupada${pulados.length > 1 ? "s" : ""} ficará${pulados.length > 1 ? "ão" : ""} de fora: ${pulados.map((d) => dataCurta(d.toISOString())).join(", ")}.` : ""))) return;
+      }
+      const serie = datas.length > 1 ? novoUuid() : null;
+      const obs = r.querySelector("[data-obs]").value.trim() || null;
+      const { error } = await sb.from("ad_agendamentos").insert(datas.map((d) => ({
         profissional_id: st.prof.id, servico_id: s.id, servico_nome: s.nome, preco: s.preco,
         cliente_nome: nome, cliente_whatsapp: zap, cliente_id: cli?.id || null, status: "confirmado",
-        inicio: ini.toISOString(), fim: new Date(ini.getTime() + s.duracao_min * 60000).toISOString(),
-        observacao: r.querySelector("[data-obs]").value.trim() || null,
-      });
+        inicio: d.toISOString(), fim: new Date(d.getTime() + s.duracao_min * 60000).toISOString(),
+        observacao: obs, serie_id: serie,
+      })));
       if (error) return toast(erroMsg(error), 1);
-      toast("Agendado!");
+      toast(datas.length > 1 ? `${datas.length} horários agendados! 🔁` : "Agendado!");
       const a = { cliente_nome: nome, cliente_whatsapp: zap, servico_nome: s.nome, inicio: ini.toISOString() };
-      if (confirm("Enviar a confirmação para a cliente no WhatsApp?")) abreZap(linkZap(a, "confirmacao"));
+      if (datas.length > 1) {
+        const lista = datas.map((d) => `• ${dataCurta(d.toISOString())} às ${hora(d.toISOString())}`).join("\n");
+        if (confirm("Enviar as datas para a cliente no WhatsApp?")) abreZap(`https://wa.me/${zapNum(zap)}?text=${encodeURIComponent(`Oi, ${primeiroNome(nome)}! 💜 Seus horários de ${s.nome} estão garantidos:\n\n${lista}\n\nQualquer imprevisto, me avise com antecedência. Até lá!`)}`);
+      } else if (confirm("Enviar a confirmação para a cliente no WhatsApp?")) abreZap(linkZap(a, "confirmacao"));
       fechaFolha(); st.dia = isoDia(ini); atualizaTela();
     };
   });
+}
+
+
+// ---------- agendamento recorrente ----------
+const SEM_CURTO = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+function htmlRepetir() {
+  return `<label class="f">Repetir</label>
+    <select class="campo" data-rep>
+      <option value="">Não repetir</option><option value="dia">Todo dia</option><option value="sem">Toda semana</option>
+      <option value="2sem">A cada 2 semanas</option><option value="3sem">A cada 3 semanas</option><option value="4sem">A cada 4 semanas</option>
+      <option value="mes">Todo mês (mesmo dia)</option><option value="dsem">Dias da semana…</option><option value="datas">Datas específicas…</option>
+    </select>
+    <div class="hide" data-rep-dsem><div class="seg" style="flex-wrap:wrap;margin-top:8px">${SEM_CURTO.map((d, i) => `<button type="button" data-ds="${i}">${d}</button>`).join("")}</div></div>
+    <div class="hide" data-rep-datas><div class="linha" style="gap:8px;margin-top:8px"><input class="campo" type="date" data-rep-nova min="${isoDia()}" style="flex:1"><button type="button" class="btn mini" data-rep-add>+ Adicionar</button></div><div data-rep-lista class="pequeno" style="margin-top:6px"></div></div>
+    <div class="hide" data-rep-fim>
+      <label class="f">Termina</label>
+      <div class="grade2"><select class="campo" data-rep-tipo><option value="data">Em uma data</option><option value="vezes">Depois de X vezes</option></select>
+      <input class="campo" type="date" data-rep-ate value="${somaDiasIso(isoDia(), 90)}"><input class="campo hide" type="number" min="2" max="60" value="8" data-rep-vezes inputmode="numeric"></div>
+      <p class="pequeno" style="margin-top:6px" data-rep-resumo></p>
+    </div>`;
+}
+function novoUuid() { if (crypto.randomUUID) try { return crypto.randomUUID(); } catch {} const b = crypto.getRandomValues(new Uint8Array(16)); b[6] = (b[6] & 15) | 64; b[8] = (b[8] & 63) | 128; const h = [...b].map((x) => x.toString(16).padStart(2, "0")).join(""); return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`; }
+function somaDiasIso(iso, n) { const d = new Date(iso + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+function ligaRepetir(r, horarioAtual) {
+  const $r = (x) => r.querySelector(x);
+  const dsem = new Set(), datas = new Set();
+  const tipo = () => $r("[data-rep]").value;
+  const mostra = () => {
+    const t = tipo();
+    $r("[data-rep-dsem]").classList.toggle("hide", t !== "dsem");
+    $r("[data-rep-datas]").classList.toggle("hide", t !== "datas");
+    $r("[data-rep-fim]").classList.toggle("hide", !t || t === "datas");
+    const vz = $r("[data-rep-tipo]").value === "vezes";
+    $r("[data-rep-ate]").classList.toggle("hide", vz); $r("[data-rep-vezes]").classList.toggle("hide", !vz);
+    $r("[data-rep-lista]").innerHTML = [...datas].sort().map((d) => `<span class="chip" style="margin:2px">${d.slice(8)}/${d.slice(5, 7)} <a href="#" data-rm="${d}" style="color:inherit">✕</a></span>`).join("") || "Nenhuma data adicionada.";
+    r.querySelectorAll("[data-rm]").forEach((a) => (a.onclick = (e) => { e.preventDefault(); datas.delete(a.dataset.rm); mostra(); }));
+    let res = ""; try { const h = horarioAtual(); if (h && t && t !== "datas") { const n = gera(new Date(h)).length + 1; res = `Serão ${n} agendamentos no total.`; } } catch (e) { res = e.message; }
+    $r("[data-rep-resumo]").textContent = res;
+  };
+  // monta datas no fuso de Brasília (UTC-3, sem horário de verão)
+  const BR = 3 * 3600e3;
+  function gera(ini) {
+    const t = tipo(); if (!t) return [];
+    const loc = new Date(ini.getTime() - BR); // relógio local em campos UTC
+    const hh = loc.getUTCHours(), mm = loc.getUTCMinutes();
+    const em = (y, m, d) => new Date(Date.UTC(y, m, d, hh, mm) + BR);
+    if (t === "datas") {
+      if (!datas.size) throw new Error("Adicione pelo menos uma data para repetir.");
+      return [...datas].sort().map((d) => em(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8))).filter((d) => d > ini);
+    }
+    if (t === "dsem" && !dsem.size) throw new Error("Escolha os dias da semana.");
+    const porVezes = $r("[data-rep-tipo]").value === "vezes";
+    const vezes = Math.min(60, Math.max(2, +$r("[data-rep-vezes]").value || 2));
+    const ateIso = $r("[data-rep-ate]").value; if (!porVezes && !ateIso) throw new Error("Escolha quando a repetição termina.");
+    const limite = porVezes ? Infinity : em(+ateIso.slice(0, 4), +ateIso.slice(5, 7) - 1, +ateIso.slice(8)).getTime() + 864e5 - 1;
+    const out = []; const y0 = loc.getUTCFullYear(), m0 = loc.getUTCMonth(), d0 = loc.getUTCDate();
+    for (let i = 1; out.length < (porVezes ? vezes - 1 : 60) && i < 800; i++) {
+      let d;
+      if (t === "dia") d = em(y0, m0, d0 + i);
+      else if (/sem$/.test(t) && t !== "dsem") d = em(y0, m0, d0 + i * 7 * (parseInt(t) || 1));
+      else if (t === "mes") { const ult = new Date(Date.UTC(y0, m0 + i + 1, 0)).getUTCDate(); d = em(y0, m0 + i, Math.min(d0, ult)); }
+      else if (t === "dsem") { d = em(y0, m0, d0 + i); if (!dsem.has(new Date(d.getTime() - BR).getUTCDay())) continue; }
+      if (d.getTime() > limite) break;
+      out.push(d);
+    }
+    if (out.length >= 60 && !porVezes) throw new Error("Muitas repetições (máximo 60). Escolha uma data de término mais próxima.");
+    return out;
+  }
+  $r("[data-rep]").onchange = mostra; $r("[data-rep-tipo]").onchange = mostra; $r("[data-rep-ate]").onchange = mostra; $r("[data-rep-vezes]").oninput = mostra;
+  r.querySelectorAll("[data-ds]").forEach((b) => (b.onclick = () => { const i = +b.dataset.ds; dsem.has(i) ? dsem.delete(i) : dsem.add(i); b.classList.toggle("on", dsem.has(i)); mostra(); }));
+  $r("[data-rep-add]").onclick = () => { const v = $r("[data-rep-nova]").value; if (!v) return toast("Escolha a data.", 1); datas.add(v); $r("[data-rep-nova]").value = ""; mostra(); };
+  r.addEventListener("click", (e) => { if (e.target.closest("[data-slots] button")) setTimeout(mostra, 0); });
+  mostra();
+  const NOMES = { dia: "todo dia", sem: "toda semana", "2sem": "a cada 2 semanas", "3sem": "a cada 3 semanas", "4sem": "a cada 4 semanas", mes: "todo mês", dsem: "dias da semana", datas: "datas específicas" };
+  return { gera, descricao: () => NOMES[tipo()] || "" };
 }
 
 // =====================================================================
@@ -789,7 +903,7 @@ async function telaClientes() {
   const r = tela(`
     <div class="busca">${IC.busca}<input class="campo" id="busca-cli" placeholder="Buscar por nome ou telefone" value="${esc(st.busca)}" autocomplete="off"></div>
     <div class="seg" id="filtro-cli">
-      <button data-f="todas" class="on">Todas</button><button data-f="vip">VIP</button><button data-f="frequentes">Frequentes</button><button data-f="novas">Novas</button><button data-f="sumidas">Inativas</button><button data-f="aniver">Aniver.</button>
+      <button data-f="todas" class="on">Todas</button><button data-f="vip">VIP</button><button data-f="frequentes">Frequentes</button><button data-f="novas">Novas</button><button data-f="sumidas">Inativas</button><button data-f="aniver">Aniver.</button><button data-f="bloq">Bloqueadas</button>
     </div>
     <div id="lista-cli"></div>
     <button class="btn ouro cheio" id="nova-cli">${IC.mais}Cadastrar cliente</button>`);
@@ -801,10 +915,11 @@ async function telaClientes() {
     if (filtro === "frequentes") l = l.filter((c) => c.visitas >= 3).sort((a, b) => b.visitas - a.visitas);
     if (filtro === "sumidas") l = l.filter((c) => c.diasSem !== null && c.diasSem >= 30 && !c.proxima).sort((a, b) => b.diasSem - a.diasSem);
     if (filtro === "vip") l = l.filter((c) => c.vip);
+    if (filtro === "bloq") l = l.filter((c) => c.bloqueado);
     if (filtro === "novas") l = l.filter((c) => c.visitas <= 1 && (Date.now() - new Date(c.criado_em)) / 864e5 <= 30);
     if (filtro === "aniver") l = l.filter((c) => c.aniversario && c.aniversario.slice(5, 7) === mesAtual).sort((a, b) => a.aniversario.slice(8) - b.aniversario.slice(8));
     $("lista-cli").innerHTML = (filtro === "sumidas" && l.length ? `<p class="pequeno" style="margin:0 4px 8px">Clientes há 30 dias ou mais sem voltar e sem horário marcado. Toque em "Convidar" para mandar uma mensagem pronta.</p>` : "") + (l.length ? `<div class="lista">${l.map((c) => `<button class="item" data-c="${c.id}">${avatarCli(c)}
-      <div class="cresce"><b>${esc(c.nome)}</b>${c.vip ? ' <span class="chip vip">VIP</span>' : ""}${c.visitas >= 3 ? ' <span class="chip concluido">Frequente</span>' : ""}
+      <div class="cresce"><b>${esc(c.nome)}</b>${c.bloqueado ? ' <span class="chip cancelado">🚫 Bloqueada</span>' : ""}${c.vip ? ' <span class="chip vip">VIP</span>' : ""}${c.visitas >= 3 ? ' <span class="chip concluido">Frequente</span>' : ""}
       <div class="pequeno">${c.proxima ? "Próximo: " + dataCurta(c.proxima) + " às " + hora(c.proxima) : c.ultima ? (c.diasSem === 0 ? "Última visita hoje" : `Última visita há ${c.diasSem} dia${c.diasSem !== 1 ? "s" : ""}`) : "Ainda sem visitas"}${filtro === "aniver" && c.aniversario ? " · 🎂 " + c.aniversario.slice(8) + "/" + c.aniversario.slice(5, 7) : ""}</div></div>
       ${filtro === "sumidas" ? `<a class="btn zap mini" target="_blank" rel="noopener" data-parar href="https://wa.me/${zapNum(c.whatsapp)}?text=${encodeURIComponent(msgVolta(c))}">Convidar</a>` : '<span class="seta">›</span>'}</button>`).join("")}</div>`
       : `<div class="vazio">${IC.cliente}<div>${todas.length ? "Nenhuma cliente nesta lista." : "As clientes que agendam pelo site aparecem aqui automaticamente."}</div></div>`);
@@ -837,6 +952,7 @@ async function detalheCliente(id) {
       <div class="stat"><small>Cancelamentos</small><b>${c.cancel}</b><i>${c.faltas ? c.faltas + " falta" + (c.faltas > 1 ? "s" : "") : "sem faltas"}</i></div>
       <div class="stat"><small>Última visita</small><b style="font-size:20px">${c.ultima ? dataCurta(c.ultima) : "—"}</b><i>${c.diasSem === null ? "" : c.diasSem === 0 ? "hoje" : "há " + c.diasSem + " dia" + (c.diasSem !== 1 ? "s" : "")}</i></div>
     </div>
+    ${c.bloqueado ? `<p class="cartao" style="background:var(--alerta-bg);color:var(--alerta);font-size:14.5px">🚫 <b>Cliente bloqueada</b> — não consegue agendar pelo site.${c.motivo_bloqueio ? "<br>Motivo: " + esc(c.motivo_bloqueio) : ""}</p>` : ""}
     ${c.cancel + c.faltas >= 2 ? `<p class="cartao" style="background:var(--alerta-bg);color:var(--alerta);font-size:14.5px">⚠️ Essa cliente já cancelou ou faltou ${c.cancel + c.faltas} vezes.</p>` : ""}
     ${htmlFidelidade(c)}
     ${c.observacao ? `<div class="cartao"><b>Anotações</b><p class="mudo" style="margin-top:4px;white-space:pre-wrap">${esc(c.observacao)}</p></div>` : ""}
@@ -848,15 +964,33 @@ async function detalheCliente(id) {
         <a class="btn claro" target="_blank" rel="noopener" href="https://wa.me/${zapNum(c.whatsapp)}?text=${encodeURIComponent(msgAniver)}">Parabéns 🎂</a>
       </div>
       <div class="grade2"><button class="btn claro" data-vip>${c.vip ? "Tirar do VIP" : "⭐ Marcar como VIP"}</button><button class="btn claro" data-editar>Editar dados</button></div>
+      <button class="btn ${c.bloqueado ? "claro" : "perigo"} cheio" data-bloq>${c.bloqueado ? "✅ Desbloquear cliente" : "🚫 Bloquear cliente"}</button>
     </div>
     <div class="tit-linha"><h2>Histórico</h2></div>
     ${hist.length ? hist.map((a) => cartaoAg(a, true)).join("") : `<div class="vazio">Sem atendimentos ainda.</div>`}`, (r) => {
     r.querySelector("[data-agendar]").onclick = () => novoAgendamento({ cliente: c });
     r.querySelector("[data-editar]").onclick = () => editaCliente(c);
+    r.querySelector("[data-bloq]").onclick = () => bloqueiaCliente(c);
     r.querySelector("[data-vip]").onclick = async () => { await q(sb.from("ad_clientes").update({ vip: !c.vip }).eq("id", c.id)); toast(c.vip ? "Cliente tirada do VIP." : "Cliente marcada como VIP ⭐"); detalheCliente(c.id); };
     r.querySelector("[data-resgatar]")?.addEventListener("click", async () => { if (await resgataFid(c)) detalheCliente(c.id); });
     ligaCartoes(r);
   });
+}
+
+async function bloqueiaCliente(c) {
+  if (c.bloqueado) {
+    if (!confirm(`Desbloquear ${c.nome}? Ela volta a conseguir agendar pelo site.`)) return;
+    await q(sb.from("ad_clientes").update({ bloqueado: false, motivo_bloqueio: null }).eq("id", c.id));
+    toast("Cliente desbloqueada."); return detalheCliente(c.id);
+  }
+  const motivo = prompt(`Bloquear ${c.nome}?\n\nEla não vai conseguir agendar pelo site (aparece uma mensagem para falar com o salão no WhatsApp).\n\nMotivo (opcional, só você vê):`, c.faltas ? "Faltou sem avisar" : "");
+  if (motivo === null) return;
+  await q(sb.from("ad_clientes").update({ bloqueado: true, motivo_bloqueio: motivo.trim() || null }).eq("id", c.id));
+  const futuros = c.ags.filter((a) => ATIVOS.includes(a.status) && new Date(a.inicio) > new Date());
+  if (futuros.length && confirm(`Ela tem ${futuros.length} horário${futuros.length > 1 ? "s" : ""} marcado${futuros.length > 1 ? "s" : ""}. Cancelar também?`)) {
+    await q(sb.from("ad_agendamentos").update({ status: "cancelado" }).in("id", futuros.map((a) => a.id)));
+  }
+  toast("Cliente bloqueada 🚫"); detalheCliente(c.id); if (st.aba === "clientes") telaClientes();
 }
 
 function editaCliente(c) {

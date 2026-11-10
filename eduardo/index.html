@@ -81,6 +81,11 @@ section::before{content:"";position:absolute;left:30px;right:30px;top:-1px;heigh
 h2{font:600 27px/1.15 var(--titulo);margin-bottom:6px;letter-spacing:.01em}
 .sub{margin:0 0 14px;color:var(--m);font-size:15px}
 .note{font-size:14px;color:var(--m);margin-top:10px}
+.volta{margin-top:10px;padding:12px 14px;border-radius:14px;background:rgba(201,162,255,.12);border:1px solid rgba(201,162,255,.35);font-size:15px;line-height:1.45;animation:surge .35s ease}
+.volta.bloq{background:rgba(255,120,120,.12);border-color:rgba(255,120,120,.4)}
+.volta button{margin-top:8px;background:none;border:1px solid currentColor;color:inherit;border-radius:999px;padding:6px 12px;font:inherit;font-size:14px;cursor:pointer}
+.volta .troca{border:0;padding:0;margin-left:6px;text-decoration:underline;font-size:13px;opacity:.8}
+@keyframes surge{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 .etapa{font:600 14px var(--font);color:var(--roxo2);margin:22px 0 10px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.06em}
 .etapa i{font-style:normal;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--marca);color:#fff;font-size:12.5px;letter-spacing:0}
 
@@ -476,8 +481,9 @@ header .nota{animation:surge .7s .66s both}
   <div class="slots" id="slots" role="group" aria-labelledby="lbHora"></div>
 
   <p class="etapa"><i>3</i>Seus dados</p>
-  <label class="f" for="nome" style="margin-top:0">Seu nome</label><input id="nome" autocomplete="name" placeholder="Nome completo" enterkeyhint="next">
-  <label class="f" for="tel">Seu WhatsApp</label><input id="tel" type="tel" inputmode="tel" autocomplete="tel" maxlength="15" placeholder="(31) 99999-9999" enterkeyhint="next">
+  <label class="f" for="tel" style="margin-top:0">Seu WhatsApp</label><input id="tel" type="tel" inputmode="tel" autocomplete="tel" maxlength="15" placeholder="(31) 99999-9999" enterkeyhint="next">
+  <div class="volta hide" id="volta"></div>
+  <div id="blNome"><label class="f" for="nome">Seu nome</label><input id="nome" autocomplete="name" placeholder="Nome completo" enterkeyhint="next"></div>
   <label class="f" for="obs">Observação <small>(opcional)</small></label>
   <textarea id="obs" maxlength="200" placeholder="Ex.: cabelo longo, quero manter o comprimento, cor que desejo…"></textarea>
   <input class="hp" id="site" tabindex="-1" autocomplete="off" aria-hidden="true">
@@ -744,6 +750,41 @@ const mascaraTel = (el) => el.addEventListener("input", () => { const d = el.val
 mascaraTel($("tel")); mascaraTel($("mTel"));
 try { const c = JSON.parse(localStorage.getItem("et_cliente") || "{}"); $("nome").value = c.nome || ""; $("tel").value = c.tel || ""; if (c.nome) $("mNome").value = c.nome.split(" ")[0]; if (c.tel) $("mTel").value = c.tel; } catch {}
 
+/* ---------- reconhece cliente que já agendou ---------- */
+let reconhecida = null, ultTelBusca = "";
+async function reconhece() {
+  const t = $("tel").value.replace(/\D/g, "");
+  if (t.length < 10 || t === ultTelBusca) { if (t.length < 10) mostraVolta(null); return; }
+  ultTelBusca = t;
+  const { data } = await sb.rpc("ad_cliente_reconhece", { p_slug: SLUG, p_whatsapp: t });
+  if ($("tel").value.replace(/\D/g, "") !== t) return;
+  mostraVolta(data || null);
+}
+function mostraVolta(c) {
+  reconhecida = c && !c.bloqueado ? c : null;
+  const v = $("volta");
+  if (!c) { v.className = "volta hide"; $("blNome").classList.remove("hide"); return; }
+  if (c.bloqueado) {
+    v.className = "volta bloq";
+    v.innerHTML = `Não é possível agendar online com esse número. Por favor, fale com o salão pelo <a href="https://wa.me/${zapNum()}?text=${encodeURIComponent("Olá! Gostaria de agendar um horário.")}" target="_blank" rel="noopener" style="color:inherit;font-weight:700">WhatsApp</a>.`;
+    $("blNome").classList.remove("hide"); return;
+  }
+  v.className = "volta";
+  const temUlt = c.ultimo && st.pag.servicos.find((s) => s.nome === c.ultimo.split(" + ")[0]);
+  v.innerHTML = `💜 Que bom te ver de novo, <b>${esc(c.primeiro)}</b>! Seu cadastro já está salvo, não precisa preencher mais nada.` +
+    (temUlt && !st.sel.length ? `<br><button type="button" id="repete">Repetir o último: ${esc(c.ultimo)}</button>` : "") +
+    `<button type="button" class="troca" id="naoSou">Não sou eu</button>`;
+  if (!$("nome").value.trim()) $("nome").value = c.primeiro;
+  $("blNome").classList.add("hide");
+  $("naoSou").onclick = () => { reconhecida = null; ultTelBusca = ""; $("tel").value = ""; $("nome").value = ""; mostraVolta(null); $("tel").focus(); };
+  $("repete")?.addEventListener("click", () => {
+    c.ultimo.split(" + ").forEach((n) => { const s = st.pag.servicos.find((x) => x.nome === n); if (s && !st.sel.some((x) => x.id === s.id) && st.sel.length < MAX_SERV) st.sel.push(s); });
+    desenhaLista(); carregaSlots(); atualiza(); toast("Serviço escolhido! Agora é só escolher o horário."); vai($("agendar"));
+  });
+}
+$("tel").addEventListener("input", () => { clearTimeout(reconhece.t); reconhece.t = setTimeout(reconhece, 350); });
+if ($("tel").value) setTimeout(reconhece, 800);
+
 /* ---------- agendar ---------- */
 $("enviar").onclick = async () => {
   const msg = (t) => { $("msg").textContent = t; };
@@ -751,8 +792,8 @@ $("enviar").onclick = async () => {
   const nome = $("nome").value.trim(), tel = $("tel").value.replace(/\D/g, ""), obs = $("obs").value.trim();
   if (!st.sel.length) { msg("Escolha pelo menos um serviço."); return vai($("servicos")); }
   if (!st.hora) { msg("Escolha o dia e o horário."); return vai($("agendar")); }
-  if (nome.length < 2) { msg("Escreva seu nome."); return $("nome").focus(); }
   if (tel.length < 10) { msg("Escreva seu WhatsApp com DDD."); return $("tel").focus(); }
+  if (nome.length < 2) { msg("Escreva seu nome."); $("blNome").classList.remove("hide"); return $("nome").focus(); }
   if (!$("aceite").checked) { msg("Leia e marque que concorda com a política de cancelamento."); $("lbAceite").classList.add("pisca"); setTimeout(() => $("lbAceite").classList.remove("pisca"), 1300); $("lbAceite").scrollIntoView({ behavior: "smooth", block: "center" }); return; }
   msg("");
   $("enviar").disabled = true; $("enviar").textContent = "Reservando…";
@@ -763,7 +804,7 @@ $("enviar").onclick = async () => {
     else msg("Não foi possível agendar: " + error.message);
     return;
   }
-  try { localStorage.setItem("et_cliente", JSON.stringify({ nome, tel: $("tel").value })); } catch {}
+  try { const ant = JSON.parse(localStorage.getItem("et_cliente") || "{}"); localStorage.setItem("et_cliente", JSON.stringify({ nome: reconhecida && ant.nome ? ant.nome : nome, tel: $("tel").value })); } catch {}
   st.ag = { id, nome, tel, obs, sel: [...st.sel], min: totMin(), preco: totPreco(), inicio: st.hora };
   confirmado();
 };
