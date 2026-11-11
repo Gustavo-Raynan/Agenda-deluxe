@@ -1,5 +1,5 @@
 // Nay Nails Gestão — service worker: abre rápido e recebe notificações com o app fechado
-const CACHE = "nay-gestao-v26";
+const CACHE = "nay-gestao-v27";
 const ARQUIVOS = ["./", "app.css", "app.js", "estoque.js", "extras.js", "manifest.json", "icone-192.png", "../nayara/logo.jpg"];
 
 self.addEventListener("install", (e) => {

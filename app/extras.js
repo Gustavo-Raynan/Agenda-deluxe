@@ -516,3 +516,59 @@ function telaLivres(aba = "compartilhar") {
     desenha();
   });
 }
+
+// =====================================================================
+// EDITAR SERVIÇOS E VALOR DE UM AGENDAMENTO
+// =====================================================================
+function editarServicos(a) {
+  const todos = st.servicos.filter((s) => s.ativo || s.id === a.servico_id);
+  const achar = (nm) => st.servicos.find((x) => x.nome.toLowerCase() === nm.toLowerCase());
+  const nomes = String(a.servico_nome || "").split(/\s*\+\s*/).filter(Boolean);
+  let itens = nomes.map((nm, i) => { const s = achar(nm) || (i === 0 && st.servicos.find((x) => x.id === a.servico_id)); return { id: s?.id || null, nome: s?.nome || nm, preco: s ? Number(s.preco) : 0, min: s?.duracao_min || 0 }; });
+  const minAtual = Math.round((new Date(a.fim) - new Date(a.inicio)) / 60000);
+  if (itens.length === 1 && !itens[0].min) itens[0].min = minAtual;
+  let valorManual = true, valor = Number(a.preco), minManual = true, minutos = minAtual;
+  abreFolha(cabFolha("Editar serviço e valor", `${esc(a.cliente_nome)} · ${dataCurta(a.inicio)} às ${hora(a.inicio)}`) + `
+    <div class="cartao"><label class="f" style="margin-top:0">Serviços</label><div data-lista></div>
+      <div class="linha" style="gap:8px;margin-top:10px"><select class="campo" data-add><option value="">+ Adicionar serviço…</option>${todos.map((s) => `<option value="${s.id}">${esc(s.nome)} · ${brl(s.preco)} · ${dur(s.duracao_min)}</option>`).join("")}</select></div></div>
+    <div class="cartao"><div class="grade2">
+      <div><label class="f" style="margin-top:0">Valor total (R$)</label><input class="campo" data-valor inputmode="decimal" style="min-width:0"></div>
+      <div><label class="f" style="margin-top:0">Duração (min)</label><input class="campo" data-min type="number" min="5" step="5" style="min-width:0"></div></div>
+      <p class="pequeno" data-resumo style="margin-top:8px"></p>
+      <button class="link" data-soma style="margin-top:6px">Usar soma dos preços da tabela</button></div>
+    <button class="btn ouro cheio" data-salvar>Salvar alterações</button>`, (r) => {
+    const $ = (x) => r.querySelector(x);
+    const somaP = () => itens.reduce((s, i) => s + i.preco, 0), somaM = () => itens.reduce((s, i) => s + i.min, 0);
+    const desenha = () => {
+      $("[data-lista]").innerHTML = itens.length ? itens.map((i, k) => `<div class="item" style="padding:10px 0"><div class="cresce"><b>${esc(i.nome)}</b><div class="pequeno">${brl(i.preco)}${i.min ? " · " + dur(i.min) : ""}</div></div><button class="link" data-tira="${k}" style="color:var(--perigo,#b04040)">Remover</button></div>`).join("") : `<p class="mudo">Nenhum serviço. Adicione abaixo.</p>`;
+      r.querySelectorAll("[data-tira]").forEach((b) => (b.onclick = () => { itens.splice(+b.dataset.tira, 1); valorManual = false; minManual = false; desenha(); }));
+      if (!valorManual) valor = somaP();
+      if (!minManual && somaM()) minutos = somaM();
+      $("[data-valor]").value = String(valor.toFixed(2)).replace(".", ",");
+      $("[data-min]").value = minutos;
+      const fim = new Date(new Date(a.inicio).getTime() + minutos * 60000);
+      $("[data-resumo]").textContent = `Horário: ${hora(a.inicio)} às ${hora(fim.toISOString())}${somaP() !== valor ? ` · Tabela: ${brl(somaP())}` : ""}`;
+    };
+    $("[data-add]").onchange = (e) => {
+      const s = st.servicos.find((x) => x.id === e.target.value); if (!s) return;
+      itens.push({ id: s.id, nome: s.nome, preco: Number(s.preco), min: s.duracao_min });
+      valor += Number(s.preco); minutos += s.duracao_min; e.target.value = ""; desenha();
+    };
+    $("[data-valor]").oninput = (e) => { valorManual = true; valor = Number(e.target.value.replace(/\./g, "").replace(",", ".")) || 0; };
+    $("[data-min]").oninput = (e) => { minManual = true; minutos = Math.max(5, Number(e.target.value) || 0); const fim = new Date(new Date(a.inicio).getTime() + minutos * 60000); $("[data-resumo]").textContent = `Horário: ${hora(a.inicio)} às ${hora(fim.toISOString())}`; };
+    $("[data-soma]").onclick = () => { valorManual = false; minManual = false; desenha(); };
+    $("[data-salvar]").onclick = async () => {
+      if (!itens.length) return toast("Deixe pelo menos um serviço.", 1);
+      if (!(valor >= 0)) return toast("Valor inválido.", 1);
+      const fim = new Date(new Date(a.inicio).getTime() + minutos * 60000).toISOString();
+      const choque = await q(sb.from("ad_agendamentos").select("cliente_nome,inicio").in("status", ATIVOS).neq("id", a.id).lt("inicio", fim).gt("fim", a.inicio));
+      if (choque.length && !confirm(`Com essa duração, o horário encosta em ${choque.map((c) => `${c.cliente_nome} (${hora(c.inicio)})`).join(", ")}. Salvar mesmo assim?`)) return;
+      const { error } = await sb.from("ad_agendamentos").update({
+        servico_id: itens[0].id, servico_nome: itens.map((i) => i.nome).join(" + ").slice(0, 200), preco: Math.round(valor * 100) / 100, fim,
+      }).eq("id", a.id);
+      if (error) return toast(erroMsg(error), 1);
+      toast("Agendamento atualizado!"); detalheAg(a.id); atualizaTela();
+    };
+    desenha();
+  });
+}
