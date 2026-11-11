@@ -80,8 +80,11 @@ h2{font:600 28px/1.1 var(--serif);margin-bottom:6px}
 /* serviços: escolha única */
 .sv{display:grid;grid-template-columns:auto 1fr auto;gap:2px 12px;align-items:center;padding:14px 14px;border:1px solid var(--b);border-radius:16px;margin-bottom:8px;cursor:pointer;background:var(--field);transition:border-color .15s,background .15s}
 .sv:has(input:checked){border-color:var(--g);background:#2A2618}
-.sv input{appearance:none;-webkit-appearance:none;grid-row:1/span 2;width:22px;height:22px;margin:0;border:1.5px solid var(--b2);border-radius:50%;background:transparent;display:grid;place-content:center;cursor:pointer}
-.sv input::after{content:"";width:10px;height:10px;border-radius:50%;background:#1B1608;transform:scale(0);transition:transform .12s}
+.sv input{appearance:none;-webkit-appearance:none;grid-row:1/span 2;width:24px;height:24px;margin:0;border:1.5px solid var(--b2);border-radius:7px;background:transparent;display:grid;place-content:center;cursor:pointer}
+.sv input::after{content:"";width:11px;height:6px;border-left:2.5px solid #1B1608;border-bottom:2.5px solid #1B1608;transform:rotate(-45deg) scale(0);margin-top:-3px;transition:transform .12s}
+.sv input:checked::after{transform:rotate(-45deg) scale(1)!important}
+#lista .sv input{width:24px;height:24px;padding:0;border:1.5px solid var(--b2);border-radius:7px;background:transparent}
+#lista .sv input:checked{background:var(--g);border-color:var(--g)}
 .sv input:checked{background:var(--g);border-color:var(--g)}
 .sv input:checked::after{transform:scale(1)}
 .sv .n{font-size:16px;font-weight:500;line-height:1.3}
@@ -308,8 +311,9 @@ header .cta::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:4
 <main>
 <section id="servicos">
   <h2>Serviços e valores</h2>
-  <p class="sub">Escolha um serviço. Os valores são a partir de, e o final é combinado no atendimento.</p>
+  <p class="sub">Escolha <b>um ou mais serviços</b> (ex.: pé + spa dos pés). Os valores são a partir de, e o final é combinado no atendimento.</p>
   <div id="lista"><p class="note">Carregando serviços…</p></div>
+  <div id="somaServ" class="hide" style="margin-top:12px;padding:12px 14px;border:1px solid var(--g);border-radius:14px;background:#2A2618;font-size:14.5px"></div>
 </section>
 
 <section id="agendar">
@@ -468,14 +472,21 @@ async function carregar() {
     return;
   }
   $("lista").innerHTML = data.servicos.map((s) => `
-    <label class="sv"><input type="radio" name="serv" value="${s.id}">
+    <label class="sv"><input type="checkbox" name="serv" value="${s.id}">
       <span class="n">${esc(s.nome)}</span>
       <span class="d">${dur(s.duracao_min)}${s.descricao ? `<i>${esc(s.descricao)}</i>` : ""}</span>
       <em><b>a partir de</b>${brl(s.preco)}</em></label>`).join("");
   cascata("#lista .sv", 0.045);
   $("lista").querySelectorAll("input").forEach((i) => (i.onchange = () => {
-    st.serv = data.servicos.find((s) => s.id === i.value);
-    carregaSlots(); atualiza();
+    if (i.checked) st.sel = [...(st.sel || []), i.value];
+    else st.sel = (st.sel || []).filter((x) => x !== i.value);
+    if (st.sel.length > 6) { i.checked = false; st.sel.pop(); return; }
+    const ss = st.sel.map((id) => data.servicos.find((s) => s.id === id)).filter(Boolean);
+    st.serv = ss.length ? { id: ss.map((s) => s.id).join(","), ids: ss.map((s) => s.id), nome: ss.map((s) => s.nome).join(" + "), preco: ss.reduce((t, s) => t + Number(s.preco), 0), duracao_min: ss.reduce((t, s) => t + s.duracao_min, 0) } : null;
+    const box = $("somaServ");
+    if (ss.length > 1) { box.classList.remove("hide"); box.innerHTML = `✅ <b>${ss.length} serviços:</b> ${esc(st.serv.nome)}<br><span style="color:var(--m)">Tempo total ${dur(st.serv.duracao_min)} · a partir de</span> <b style="color:var(--gt)">${brl(st.serv.preco)}</b>`; }
+    else box.classList.add("hide");
+    st.hora = null; carregaSlots(); atualiza();
   }));
   desenhaDias();
   carregaCatalogo();
@@ -708,7 +719,7 @@ $("enviar").onclick = async () => {
   if (!$("aceite").checked) { msg("Leia e marque que concorda com a política de cancelamento."); $("aceite").closest("label").classList.add("pisca"); setTimeout(() => $("aceite").closest("label").classList.remove("pisca"), 1200); return $("aceite").focus(); }
   msg("");
   $("enviar").disabled = true; $("enviar").textContent = "Reservando…";
-  const { data: id, error } = await sb.rpc("ad_agendar_varios", { p_slug: SLUG, p_servicos: [st.serv.id], p_inicio: st.hora, p_nome: nome, p_whatsapp: tel, p_obs: obs || null });
+  const { data: id, error } = await sb.rpc("ad_agendar_varios", { p_slug: SLUG, p_servicos: st.serv.ids || [st.serv.id], p_inicio: st.hora, p_nome: nome, p_whatsapp: tel, p_obs: obs || null });
   $("enviar").disabled = false; $("enviar").textContent = "Confirmar agendamento";
   if (error) {
     if (error.message.includes("disponível")) { msg("Esse horário acabou de ser ocupado. Escolha outro."); carregaSlots(); vai($("agendar")); }
@@ -753,8 +764,8 @@ $("lembrete").onclick = () => {
 };
 
 $("novo").onclick = () => {
-  st.ag = null; st.serv = null; st.hora = null; $("obs").value = "";
-  document.querySelectorAll("#lista input").forEach((i) => (i.checked = false));
+  st.ag = null; st.serv = null; st.sel = []; st.hora = null; $("obs").value = "";
+  document.querySelectorAll("#lista input").forEach((i) => (i.checked = false)); $("somaServ").classList.add("hide");
   carregaSlots();
   $("confirmado").classList.add("hide"); $("servicos").classList.remove("hide"); $("agendar").classList.remove("hide");
   vai($("servicos"));
