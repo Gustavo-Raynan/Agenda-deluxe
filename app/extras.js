@@ -67,11 +67,12 @@ const ATALHOS = {
   compras: ["Compras", "carrinho", () => registraCompra()],
   relatorios: ["Relatórios", "grafico", () => telaRelatorios()],
   bloquear: ["Bloquear", "bloqueio", () => novoBloqueio()],
+  livres: ["Horários livres", "calendario", () => telaLivres()],
   fidelidade: ["Fidelidade", "estrela", () => telaFidelidade()],
   site: ["Meu link", "link", () => telaSite()],
   config: ["Ajustes", "engrenagem", () => vaiPara("mais")],
 };
-const ATALHOS_PADRAO = ["novo", "bloquear", "clientes", "financeiro", "esmaltes", "estoque", "relatorios", "config"];
+const ATALHOS_PADRAO = ["novo", "livres", "bloquear", "clientes", "financeiro", "esmaltes", "estoque", "relatorios"];
 const meusAtalhos = () => (cfg().atalhos || ATALHOS_PADRAO).filter((k) => ATALHOS[k]);
 function htmlAtalhos() {
   return meusAtalhos().map((k) => `<button class="atalho" data-atalho="${k}"><span>${IC[ATALHOS[k][1]] || IC.estrela}</span>${ATALHOS[k][0]}</button>`).join("");
@@ -395,4 +396,123 @@ async function cartaoAlmocoDia(diaIso) {
   const ini = Math.min(...hs.map((h) => minDe(h.inicio))), fim = Math.max(...hs.map((h) => minDe(h.fim)));
   if (minDe(a.fim) <= ini || minDe(a.ini) >= fim) return null;
   return { t: new Date(`${diaIso}T${a.ini}:00-03:00`).getTime(), html: `<div class="ag" style="cursor:default;background:repeating-linear-gradient(135deg,var(--nude) 0 10px,transparent 10px 20px);border-style:dashed"><div class="h">${a.ini}<small>até ${a.fim}</small></div><div><div class="n">🍽️ Horário de almoço</div><div class="s">Bloqueado para agendamentos</div></div></div>` };
+}
+
+// =====================================================================
+// HORÁRIOS LIVRES (compartilhar lista + encontrar um horário)
+// =====================================================================
+const SEM_LONGO = ["dom.", "seg.", "ter.", "qua.", "qui.", "sex.", "sáb."];
+const MES_CURTO = ["jan.", "fev.", "mar.", "abr.", "maio", "jun.", "jul.", "ago.", "set.", "out.", "nov.", "dez."];
+const rotDia = (d) => { const x = new Date(d + "T12:00:00Z"); return [SEM_LONGO[x.getUTCDay()], `${x.getUTCDate()} de ${MES_CURTO[x.getUTCMonth()]}`]; };
+
+async function livresPeriodo(de, ate, min) {
+  const n = Math.min(62, diasEntre(de, ate) + 1);
+  const dias = Array.from({ length: n }, (_, i) => somaDias(de, i));
+  const res = await Promise.all(dias.map((d) => livres(d, min)));
+  return dias.map((d, i) => ({ d, hs: res[i].map(hora) })).filter((x) => x.hs.length);
+}
+
+function telaLivres(aba = "compartilhar") {
+  const servs = st.servicos.filter((s) => s.ativo);
+  const padrao = servs.find((s) => /^p[ée] e m[ãa]o$/i.test(s.nome)) || servs[0];
+  let servId = padrao?.id, de = isoDia(), ate = somaDias(isoDia(), 9), mes = isoDia().slice(0, 7), diaSel = null, lista = [];
+  const serv = () => servs.find((s) => s.id === servId);
+  abreFolha(cabFolha("Horários livres", "Mande para as clientes ou encontre um horário para encaixar.") + `
+    <div class="seg" data-abas style="margin-bottom:12px"><button data-aba="compartilhar">Compartilhar</button><button data-aba="encontrar">Encontrar horário</button></div>
+    <div class="cartao"><label class="f" style="margin-top:0">Serviço (define o tempo de cada horário)</label>
+      <select class="campo" data-sv>${servs.map((s) => `<option value="${s.id}" ${s.id === servId ? "selected" : ""}>${esc(s.nome)} · ${dur(s.duracao_min)}</option>`).join("")}</select></div>
+    <div data-corpo></div>`, (r) => {
+    const corpo = r.querySelector("[data-corpo]");
+    const abas = () => r.querySelectorAll("[data-aba]").forEach((b) => b.classList.toggle("on", b.dataset.aba === aba));
+
+    async function compartilhar() {
+      corpo.innerHTML = `<div class="cartao"><div class="grade2"><div><label class="f" style="margin-top:0">De</label><input class="campo" type="date" data-de value="${de}" min="${isoDia()}" style="min-width:0;width:100%"></div><div><label class="f" style="margin-top:0">Até</label><input class="campo" type="date" data-ate value="${ate}" min="${isoDia()}" style="min-width:0;width:100%"></div></div>
+        <div class="opcoes" style="margin-top:10px"><button data-p="6">Esta semana</button><button data-p="13">2 semanas</button><button data-p="29">30 dias</button></div></div>
+        <div data-prev><p class="mudo" style="text-align:center;padding:20px">Carregando horários…</p></div>`;
+      corpo.querySelector("[data-de]").onchange = (e) => { de = e.target.value; if (ate < de) ate = de; compartilhar(); };
+      corpo.querySelector("[data-ate]").onchange = (e) => { ate = e.target.value < de ? de : e.target.value; compartilhar(); };
+      corpo.querySelectorAll("[data-p]").forEach((b) => (b.onclick = () => { de = isoDia(); ate = somaDias(de, +b.dataset.p); compartilhar(); }));
+      lista = await livresPeriodo(de, ate, serv()?.duracao_min || 60);
+      const prev = corpo.querySelector("[data-prev]");
+      prev.innerHTML = `<div class="cartao" style="padding:0;overflow:hidden">
+          <div style="background:linear-gradient(135deg,#1F2A1C,#3A4A2E);color:#F4EBDD;padding:16px;display:flex;gap:12px;align-items:center">
+            <img src="../nayara/logo.jpg" alt="" style="width:52px;height:52px;border-radius:50%;border:2px solid #C9A86A;object-fit:cover">
+            <div class="cresce"><b style="font-size:17px">${esc(st.prof.nome || "")}</b><div style="font-size:12.5px;opacity:.85">${st.prof.whatsapp ? fmtTel(st.prof.whatsapp) : ""}</div></div>
+            <span style="background:#C9A86A;color:#1B1608;border-radius:20px;padding:6px 12px;font-weight:700;font-size:12.5px">Agende já!</span></div>
+          <div style="padding:12px 16px"><b>Horários disponíveis</b> <span class="pequeno">· ${esc(serv()?.nome || "")}</span>
+          ${lista.length ? lista.map((x) => { const [s, d] = rotDia(x.d); return `<div style="display:grid;grid-template-columns:86px 1fr;gap:8px;padding:9px 0;border-top:1px solid var(--linha)"><div><b>${s}</b><div class="pequeno">${d}</div></div><div style="font-variant-numeric:tabular-nums;line-height:1.7">${x.hs.join("&nbsp;&nbsp; ")}</div></div>`; }).join("") : `<p class="mudo" style="padding:12px 0">Nenhum horário livre nesse período.</p>`}</div></div>
+        ${lista.length ? `<button class="btn ouro cheio" data-img>${IC.baixar || ""}Compartilhar imagem</button><button class="btn claro cheio" data-txt style="margin-top:8px">Copiar texto para o WhatsApp</button>` : ""}`;
+      prev.querySelector("[data-img]")?.addEventListener("click", compartilhaImagem);
+      prev.querySelector("[data-txt]")?.addEventListener("click", async () => {
+        const txt = `✨ *Horários disponíveis — ${st.prof.nome}*\n_${serv()?.nome}_\n\n` + lista.map((x) => { const [s, d] = rotDia(x.d); return `*${s} ${d}*\n${x.hs.join(" · ")}`; }).join("\n\n") + `\n\n📲 Agende pelo link: ${location.origin}/nayara/`;
+        try { await navigator.clipboard.writeText(txt); toast("Texto copiado! É só colar no WhatsApp."); }
+        catch { abreZap(`https://wa.me/?text=${encodeURIComponent(txt)}`); }
+      });
+    }
+
+    async function compartilhaImagem() {
+      const W = 1080, lh = 64, top = 330;
+      const linhas = lista.map((x) => { const parts = []; for (let i = 0; i < x.hs.length; i += 6) parts.push(x.hs.slice(i, i + 6).join("    ")); return { x, parts }; });
+      const H = Math.max(1080, top + 90 + linhas.reduce((s, l) => s + Math.max(2, l.parts.length) * lh + 24, 0) + 170);
+      const c = document.createElement("canvas"); c.width = W; c.height = H; const g = c.getContext("2d");
+      g.fillStyle = "#F7F2E8"; g.fillRect(0, 0, W, H);
+      const gr = g.createLinearGradient(0, 0, W, 300); gr.addColorStop(0, "#1F2A1C"); gr.addColorStop(1, "#3A4A2E"); g.fillStyle = gr; g.fillRect(0, 0, W, 290);
+      const logo = new Image(); logo.src = "../nayara/logo.jpg"; await new Promise((ok) => { logo.onload = ok; logo.onerror = ok; });
+      g.save(); g.beginPath(); g.arc(150, 145, 95, 0, 7); g.closePath(); g.clip(); try { g.drawImage(logo, 55, 50, 190, 190); } catch {} g.restore();
+      g.strokeStyle = "#C9A86A"; g.lineWidth = 6; g.beginPath(); g.arc(150, 145, 95, 0, 7); g.stroke();
+      g.fillStyle = "#F4EBDD"; g.font = "700 54px system-ui, sans-serif"; g.fillText(st.prof.nome || "", 280, 125);
+      g.font = "400 34px system-ui, sans-serif"; g.globalAlpha = .85; g.fillText(st.prof.whatsapp ? fmtTel(st.prof.whatsapp) : "Nails e cuidados", 280, 180); g.globalAlpha = 1;
+      g.fillStyle = "#C9A86A"; g.font = "700 32px system-ui, sans-serif"; g.fillText(`Horários disponíveis · ${serv()?.nome || ""}`, 280, 232);
+      let y = top + 20;
+      g.fillStyle = "#1F2A1C"; g.font = "700 44px system-ui, sans-serif"; g.fillText("Horário disponível:", 60, y); y += 40;
+      for (const { x, parts } of linhas) {
+        g.strokeStyle = "#E3D9C6"; g.lineWidth = 2; g.beginPath(); g.moveTo(60, y); g.lineTo(W - 60, y); g.stroke(); y += 58;
+        const [s, d] = rotDia(x.d);
+        g.fillStyle = "#1F2A1C"; g.font = "700 40px system-ui, sans-serif"; g.fillText(s, 60, y);
+        g.font = "400 32px system-ui, sans-serif"; g.fillStyle = "#6B6355"; g.fillText(d, 60, y + 44);
+        g.fillStyle = "#1F2A1C"; g.font = "500 38px system-ui, sans-serif";
+        parts.forEach((p, i) => g.fillText(p, 300, y + i * lh));
+        y += Math.max(2, parts.length) * lh - 30;
+      }
+      g.fillStyle = "#C9A86A"; g.beginPath(); g.roundRect(60, H - 140, W - 120, 92, 46); g.fill();
+      g.fillStyle = "#1B1608"; g.font = "700 38px system-ui, sans-serif"; g.textAlign = "center";
+      g.fillText(`Agende: ${location.host}/nayara`, W / 2, H - 80); g.textAlign = "left";
+      const blob = await new Promise((ok) => c.toBlob(ok, "image/png"));
+      const arq = new File([blob], "horarios-disponiveis.png", { type: "image/png" });
+      if (navigator.canShare?.({ files: [arq] })) { try { await navigator.share({ files: [arq], title: "Horários disponíveis" }); return; } catch (e) { if (e.name === "AbortError") return; } }
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = arq.name; a.click(); toast("Imagem salva. Agora é só enviar.");
+    }
+
+    async function encontrar() {
+      const [y, m] = mes.split("-").map(Number);
+      const ini = `${mes}-01`, nDias = new Date(Date.UTC(y, m, 0)).getUTCDate(), fimMes = `${mes}-${String(nDias).padStart(2, "0")}`;
+      const nomeMes = cap(new Date(Date.UTC(y, m - 1, 15)).toLocaleDateString("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" }));
+      corpo.innerHTML = `<div class="cartao"><div class="navdia" style="margin:0 0 8px"><button class="redondo" data-m="-1" ${mes <= isoDia().slice(0, 7) ? "disabled" : ""}>‹</button><div class="cresce">${nomeMes}<small>Dias em verde têm horário livre</small></div><button class="redondo" data-m="1">›</button></div>
+        <div class="mes" data-cal><p class="mudo" style="grid-column:1/-1;text-align:center;padding:20px">Procurando horários…</p></div></div><div data-slotsdia></div>`;
+      corpo.querySelectorAll("[data-m]").forEach((b) => (b.onclick = () => { const d = new Date(Date.UTC(y, m - 1 + +b.dataset.m, 1)); mes = d.toISOString().slice(0, 7); diaSel = null; encontrar(); }));
+      const deDia = ini < isoDia() ? isoDia() : ini;
+      const disp = deDia <= fimMes ? await livresPeriodo(deDia, fimMes, serv()?.duracao_min || 60) : [];
+      const tem = Object.fromEntries(disp.map((x) => [x.d, x.hs]));
+      const iniSem = new Date(ini + "T12:00:00Z").getUTCDay();
+      let cel = SEM3.map((s) => `<div class="cab">${s}</div>`).join("") + Array(iniSem).fill("<div></div>").join("");
+      for (let d = 1; d <= nDias; d++) {
+        const iso = `${mes}-${String(d).padStart(2, "0")}`, ok = !!tem[iso];
+        cel += `<button data-dia="${iso}" ${ok ? "" : "disabled"} style="${ok ? "color:#2E7D4F;font-weight:800" : "opacity:.35"}${iso === diaSel ? ";background:#2E7D4F;color:#fff;border-radius:50%" : ""}">${d}<i>${ok ? tem[iso].length : ""}</i></button>`;
+      }
+      corpo.querySelector("[data-cal]").innerHTML = cel;
+      const mostra = () => {
+        const box = corpo.querySelector("[data-slotsdia]");
+        if (!diaSel || !tem[diaSel]) { box.innerHTML = disp.length ? `<p class="mudo" style="text-align:center">Toque num dia em verde.</p>` : `<p class="mudo" style="text-align:center">Nenhum horário livre neste mês para esse serviço.</p>`; return; }
+        box.innerHTML = `<div class="cartao"><b>${cap(diaSemana(diaSel + "T12:00:00-03:00"))}, ${dataCurta(diaSel + "T12:00:00-03:00")}</b><div class="slots" style="margin-top:10px">${tem[diaSel].map((h) => `<button data-h="${h}">${h}</button>`).join("")}</div><p class="pequeno" style="margin-top:10px">Toque no horário para agendar uma cliente.</p></div>`;
+        box.querySelectorAll("[data-h]").forEach((b) => (b.onclick = () => novoAgendamento({ data: diaSel, servicoId: servId, horaIni: new Date(`${diaSel}T${b.dataset.h}:00-03:00`).toISOString() })));
+      };
+      corpo.querySelectorAll("[data-dia]").forEach((b) => (b.onclick = () => { diaSel = b.dataset.dia; encontrar(); }));
+      mostra();
+    }
+
+    const desenha = () => { abas(); aba === "compartilhar" ? compartilhar() : encontrar(); };
+    r.querySelectorAll("[data-aba]").forEach((b) => (b.onclick = () => { aba = b.dataset.aba; desenha(); }));
+    r.querySelector("[data-sv]").onchange = (e) => { servId = e.target.value; desenha(); };
+    desenha();
+  });
 }

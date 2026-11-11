@@ -628,7 +628,7 @@ function mensagensProntas(a) {
 }
 
 // ---------- escolher dia e horário (usado em novo agendamento e remarcar) ----------
-function seletorHorario(r, minutos, dataInicial, aoMudar) {
+function seletorHorario(r, minutos, dataInicial, aoMudar, pre) {
   const caixa = r.querySelector("[data-horario]");
   let escolhido = null;
   caixa.innerHTML = `<label class="f">Dia</label><input class="campo" type="date" data-data value="${dataInicial}" min="${isoDia()}">
@@ -644,6 +644,7 @@ function seletorHorario(r, minutos, dataInicial, aoMudar) {
     const lv = await livres(d, mins);
     sl.innerHTML = lv.length ? lv.map((t) => `<button type="button" data-t="${t}">${hora(t)}</button>`).join("") : `<p class="pequeno" style="grid-column:1/-1">Sem horários livres neste dia. Use "outro horário" se quiser encaixar.</p>`;
     sl.querySelectorAll("button").forEach((b) => (b.onclick = () => { sl.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); escolhido = b.dataset.t; caixa.querySelector("[data-hora]").value = ""; aoMudar(escolhido); }));
+    if (pre) { const alvo = [...sl.querySelectorAll("button")].find((b) => new Date(b.dataset.t).getTime() === new Date(pre).getTime()); pre = null; alvo?.click(); alvo?.scrollIntoView({ block: "center" }); }
   };
   caixa.querySelector("[data-data]").onchange = carrega;
   caixa.querySelector("[data-outro]").onclick = () => caixa.querySelector("[data-manual]").classList.toggle("hide");
@@ -679,7 +680,7 @@ async function remarcar(a) {
 // =====================================================================
 // NOVO AGENDAMENTO
 // =====================================================================
-async function novoAgendamento({ data, cliente }) {
+async function novoAgendamento({ data, cliente, servicoId, horaIni }) {
   const clientes = await q(sb.from("ad_clientes").select("id,nome,whatsapp").order("nome"));
   let horario = null, cli = cliente || null;
   const servs = st.servicos.filter((s) => s.ativo);
@@ -699,7 +700,8 @@ async function novoAgendamento({ data, cliente }) {
     <button class="btn ouro cheio" data-salvar>Agendar</button>`, (r) => {
     const serv = () => servs.find((s) => s.id === r.querySelector("[data-serv]").value);
     let rep = null;
-    const sel = seletorHorario(r, () => serv()?.duracao_min, data || isoDia(), (t) => { horario = t; rep?.atualiza(); });
+    if (servicoId) r.querySelector("[data-serv]").value = servicoId;
+    const sel = seletorHorario(r, () => serv()?.duracao_min, data || isoDia(), (t) => { horario = t; rep?.atualiza(); }, horaIni);
     rep = ligaRepetir(r, () => horario);
     r.querySelector("[data-serv]").onchange = () => sel.recarrega();
     r.querySelector("[data-cli]").oninput = (e) => {
@@ -1142,6 +1144,7 @@ function telaMais() {
   const grupos = [
     ["Salão", [
       ["servicos", IC.tesoura, "Serviços e preços", "Preço, duração, cor na agenda e custo"],
+      ["livres", IC.calendario, "Horários livres", "Compartilhar vagas e encontrar um horário"],
       ["horarios", IC.relogio, "Horários e folgas", "Dias de trabalho, almoço, feriados e férias"],
       ["site", IC.link, "Site de agendamento", "Copiar e divulgar seu link"],
       ["salao", IC.salao, "Dados do salão", "Nome, WhatsApp, Instagram e endereço"],
@@ -1170,7 +1173,7 @@ function telaMais() {
   const r = tela(grupos.map(([g, itens]) => `<div class="tit-linha"><h2>${g}</h2></div><div class="lista">${itens.map(([k, ic, t, s]) => `<button class="item" data-m="${k}"><div class="ic">${ic}</div><div class="cresce"><b>${t}</b>${s ? `<div class="pequeno">${esc(s)}</div>` : ""}</div><span class="seta">›</span></button>`).join("")}</div>`).join("") + `
     <p class="pequeno" style="text-align:center;margin-top:20px">Nay Nails Gestão · versão 1.1<br>Mesma agenda do site de agendamento</p>`);
   r.querySelectorAll("[data-m]").forEach((b) => (b.onclick = () => ({
-    estoque: () => vaiPara("estoque"), relatorios: telaRelatorios, taxas: telaTaxas, fidelidade: telaFidelidade, equipe: telaEquipe, servicos: telaServicos, horarios: telaHorarios, notificacoes: telaNotificacoes, chegar: comoChegar, site: telaSite, salao: dadosSalao, instalar: instrucoesInstalar, senha: novaSenha, seguranca: telaSeguranca, aparencia: telaAparencia, automacoes: telaAutomacoes, tutorial: () => mostraTutorial(),
+    estoque: () => vaiPara("estoque"), relatorios: telaRelatorios, taxas: telaTaxas, fidelidade: telaFidelidade, equipe: telaEquipe, servicos: telaServicos, horarios: telaHorarios, livres: () => telaLivres(), notificacoes: telaNotificacoes, chegar: comoChegar, site: telaSite, salao: dadosSalao, instalar: instrucoesInstalar, senha: novaSenha, seguranca: telaSeguranca, aparencia: telaAparencia, automacoes: telaAutomacoes, tutorial: () => mostraTutorial(),
     sair: async () => { if (confirm("Sair do app?")) { await sb.auth.signOut(); location.reload(); } },
   })[b.dataset.m]()));
 }
