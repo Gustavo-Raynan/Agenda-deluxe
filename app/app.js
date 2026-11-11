@@ -554,7 +554,6 @@ function msgConfirmacao(a) {
     `📅 *Dia:* ${cap(dataLonga(ini))}\n` +
     `⏰ *Horário:* ${hora(ini)}${fim ? ` às ${hora(fim)}` : ""}${minutos ? ` (${dur(minutos)})` : ""}\n` +
     `💰 *Valor:* ${brl(a.preco || 0)}` + cores + obs + end +
-    `\n\n✨ *Dicas para o seu atendimento:*\n• Chegue com 5 minutinhos de antecedência\n• Se puder, venha com as unhas sem esmalte\n• Atrasos acima de 15 minutos podem precisar ser remarcados` +
     `\n\n⚠️ *Política de cancelamento:* cancelamentos ou remarcações com menos de 24h de antecedência têm taxa de 100% do valor do serviço.` +
     link + `\n\nQualquer dúvida é só me chamar por aqui. Até lá! 😘\n_Nayara Fernandes · Nails e cuidados_`;
 }
