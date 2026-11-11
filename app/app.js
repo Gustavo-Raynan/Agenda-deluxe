@@ -481,7 +481,13 @@ async function telaAgenda() {
       <div class="linha entre" style="margin:0 4px 10px"><span class="mudo">${ativos.length} atendimento${ativos.length !== 1 ? "s" : ""}</span>
       ${st.dia !== hoje ? `<button class="link" data-hoje>Ir para hoje</button>` : ""}</div>
       ${(bloq || []).map((b) => `<div class="ag cancelado" style="opacity:.8;cursor:default"><div class="h">${hora(b.inicio)}<small>até ${hora(b.fim)}</small></div><div><div class="n">Horário bloqueado</div><div class="s">${esc(b.motivo || "")}</div></div><div class="d"><button class="link" data-desbloq="${b.id}">Liberar</button></div></div>`).join("")}
-      ${ags.length ? ags.map((a) => cartaoAg(a)).join("") : `<div class="vazio">${IC.calendario}<div>Nenhum agendamento neste dia.</div></div>`}
+      ${await (async () => {
+        const alm = await cartaoAlmocoDia(st.dia);
+        const itens = ags.map((a) => ({ t: new Date(a.inicio).getTime(), html: cartaoAg(a) }));
+        if (alm) itens.push(alm);
+        itens.sort((x, y) => x.t - y.t);
+        return ags.length || alm ? itens.map((i) => i.html).join("") + (ags.length ? "" : `<div class="vazio">${IC.calendario}<div>Nenhum agendamento neste dia.</div></div>`) : `<div class="vazio">${IC.calendario}<div>Nenhum agendamento neste dia.</div></div>`;
+      })()}
       <button class="btn ouro cheio" data-novo style="margin-top:6px">${IC.mais}Novo agendamento</button>`;
   } else if (st.agendaModo === "semana") {
     const ini = st.dia, fim = somaDias(st.dia, 7);
@@ -1252,6 +1258,7 @@ async function telaHorarios() {
   abreFolha(cabFolha("Horários e folgas", "O site só mostra horários dentro destes períodos.") + `
     <div class="cartao"><h2>Semana de trabalho</h2><p class="pequeno">Para ter intervalo de almoço, use dois períodos no mesmo dia (ex.: 9h às 12h e 13h às 18h).</p><div data-semana></div>
       <button class="btn ouro cheio" data-salvar style="margin-top:14px">Salvar horários</button></div>
+    ${htmlAlmocoCartao()}
     <div class="cartao"><h2>Até quando o site aceita marcações</h2><p class="pequeno">As clientes só conseguem marcar até esta data. Em branco: próximos 30 dias.</p>
       <div class="linha" style="margin-top:10px;gap:8px"><input class="campo" type="date" data-ate min="${isoDia()}" value="${cfg().agenda_ate || ""}"><button class="btn claro" data-ate-ok style="flex:none">Salvar</button></div></div>
     <div class="tit-linha"><h2>Folgas e bloqueios</h2><button data-bloq>+ Bloquear</button></div>
@@ -1263,6 +1270,7 @@ async function telaHorarios() {
       if (edit.length) await q(sb.from("ad_horarios").insert(edit.map((h) => ({ ...h, profissional_id: st.prof.id }))));
       toast("Horários salvos. O site já foi atualizado.");
     };
+    ligaAlmoco(r, () => { fechaFolha(); telaHorarios(); });
     r.querySelector("[data-ate-ok]").onclick = async () => {
       const v = r.querySelector("[data-ate]").value || null;
       await salvaCfg({ agenda_ate: v });

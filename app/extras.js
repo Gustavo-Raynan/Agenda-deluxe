@@ -330,3 +330,69 @@ async function cancelaSerie(a) {
   if (error) return toast(erroMsg(error), 1);
   toast(`${prox.length} horário(s) cancelados.`); fechaFolha(); atualizaTela();
 }
+
+// =====================================================================
+// HORÁRIO DE ALMOÇO
+// =====================================================================
+const almoco = () => ({ ativo: true, ini: "12:00", fim: "13:30", ...(cfg().almoco || {}) });
+const minDe = (h) => { const [a, b] = h.slice(0, 5).split(":").map(Number); return a * 60 + b; };
+const hDe = (m) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+
+// junta o buraco do almoço antigo e abre o novo, dia a dia
+function aplicaAlmoco(horarios, antigo, novo) {
+  const out = [];
+  for (let d = 0; d < 7; d++) {
+    let iv = horarios.filter((h) => h.dia_semana === d).map((h) => [minDe(h.inicio), minDe(h.fim)]).sort((a, b) => a[0] - b[0]);
+    if (!iv.length) continue;
+    if (antigo?.ativo) {
+      const ai = minDe(antigo.ini), af = minDe(antigo.fim), j = [];
+      for (const x of iv) { const u = j[j.length - 1]; if (u && u[1] === ai && x[0] === af) u[1] = x[1]; else j.push([...x]); }
+      iv = j;
+    }
+    if (novo?.ativo) {
+      const ni = minDe(novo.ini), nf = minDe(novo.fim), s = [];
+      for (const [a, b] of iv) {
+        if (nf <= a || ni >= b) { s.push([a, b]); continue; }
+        if (ni > a) s.push([a, ni]);
+        if (nf < b) s.push([nf, b]);
+      }
+      iv = s;
+    }
+    iv.filter(([a, b]) => b - a >= 15).forEach(([a, b]) => out.push({ dia_semana: d, inicio: hDe(a), fim: hDe(b) }));
+  }
+  return out;
+}
+
+function htmlAlmocoCartao() {
+  const a = almoco();
+  return `<div class="cartao"><h2>🍽️ Horário de almoço</h2><p class="pequeno">Nesse horário ninguém consegue marcar (nem no site, nem no app) e ele aparece na sua agenda.</p>
+    <label class="linha" style="gap:10px;margin:10px 0"><input type="checkbox" data-alm-on ${a.ativo ? "checked" : ""} style="width:22px;height:22px;accent-color:var(--ouro)"><b>Ter horário de almoço</b></label>
+    <div class="linha" style="gap:8px"><input class="campo" type="time" data-alm-ini value="${a.ini}"><span>às</span><input class="campo" type="time" data-alm-fim value="${a.fim}"></div>
+    <button class="btn ouro cheio" data-alm-salvar style="margin-top:12px">Salvar almoço</button></div>`;
+}
+
+function ligaAlmoco(r, recarrega) {
+  r.querySelector("[data-alm-salvar]").onclick = async () => {
+    const novo = { ativo: r.querySelector("[data-alm-on]").checked, ini: r.querySelector("[data-alm-ini]").value, fim: r.querySelector("[data-alm-fim]").value };
+    if (novo.ativo && (!novo.ini || !novo.fim || novo.fim <= novo.ini)) return toast("O fim do almoço precisa ser depois do início.", 1);
+    const antigo = almoco();
+    const hs = await q(sb.from("ad_horarios").select("dia_semana,inicio,fim"));
+    const novos = aplicaAlmoco(hs, antigo, novo);
+    await q(sb.from("ad_horarios").delete().eq("profissional_id", st.prof.id));
+    if (novos.length) await q(sb.from("ad_horarios").insert(novos.map((h) => ({ ...h, profissional_id: st.prof.id }))));
+    await salvaCfg({ almoco: novo });
+    toast(novo.ativo ? `Almoço das ${novo.ini} às ${novo.fim} salvo.` : "Horário de almoço desligado.");
+    recarrega?.();
+  };
+}
+
+// cartão do almoço na agenda do dia (só em dia de trabalho, se cair dentro do expediente)
+async function cartaoAlmocoDia(diaIso) {
+  const a = almoco(); if (!a.ativo) return null;
+  const dow = new Date(diaIso + "T12:00:00Z").getUTCDay();
+  const hs = (await q(sb.from("ad_horarios").select("inicio,fim").eq("dia_semana", dow)));
+  if (!hs.length) return null;
+  const ini = Math.min(...hs.map((h) => minDe(h.inicio))), fim = Math.max(...hs.map((h) => minDe(h.fim)));
+  if (minDe(a.fim) <= ini || minDe(a.ini) >= fim) return null;
+  return { t: new Date(`${diaIso}T${a.ini}:00-03:00`).getTime(), html: `<div class="ag" style="cursor:default;background:repeating-linear-gradient(135deg,var(--nude) 0 10px,transparent 10px 20px);border-style:dashed"><div class="h">${a.ini}<small>até ${a.fim}</small></div><div><div class="n">🍽️ Horário de almoço</div><div class="s">Bloqueado para agendamentos</div></div></div>` };
+}
