@@ -513,3 +513,6 @@ nav.abas button.on { color: var(--acc); }
 .pix-barra i { display: block; height: 100%; width: 100%; background: var(--grad-site); transition: width 1s linear; }
 .pix-tempo.acabando { color: var(--red); }
 .pix-tempo.acabando .pix-barra i { background: var(--red); }
+
+[data-alm-dias] button, [data-rep-dsem] button { padding: 8px 12px; }
+[data-alm-dias] button.on, [data-rep-dsem] button.on { background: var(--acc); color: #fff; box-shadow: none; }

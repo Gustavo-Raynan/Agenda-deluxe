@@ -483,7 +483,7 @@ async function telaAgenda() {
       <div class="linha entre" style="margin:0 4px 10px"><span class="mudo">${ativos.length} atendimento${ativos.length !== 1 ? "s" : ""}</span>
       ${st.dia !== hoje ? `<button class="link" data-hoje>Ir para hoje</button>` : ""}</div>
       ${(bloq || []).map((b) => `<div class="ag cancelado" style="opacity:.8;cursor:default"><div class="h">${hora(b.inicio)}<small>até ${hora(b.fim)}</small></div><div><div class="n">Horário bloqueado</div><div class="s">${esc(b.motivo || "")}</div></div><div class="d"><button class="link" data-desbloq="${b.id}">Liberar</button></div></div>`).join("")}
-      ${ags.length ? ags.map((a) => cartaoAg(a)).join("") : `<div class="vazio">${IC.calendario}<div>Nenhum agendamento neste dia.</div></div>`}
+      ${listaComAlmoco(ags, st.dia) || `<div class="vazio">${IC.calendario}<div>Nenhum agendamento neste dia.</div></div>`}
       <button class="btn ouro cheio" data-novo style="margin-top:6px">${IC.mais}Novo agendamento</button>`;
   } else if (st.agendaModo === "semana") {
     const ini = st.dia, fim = somaDias(st.dia, 7);
@@ -1457,6 +1457,26 @@ function editaServico(s) {
   });
 }
 
+
+// ---------- horário de almoço ----------
+const almoco = () => { const a = st.prof?.config?.almoco; return a?.ativo && a.inicio && a.fim ? a : null; };
+function almocoNoDia(diaIso) {
+  const a = almoco(); if (!a) return null;
+  const dow = new Date(diaIso + "T12:00:00Z").getUTCDay();
+  if (Array.isArray(a.dias) && !a.dias.includes(dow)) return null;
+  return a;
+}
+function cartaoAlmoco(a) {
+  return `<div class="ag" style="cursor:default;opacity:.85;border-style:dashed"><div class="h">${a.inicio}<small>até ${a.fim}</small></div><div><div class="n">🍽️ Almoço</div><div class="s">O site não mostra horários nesse período</div></div><div class="d"></div></div>`;
+}
+function listaComAlmoco(ags, diaIso) {
+  const a = almocoNoDia(diaIso);
+  const cards = ags.map((x) => ({ t: hora(x.inicio), html: cartaoAg(x) }));
+  if (!cards.length && !a) return "";
+  if (a) { const i = cards.findIndex((c) => c.t >= a.inicio); cards.splice(i < 0 ? cards.length : i, 0, { t: a.inicio, html: cartaoAlmoco(a) }); }
+  return cards.map((c) => c.html).join("");
+}
+
 // ---------- horários, folgas e bloqueios ----------
 async function telaHorarios() {
   const [hs, bloq] = await Promise.all([
@@ -1464,6 +1484,11 @@ async function telaHorarios() {
     q(sb.from("ad_bloqueios").select("*").gte("fim", new Date().toISOString()).order("inicio")),
   ]);
   let edit = hs.map((h) => ({ dia_semana: h.dia_semana, inicio: h.inicio.slice(0, 5), fim: h.fim.slice(0, 5) }));
+  const alm = { ativo: false, inicio: "12:00", fim: "13:00", ...(st.prof.config?.almoco || {}) };
+  // períodos que caem inteiros dentro do almoço eram tentativas de marcar o almoço: tira
+  const dentroAlmoco = (h) => alm.ativo && h.inicio >= alm.inicio && h.fim <= alm.fim && edit.some((o) => o !== h && o.dia_semana === h.dia_semana && o.inicio <= h.inicio && o.fim >= h.fim);
+  const limpos = edit.filter(dentroAlmoco).length;
+  if (limpos) edit = edit.filter((h) => !dentroAlmoco(h));
   const desenha = (r) => {
     r.querySelector("[data-semana]").innerHTML = [1, 2, 3, 4, 5, 6, 0].map((d) => {
       const f = edit.map((h, i) => ({ ...h, i })).filter((h) => h.dia_semana === d);
@@ -1475,13 +1500,34 @@ async function telaHorarios() {
     r.querySelectorAll("input[data-i]").forEach((inp) => (inp.onchange = () => (edit[+inp.dataset.i][inp.dataset.k] = inp.value)));
   };
   abreFolha(cabFolha("Horários e folgas", "O site só mostra horários dentro destes períodos.") + `
-    <div class="cartao"><h2>Semana de trabalho</h2><p class="pequeno">Para ter intervalo de almoço, use dois períodos no mesmo dia (ex.: 9h às 12h e 13h às 18h).</p><div data-semana></div>
+    <div class="cartao"><h2>🍽️ Horário de almoço</h2><p class="pequeno">Nesse intervalo o site não mostra horários para as clientes, e na agenda aparece "Almoço".</p>
+      <label class="linha" style="gap:10px;margin:12px 0 4px;cursor:pointer"><input type="checkbox" data-alm-on ${alm.ativo ? "checked" : ""} style="width:22px;height:22px;accent-color:var(--acc)"><b>Fazer pausa para almoço</b></label>
+      <div data-alm-campos class="${alm.ativo ? "" : "hide"}">
+        <div class="linha" style="margin-top:8px"><input class="campo" type="time" data-alm-ini value="${alm.inicio}"><span>às</span><input class="campo" type="time" data-alm-fim value="${alm.fim}"></div>
+        <p class="pequeno" style="margin:10px 0 6px">Em quais dias:</p>
+        <div class="seg" style="flex-wrap:wrap" data-alm-dias>${[1, 2, 3, 4, 5, 6, 0].map((d) => `<button type="button" data-ad="${d}" class="${!Array.isArray(alm.dias) || alm.dias.includes(d) ? "on" : ""}">${SEM_CURTO[d]}</button>`).join("")}</div>
+      </div>
+      <button class="btn ouro cheio" data-alm-salvar style="margin-top:14px">Salvar almoço</button></div>
+    <div class="cartao"><h2>Semana de trabalho</h2><p class="pequeno">Coloque o horário de abrir e fechar. O almoço é descontado sozinho.</p>${limpos ? `<p class="pequeno" style="color:var(--acc);margin-top:6px">Tirei ${limpos} período${limpos > 1 ? "s" : ""} que estava${limpos > 1 ? "m" : ""} no horário do almoço. Toque em Salvar horários para confirmar.</p>` : ""}<div data-semana></div>
       <button class="btn ouro cheio" data-salvar style="margin-top:14px">Salvar horários</button></div>
     <div class="tit-linha"><h2>Folgas e bloqueios</h2><button data-bloq>+ Bloquear</button></div>
     ${bloq.length ? `<div class="lista">${bloq.map((b) => `<div class="item" style="cursor:default"><div class="ic">${IC.bloqueio}</div><div class="cresce"><b>${esc(b.motivo || "Bloqueado")}</b><div class="pequeno">${dataCurta(b.inicio)} ${hora(b.inicio)} até ${dataCurta(b.fim)} ${hora(b.fim)}</div></div><button class="link" data-lib="${b.id}">Liberar</button></div>`).join("")}</div>` : `<p class="mudo" style="margin:0 2px 14px">Nenhum bloqueio futuro. Use para folgas, feriados, férias ou compromissos.</p>`}`, (r) => {
     desenha(r);
+    r.querySelector("[data-alm-on]").onchange = (e) => r.querySelector("[data-alm-campos]").classList.toggle("hide", !e.target.checked);
+    r.querySelectorAll("[data-ad]").forEach((b) => (b.onclick = () => b.classList.toggle("on")));
+    r.querySelector("[data-alm-salvar]").onclick = async () => {
+      const ativo = r.querySelector("[data-alm-on]").checked, inicio = r.querySelector("[data-alm-ini]").value, fim = r.querySelector("[data-alm-fim]").value;
+      if (ativo && (!inicio || !fim || fim <= inicio)) return toast("Confira: o fim do almoço precisa ser depois do início.", 1);
+      const dias = [...r.querySelectorAll("[data-ad].on")].map((b) => +b.dataset.ad);
+      if (ativo && !dias.length) return toast("Escolha pelo menos um dia.", 1);
+      await salvaCfg({ almoco: { ativo, inicio, fim, ...(dias.length < 7 ? { dias } : {}) } });
+      toast(ativo ? `Almoço salvo: ${inicio} às ${fim}. O site já não mostra esse horário.` : "Pausa de almoço desligada.");
+      if (st.aba === "agenda" || st.aba === "inicio") atualizaTela();
+    };
     r.querySelector("[data-salvar]").onclick = async () => {
       if (edit.some((h) => !h.inicio || !h.fim || h.fim <= h.inicio)) return toast("Confira: o fim precisa ser depois do início.", 1);
+      const sobrepoe = edit.some((h, i) => edit.some((o, j) => j !== i && o.dia_semana === h.dia_semana && o.inicio < h.fim && h.inicio < o.fim));
+      if (sobrepoe) return toast("Tem dois períodos se encostando no mesmo dia. Para almoço, use o quadro de cima.", 1);
       await q(sb.from("ad_horarios").delete().eq("profissional_id", st.prof.id));
       if (edit.length) await q(sb.from("ad_horarios").insert(edit.map((h) => ({ ...h, profissional_id: st.prof.id }))));
       toast("Horários salvos. O site já foi atualizado.");
