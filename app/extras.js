@@ -71,7 +71,7 @@ const ATALHOS = {
   site: ["Meu link", "link", () => telaSite()],
   config: ["Ajustes", "engrenagem", () => vaiPara("mais")],
 };
-const ATALHOS_PADRAO = ["novo", "clientes", "financeiro", "esmaltes", "estoque", "compras", "relatorios", "config"];
+const ATALHOS_PADRAO = ["novo", "bloquear", "clientes", "financeiro", "esmaltes", "estoque", "relatorios", "config"];
 const meusAtalhos = () => (cfg().atalhos || ATALHOS_PADRAO).filter((k) => ATALHOS[k]);
 function htmlAtalhos() {
   return meusAtalhos().map((k) => `<button class="atalho" data-atalho="${k}"><span>${IC[ATALHOS[k][1]] || IC.estrela}</span>${ATALHOS[k][0]}</button>`).join("");

@@ -480,15 +480,18 @@ async function telaAgenda() {
       ${await resumoValores(ags)}
       <div class="linha entre" style="margin:0 4px 10px"><span class="mudo">${ativos.length} atendimento${ativos.length !== 1 ? "s" : ""}</span>
       ${st.dia !== hoje ? `<button class="link" data-hoje>Ir para hoje</button>` : ""}</div>
-      ${(bloq || []).map((b) => `<div class="ag cancelado" style="opacity:.8;cursor:default"><div class="h">${hora(b.inicio)}<small>até ${hora(b.fim)}</small></div><div><div class="n">Horário bloqueado</div><div class="s">${esc(b.motivo || "")}</div></div><div class="d"><button class="link" data-desbloq="${b.id}">Liberar</button></div></div>`).join("")}
       ${await (async () => {
         const alm = await cartaoAlmocoDia(st.dia);
         const itens = ags.map((a) => ({ t: new Date(a.inicio).getTime(), html: cartaoAg(a) }));
         if (alm) itens.push(alm);
+        (bloq || []).forEach((b) => {
+          const diaTodo = new Date(b.inicio) <= new Date(inicioDia(st.dia)) && new Date(b.fim) >= new Date(inicioDia(somaDias(st.dia, 1)));
+          itens.push({ t: diaTodo ? 0 : new Date(b.inicio).getTime(), html: `<div class="ag" style="cursor:default;background:repeating-linear-gradient(135deg,rgba(176,64,64,.10) 0 10px,transparent 10px 20px);border-style:dashed"><div class="h">${diaTodo ? "Dia" : hora(b.inicio)}<small>${diaTodo ? "inteiro" : "até " + hora(b.fim)}</small></div><div><div class="n">🚫 ${esc(b.motivo || "Horário bloqueado")}</div><div class="s">Ninguém consegue marcar</div></div><div class="d"><button class="link" data-desbloq="${b.id}">Liberar</button></div></div>` });
+        });
         itens.sort((x, y) => x.t - y.t);
-        return ags.length || alm ? itens.map((i) => i.html).join("") + (ags.length ? "" : `<div class="vazio">${IC.calendario}<div>Nenhum agendamento neste dia.</div></div>`) : `<div class="vazio">${IC.calendario}<div>Nenhum agendamento neste dia.</div></div>`;
+        return ags.length || alm || (bloq || []).length ? itens.map((i) => i.html).join("") + (ags.length ? "" : `<div class="vazio">${IC.calendario}<div>Nenhum agendamento neste dia.</div></div>`) : `<div class="vazio">${IC.calendario}<div>Nenhum agendamento neste dia.</div></div>`;
       })()}
-      <button class="btn ouro cheio" data-novo style="margin-top:6px">${IC.mais}Novo agendamento</button>`;
+      <div class="grade2" style="margin-top:6px"><button class="btn ouro" data-novo>${IC.mais}Agendar</button><button class="btn claro" data-bloq-dia>${IC.bloqueio}Bloquear</button></div>`;
   } else if (st.agendaModo === "semana") {
     const ini = st.dia, fim = somaDias(st.dia, 7);
     const ags = await agsEntre(ini, fim);
@@ -524,6 +527,7 @@ async function telaAgenda() {
   r.querySelectorAll("[data-dia]").forEach((b) => (b.onclick = () => { st.dia = b.dataset.dia; st.agendaModo = "dia"; telaAgenda(); }));
   r.querySelector("[data-hoje]")?.addEventListener("click", () => { st.dia = hoje; telaAgenda(); });
   r.querySelector("[data-novo]")?.addEventListener("click", () => novoAgendamento({ data: st.dia }));
+  r.querySelector("[data-bloq-dia]")?.addEventListener("click", () => novoBloqueio(st.dia));
   r.querySelectorAll("[data-desbloq]").forEach((b) => (b.onclick = async () => {
     if (!confirm("Liberar este horário para as clientes agendarem?")) return;
     await q(sb.from("ad_bloqueios").delete().eq("id", b.dataset.desbloq)); toast("Horário liberado."); telaAgenda();
@@ -1281,19 +1285,24 @@ async function telaHorarios() {
   });
 }
 
-function novoBloqueio() {
-  const tipos = { folga: "Folga (dia inteiro)", horario: "Horário específico", ferias: "Férias ou vários dias", feriado: "Feriado" };
+function novoBloqueio(diaIni) {
+  const tipos = { horario: "Horário específico", folga: "Dia inteiro", ferias: "Vários dias", feriado: "Feriado" };
+  const dia0 = diaIni && diaIni >= isoDia() ? diaIni : isoDia();
   let tipo = "horario";
   abreFolha(cabFolha("Bloquear horário", "Nesse período o site não mostra horários para as clientes.") + `
     <div class="cartao">
       <div class="opcoes" data-tipos>${Object.entries(tipos).map(([k, v]) => `<button type="button" data-t="${k}" class="${k === tipo ? "on" : ""}">${v}</button>`).join("")}</div>
-      <label class="f">${"Dia"}</label><input class="campo" type="date" data-de value="${isoDia()}" min="${isoDia()}">
-      <div data-ate class="hide"><label class="f">Até o dia</label><input class="campo" type="date" data-ate-d value="${somaDias(isoDia(), 7)}" min="${isoDia()}"></div>
-      <div data-horas class="grade2"><div><label class="f">Das</label><input class="campo" type="time" data-h1 value="12:00"></div><div><label class="f">Até</label><input class="campo" type="time" data-h2 value="13:00"></div></div>
+      <label class="f">Dia</label><input class="campo" type="date" data-de value="${dia0}" min="${isoDia()}">
+      <div data-ate class="hide"><label class="f">Até o dia</label><input class="campo" type="date" data-ate-d value="${somaDias(dia0, 7)}" min="${isoDia()}"></div>
+      <div data-horas>
+        <label class="f">Atalho</label><div class="opcoes"><button type="button" data-rap="09:00-12:00">Manhã</button><button type="button" data-rap="13:30-18:00">Tarde</button><button type="button" data-rap="18:00-21:00">Noite</button></div>
+        <div class="grade2"><div><label class="f">Das</label><input class="campo" type="time" data-h1 value="14:00"></div><div><label class="f">Até</label><input class="campo" type="time" data-h2 value="15:00"></div></div>
+      </div>
       <label class="f">Motivo</label><input class="campo" data-motivo placeholder="Ex.: almoço, médico, viagem">
     </div>
     <button class="btn ouro cheio" data-salvar>Bloquear</button>`, (r) => {
     const ajusta = () => { r.querySelector("[data-ate]").classList.toggle("hide", tipo !== "ferias"); r.querySelector("[data-horas]").classList.toggle("hide", tipo !== "horario"); };
+    r.querySelectorAll("[data-rap]").forEach((b) => (b.onclick = () => { const [h1, h2] = b.dataset.rap.split("-"); r.querySelector("[data-h1]").value = h1; r.querySelector("[data-h2]").value = h2; r.querySelectorAll("[data-rap]").forEach((x) => x.classList.toggle("on", x === b)); }));
     r.querySelectorAll("[data-t]").forEach((b) => (b.onclick = () => { tipo = b.dataset.t; r.querySelectorAll("[data-t]").forEach((x) => x.classList.toggle("on", x === b)); ajusta(); }));
     ajusta();
     r.querySelector("[data-salvar]").onclick = async () => {
