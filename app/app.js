@@ -537,12 +537,58 @@ async function telaAgenda() {
 // =====================================================================
 // DETALHE DO AGENDAMENTO
 // =====================================================================
+// mensagem completa de confirmação: serviço e o que inclui, dia, horário, valor, endereço, cores, política e link
+function msgConfirmacao(a) {
+  const n = primeiroNome(a.cliente_nome);
+  const ini = a.inicio, fim = a.fim || null;
+  const minutos = fim ? Math.round((new Date(fim) - new Date(ini)) / 60000) : null;
+  const nomes = String(a.servico_nome || "").split(/\s*\+\s*/);
+  const servs = nomes.map((nm) => (st.servicos || []).find((x) => x.nome.toLowerCase() === nm.toLowerCase()) || (a.servico_id && nomes.length === 1 ? (st.servicos || []).find((x) => x.id === a.servico_id) : null));
+  const linhasServ = nomes.map((nm, i) => `• *${nm}*${servs[i]?.descricao ? `\n   _${servs[i].descricao}_` : ""}`).join("\n");
+  const end = st.prof.endereco ? `\n📍 *Endereço:* ${st.prof.endereco}\n🗺️ Como chegar: https://maps.google.com/?q=${encodeURIComponent(st.prof.endereco)}` : "";
+  const cores = a.cores?.length ? `\n💅 *Cores escolhidas:* ${a.cores.map((c) => [c.marca, c.nome].filter(Boolean).join(" ")).join(", ")}` : "";
+  const obs = a.observacao ? `\n📝 *Observação:* ${a.observacao}` : "";
+  const link = a.id ? `\n\n✅ Confirme sua presença ou desmarque por aqui:\n${CONFIRMAR}${a.id}` : "";
+  return `Olá, ${n}! 💗\nSeu horário está *confirmado* com a Nayara Fernandes · Nails e cuidados. Veja os detalhes:\n\n` +
+    `💅 *Serviço:*\n${linhasServ}\n\n` +
+    `📅 *Dia:* ${cap(dataLonga(ini))}\n` +
+    `⏰ *Horário:* ${hora(ini)}${fim ? ` às ${hora(fim)}` : ""}${minutos ? ` (${dur(minutos)})` : ""}\n` +
+    `💰 *Valor:* ${brl(a.preco || 0)}` + cores + obs + end +
+    `\n\n✨ *Dicas para o seu atendimento:*\n• Chegue com 5 minutinhos de antecedência\n• Se puder, venha com as unhas sem esmalte\n• Atrasos acima de 15 minutos podem precisar ser remarcados` +
+    `\n\n⚠️ *Política de cancelamento:* cancelamentos ou remarcações com menos de 24h de antecedência têm taxa de 100% do valor do serviço.` +
+    link + `\n\nQualquer dúvida é só me chamar por aqui. Até lá! 😘\n_Nayara Fernandes · Nails e cuidados_`;
+}
+
+// depois de agendar: mostra a mensagem pronta (dá para editar) e manda no WhatsApp da cliente
+function enviarConfirmacao(a) {
+  abreFolha(cabFolha("Agendado! ✅", "Mande a confirmação para a cliente no WhatsApp.") + `
+    <div class="cartao">
+      <label class="f" style="margin-top:0">WhatsApp da cliente</label>
+      <input class="campo" data-zap inputmode="tel" placeholder="(31) 99999-9999" value="${a.cliente_whatsapp ? fmtTel(a.cliente_whatsapp) : ""}">
+      <label class="f">Mensagem <span class="pequeno">(pode editar)</span></label>
+      <textarea class="campo" data-msg style="min-height:340px;font-size:14.5px;line-height:1.45">${esc(msgConfirmacao(a))}</textarea>
+    </div>
+    <button class="btn zap cheio" data-env>${IC.zap}Enviar no WhatsApp</button>
+    <button class="btn claro cheio" data-cop style="margin-top:8px">Copiar mensagem</button>
+    <button class="link" data-nao style="display:block;margin:14px auto 0">Agora não</button>`, (r) => {
+    r.querySelector("[data-env]").onclick = async () => {
+      const z = r.querySelector("[data-zap]").value.replace(/\D/g, "");
+      if (z.length < 10) return toast("Escreva o WhatsApp da cliente com DDD.", 1);
+      if (!a.cliente_whatsapp && a.id) { await sb.from("ad_agendamentos").update({ cliente_whatsapp: z }).eq("id", a.id); if (a.cliente_id) await sb.from("ad_clientes").update({ whatsapp: z }).eq("id", a.cliente_id); }
+      abreZap(`https://wa.me/${zapNum(z)}?text=${encodeURIComponent(r.querySelector("[data-msg]").value)}`);
+      fechaFolha(); atualizaTela();
+    };
+    r.querySelector("[data-cop]").onclick = async () => { try { await navigator.clipboard.writeText(r.querySelector("[data-msg]").value); toast("Mensagem copiada!"); } catch { toast("Não deu para copiar.", 1); } };
+    r.querySelector("[data-nao]").onclick = () => { fechaFolha(); atualizaTela(); };
+  });
+}
+
 function mensagem(a, tipo) {
   const n = primeiroNome(a.cliente_nome), d = dataLonga(a.inicio), h = hora(a.inicio);
   const end = st.prof.endereco ? `\n📍 ${st.prof.endereco}` : "";
   const pol = `\n\n⚠️ *Política de cancelamento:* cancelamentos com menos de 24h de antecedência têm taxa de 100% do valor do serviço.`;
   return ({
-    confirmacao: `Olá, ${n}! 💅 Seu horário de *${a.servico_nome}* está confirmado para *${d}* às *${h}*.${end}${pol}\n\nAté lá! Nayara Fernandes · Nails e cuidados`,
+    confirmacao: msgConfirmacao(a),
     lembrete: `Olá, ${n}! 😊 Passando para lembrar do seu horário de *${a.servico_nome}* ${isoDia(a.inicio) === somaDias(isoDia(), 1) ? "amanhã" : "em " + d} às *${h}*.\n\nConfirme ou desmarque por aqui:\n${CONFIRMAR}${a.id}${pol}`,
     alteracao: `Olá, ${n}! Seu horário de *${a.servico_nome}* foi alterado para *${d}* às *${h}*. Se não puder, me avise por aqui. 💗${pol}`,
     cancelamento: `Olá, ${n}! Precisei cancelar seu horário de *${a.servico_nome}* de ${d} às ${h}. Desculpe! Você pode escolher outro horário aqui: ${SITE}`,
@@ -623,8 +669,8 @@ async function detalheAg(id) {
 function mensagensProntas(a) {
   const tipos = [["confirmacao", "Confirmar agendamento"], ["lembrete", "Lembrete com link de confirmação"], ["alteracao", "Avisar alteração de horário"], ["cancelamento", "Avisar cancelamento"], ["agradecimento", "Agradecer a visita"], ["avaliacao", "Pedir avaliação no Google"]];
   abreFolha(cabFolha("Mensagens prontas", `Para ${esc(a.cliente_nome)}. Abre o WhatsApp com o texto pronto.`) +
-    `<div class="lista">${tipos.map(([t, n]) => `<a class="item" target="_blank" rel="noopener" href="${linkZap(a, t)}"><div class="ic" style="color:var(--zap)">${IC.zap}</div><div class="cresce"><b>${n}</b><div class="pequeno" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(mensagem(a, t).replace(/\*/g, "").slice(0, 70))}…</div></div><span class="seta">›</span></a>`).join("")}</div>
-    <button class="btn claro cheio" data-voltar>Voltar</button>`, (r) => (r.querySelector("[data-voltar]").onclick = () => detalheAg(a.id)));
+    `<div class="lista">${tipos.map(([t, n]) => t === "confirmacao" ? `<button class="item" data-conf style="width:100%;text-align:left"><div class="ic" style="color:var(--zap)">${IC.zap}</div><div class="cresce"><b>${n}</b><div class="pequeno">Mensagem completa com serviço, dia, valor, endereço e política</div></div><span class="seta">›</span></button>` : `<a class="item" target="_blank" rel="noopener" href="${linkZap(a, t)}"><div class="ic" style="color:var(--zap)">${IC.zap}</div><div class="cresce"><b>${n}</b><div class="pequeno" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(mensagem(a, t).replace(/\*/g, "").slice(0, 70))}…</div></div><span class="seta">›</span></a>`).join("")}</div>
+    <button class="btn claro cheio" data-voltar>Voltar</button>`, (r) => { r.querySelector("[data-voltar]").onclick = () => detalheAg(a.id); r.querySelector("[data-conf]").onclick = () => enviarConfirmacao(a); });
 }
 
 // ---------- escolher dia e horário (usado em novo agendamento e remarcar) ----------
@@ -729,14 +775,13 @@ async function novoAgendamento({ data, cliente, servicoId, horaIni }) {
         if (zap && confirm("Enviar a lista de horários para a cliente no WhatsApp?")) abreZap(`https://wa.me/${zapNum(zap)}?text=${encodeURIComponent(msgSerie(base, linhas))}`);
         fechaFolha(); st.dia = isoDia(ini); atualizaTela(); return;
       }
-      const { error } = await sb.from("ad_agendamentos").insert({
+      const { data: novo, error } = await sb.from("ad_agendamentos").insert({
         ...base, inicio: ini.toISOString(), fim: new Date(ini.getTime() + s.duracao_min * 60000).toISOString(),
-      });
+      }).select().single();
       if (error) return toast(erroMsg(error), 1);
       toast("Agendado!");
-      const a = { cliente_nome: nome, cliente_whatsapp: zap, servico_nome: s.nome, inicio: ini.toISOString() };
-      if (zap && confirm("Enviar a confirmação para a cliente no WhatsApp?")) abreZap(linkZap(a, "confirmacao"));
-      fechaFolha(); st.dia = isoDia(ini); atualizaTela();
+      st.dia = isoDia(ini); atualizaTela();
+      enviarConfirmacao(novo);
     };
   });
 }
