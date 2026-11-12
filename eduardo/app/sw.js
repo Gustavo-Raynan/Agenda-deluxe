@@ -1,6 +1,6 @@
 // Eduardo Hair Gestão — service worker: abre rápido e recebe notificações com o app fechado
-const CACHE = "edu-gestao-v14";
-const ARQUIVOS = ["./", "app.css", "app.js", "loja.js", "catalogo.js", "catalogo.json", "qr.js", "pix.js", "divisao.js", "extras.js", "manifest.json", "icone-192.png", "../icone-192.png"];
+const CACHE = "edu-gestao-v15";
+const ARQUIVOS = ["./", "app.css", "app.js", "loja.js", "catalogo.js", "catalogo.json", "qr.js", "pix.js", "divisao.js", "fiado.js", "extras.js", "manifest.json", "icone-192.png", "../icone-192.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ARQUIVOS)).then(() => self.skipWaiting()));
@@ -36,13 +36,13 @@ self.addEventListener("notificationclick", (e) => {
   e.notification.close();
   const ag = e.notification.data && e.notification.data.agendamento;
   const tipo = e.notification.data && e.notification.data.tipo;
-  const alvo = new URL(ag ? "./#ag=" + ag : tipo === "pedido" ? "./#pedidos" : "./", self.registration.scope).href;
+  const alvo = new URL(tipo === "fiado" ? "./#fiado" : ag ? "./#ag=" + ag : tipo === "pedido" ? "./#pedidos" : "./", self.registration.scope).href;
   e.waitUntil((async () => {
     const abertas = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
     for (const c of abertas) {
       if (c.url.startsWith(self.registration.scope)) {
         await c.focus();
-        c.postMessage(ag ? { agendamento: ag } : { abrir: "avisos" });
+        c.postMessage(tipo === "fiado" ? { abrir: "fiado" } : ag ? { agendamento: ag } : { abrir: "avisos" });
         return;
       }
     }

@@ -7,7 +7,7 @@ const CONFIRMAR = "https://agenda-deluxe.pages.dev/confirmar?id=";
 const GOOGLE = "https://share.google/qmBK4zE5wo7nWzIZN";
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY, { auth: { storageKey: "edu-gestao-auth" } });
 // Cada app mostra só os dados do próprio salão (uma mesma conta pode ter acesso a mais de um salão)
-const ESCOPO_SALAO = new Set(["ad_agendamentos", "ad_avisos", "ad_bloqueios", "ad_clientes", "ad_equipe", "ad_fidelidade", "ad_horarios", "ad_lancamentos", "ad_loja", "ad_movimentos", "ad_pagamentos", "ad_pedidos", "ad_produtos", "ad_servicos"]);
+const ESCOPO_SALAO = new Set(["ad_agendamentos", "ad_avisos", "ad_bloqueios", "ad_clientes", "ad_equipe", "ad_fiados", "ad_fidelidade", "ad_horarios", "ad_lancamentos", "ad_loja", "ad_movimentos", "ad_pagamentos", "ad_pedidos", "ad_produtos", "ad_servicos"]);
 {
   const _from = sb.from.bind(sb);
   sb.from = (t) => {
@@ -173,6 +173,7 @@ async function iniciar() {
   const m = location.hash.match(/ag=([0-9a-f-]{36})/);
   const atalho = location.hash.slice(1);
   if (atalho === "agenda") vaiPara("agenda");
+  else if (atalho === "fiado") { vaiPara("inicio"); setTimeout(telaFiados, 300); }
   else if (atalho === "loja" || atalho === "pedidos") { st.estSeg = atalho === "pedidos" ? "pedidos" : "produtos"; vaiPara("estoque"); }
   else vaiPara("inicio");
   if (atalho === "novo") novoAgendamento({});
@@ -321,7 +322,7 @@ function ligaCartoes(raiz) { raiz.querySelectorAll("[data-ag]").forEach((el) => 
 async function telaInicio() {
   const hoje = isoDia(), amanha = somaDias(hoje, 1);
   const iniMes = hoje.slice(0, 8) + "01";
-  const [ags, agsAmanha, pags, avisos, livresHoje, devendo, pagsMes, despMes, prods, novos, contas] = await Promise.all([
+  const [ags, agsAmanha, pags, avisos, livresHoje, devendo0, pagsMes, despMes, prods, novos, contas, fiados] = await Promise.all([
     agsEntre(hoje, amanha), agsEntre(amanha, somaDias(hoje, 2)), pagsEntre(hoje, amanha),
     q(sb.from("ad_avisos").select("*").eq("lido", false).order("criado_em", { ascending: false }).limit(3)),
     livres(hoje, 30),
@@ -331,7 +332,11 @@ async function telaInicio() {
     dadosLojaInicio(),
     q(sb.from("ad_agendamentos").select("id").gte("criado_em", new Date(Date.now() - 864e5).toISOString()).neq("status", "cancelado")),
     q(sb.from("ad_lancamentos").select("id,valor,vencimento").eq("tipo", "saida").eq("pago", false).lte("vencimento", somaDias(hoje, 7))),
+    fiadosAbertos(),
   ]);
+  const comFiado = new Set(fiados.map((f) => f.agendamento_id).filter(Boolean));
+  const devendo = devendo0.filter((a) => !comFiado.has(a.id));
+  const fiadosHoje = fiados.filter((f) => f.cobrar_em <= hoje);
   const [proximos, atendMes, pags7, clis] = await Promise.all([
     q(sb.from("ad_agendamentos").select("*").in("status", ATIVOS).gte("fim", new Date().toISOString()).order("inicio").limit(3)),
     q(sb.from("ad_agendamentos").select("cliente_id,cliente_whatsapp").eq("status", "concluido").gte("inicio", meioDia(iniMes).toISOString())),
@@ -339,7 +344,7 @@ async function telaInicio() {
     q(sb.from("ad_clientes").select("id,nome,whatsapp,aniversario,foto_url").not("aniversario", "is", null)),
   ]);
   const clientesMes = new Set(atendMes.map((a) => a.cliente_id || a.cliente_whatsapp)).size;
-  const pendenteValor = devendo.reduce((s, a) => s + Number(a.preco), 0);
+  const pendenteValor = devendo.reduce((s, a) => s + Number(a.preco), 0) + fiados.reduce((s, f) => s + Number(f.valor), 0);
   const dias7 = Array.from({ length: 7 }, (_, i) => somaDias(hoje, i - 6)).map((d) => ({ d, v: pags7.filter((p) => isoDia(new Date(p.recebido_em)) === d).reduce((s, p) => s + Number(p.valor), 0) }));
   const mx7 = Math.max(1, ...dias7.map((x) => x.v));
   const aniv = clis.filter((c) => c.aniversario).map((c) => { const [, mm, dd] = c.aniversario.split("-"); let alvo = `${hoje.slice(0, 4)}-${mm}-${dd}`; if (alvo < hoje) alvo = `${Number(hoje.slice(0, 4)) + 1}-${mm}-${dd}`; return { ...c, alvo, falta: Math.round((meioDia(alvo) - meioDia(hoje)) / 864e5) }; })
@@ -369,6 +374,7 @@ async function telaInicio() {
   if (estq.vencendo.length + estq.vencidos.length) alertas.push(`<button class="item" data-ir="estoque"><div class="ic">${IC.relogio}</div><div class="cresce"><b>${estq.vencendo.length + estq.vencidos.length} produto${estq.vencendo.length + estq.vencidos.length > 1 ? "s" : ""} com validade perto</b><div class="pequeno">Vence em até 30 dias${estq.vencidos.length ? " ou já venceu" : ""}.</div></div><span class="seta">›</span></button>`);
   if (estq.pedidos.length) alertas.push(`<button class="item" data-ir="pedidos"><div class="ic">${IC.carrinho || IC.caixa}</div><div class="cresce"><b>${estq.pedidos.length} pedido${estq.pedidos.length > 1 ? "s" : ""} novo${estq.pedidos.length > 1 ? "s" : ""} na loja</b><div class="pequeno">Separe os produtos e avise o cliente.</div></div><span class="seta">›</span></button>`);
   if (contas.length) alertas.push(`<button class="item" data-ir="caixa"><div class="ic" style="background:var(--red2);color:var(--red)">${IC.dinheiro}</div><div class="cresce"><b>${contas.length} conta${contas.length > 1 ? "s" : ""} para pagar · ${brl(contas.reduce((s, l) => s + Number(l.valor), 0))}</b><div class="pequeno">Vencem nos próximos 7 dias${contas.some((l) => l.vencimento < hoje) ? " (há conta atrasada)" : ""}.</div></div><span class="seta">›</span></button>`);
+  if (fiadosHoje.length) alertas.push(`<button class="item" data-fiados><div class="ic">🤝</div><div class="cresce"><b>${fiadosHoje.length} fiado${fiadosHoje.length > 1 ? "s" : ""} para cobrar · ${brl(fiadosHoje.reduce((s, f) => s + Number(f.valor), 0))}</b><div class="pequeno">${fiadosHoje.slice(0, 3).map((f) => esc(primeiroNome(f.cliente_nome))).join(", ")}${fiadosHoje.length > 3 ? "…" : ""} · toque para cobrar</div></div><span class="seta">›</span></button>`);
   if (devendo.length) alertas.push(`<button class="item" data-ir="caixa"><div class="ic">${IC.dinheiro}</div><div class="cresce"><b>${devendo.length} atendimento${devendo.length > 1 ? "s" : ""} sem pagamento registrado</b><div class="pequeno">Registre para o caixa ficar certo.</div></div><span class="seta">›</span></button>`);
 
   const r = tela(`
@@ -425,6 +431,7 @@ async function telaInicio() {
     const v = avisos.find((x) => x.id === b.dataset.aviso);
     if (v?.tipo === "confirmar") lembretesEmSequencia(); else if (v?.tipo === "aniversario") { vaiPara("clientes"); } else if (b.dataset.agid) detalheAg(b.dataset.agid); else telaInicio();
   }));
+  r.querySelector("[data-fiados]")?.addEventListener("click", () => telaFiados());
   r.querySelectorAll("[data-ir]").forEach((b) => (b.onclick = () => {
     const ir = b.dataset.ir;
     if (ir === "confirmar") listaConfirmar(aConfirmar);
@@ -545,9 +552,10 @@ function mensagem(a, tipo) {
 const linkZap = (a, tipo) => `https://wa.me/${zapNum(a.cliente_whatsapp)}?text=${encodeURIComponent(mensagem(a, tipo))}`;
 
 async function detalheAg(id) {
-  const [a, pags] = await Promise.all([
+  const [a, pags, fiados] = await Promise.all([
     q(sb.from("ad_agendamentos").select("*").eq("id", id).maybeSingle()),
     q(sb.from("ad_pagamentos").select("*").eq("agendamento_id", id).order("recebido_em")),
+    q(sb.from("ad_fiados").select("*").eq("agendamento_id", id).is("pago_em", null)),
   ]);
   if (!a) return toast("Agendamento não encontrado.", 1);
   const coresAtuais = a.cores?.length ? await q(sb.from("ad_produtos").select("id,quantidade").in("id", a.cores.map((c) => c.id).filter(Boolean))) : [];
@@ -569,7 +577,8 @@ async function detalheAg(id) {
     ${htmlCores(a.cores, coresAtuais)}
     <div class="pilha">
       ${prox ? `<button class="btn ouro cheio" data-st="${prox[0]}">${prox[1]}</button>` : ""}
-      ${["concluido", "atendendo", "chegou"].includes(a.status) && !a.pago ? `<button class="btn cheio" data-pagar>${IC.dinheiro}Registrar pagamento</button>` : ""}
+      ${fiados.length ? fiados.map((f) => `<button class="cartao" data-fiado="${f.id}" style="display:block;width:100%;text-align:left;border:1px dashed var(--acc);margin:0;cursor:pointer;color:inherit;font:inherit">🤝 <b>Fiado de ${brl(f.valor)}</b> · ${quandoCobrar(f.cobrar_em).txt.toLowerCase()}<br><span class="pequeno">Toque para cobrar ou dar baixa</span></button>`).join("") : ""}
+      ${["concluido", "atendendo", "chegou"].includes(a.status) && !a.pago && !fiados.length ? `<button class="btn cheio" data-pagar>${IC.dinheiro}Registrar pagamento</button>` : ""}
       <a class="btn zap cheio" target="_blank" rel="noopener" href="https://wa.me/${zapNum(a.cliente_whatsapp)}">${IC.zap}Conversar no WhatsApp</a>
       <div class="grade2">
         <button class="btn claro" data-msgs>Mensagens prontas</button>
@@ -609,6 +618,7 @@ async function detalheAg(id) {
       toast("Agendamento reaberto."); detalheAg(a.id); atualizaTela();
     });
     r.querySelectorAll("[data-pagar]").forEach((b) => (b.onclick = () => registraPagamento(a)));
+    r.querySelectorAll("[data-fiado]").forEach((b) => (b.onclick = () => fichaFiado(fiados.find((f) => f.id === b.dataset.fiado))));
     r.querySelector("[data-sinal]")?.addEventListener("click", () => registraPagamento(a, false, true));
     r.querySelector("[data-atraso]")?.addEventListener("click", async () => { await q(sb.from("ad_agendamentos").update({ atrasou: !a.atrasou }).eq("id", a.id)); toast(a.atrasou ? "Atraso removido." : "Atraso registrado."); detalheAg(a.id); atualizaTela(); });
     r.querySelector("[data-remarcar]")?.addEventListener("click", () => remarcar(a));
@@ -939,7 +949,7 @@ async function registraPagamento(a, depoisDeFinalizar, ehSinal, semPix) {
   };
   const abrePix = (valor, obs) => mostraPix({ valor, sub: a ? `${esc(a.cliente_nome)} · ${esc(a.servico_nome)}` : esc(obs || "Recebimento"), txid: "EDU" + (a ? a.id.replace(/-/g, "").slice(0, 10) : Date.now().toString(36)),
     mensagem: a ? a.servico_nome : obs, zap: a?.cliente_whatsapp, nomeCliente: a?.cliente_nome,
-    aoReceber: () => salvaPag(valor, "pix", obs), aoOutraForma: () => registraPagamento(a, depoisDeFinalizar, ehSinal, true) });
+    aoReceber: () => salvaPag(valor, "pix", obs), aoOutraForma: () => registraPagamento(a, depoisDeFinalizar, ehSinal, true), aoFiado: ehSinal ? null : () => novoFiado({ a, valor: a ? null : valor, descricao: obs }) });
   // já abre o Pix com o valor do atendimento (5 minutos)
   if (a && !ehSinal && !semPix && sugestao > 0 && temPix()) return abrePix(sugestao, null);
   abreFolha(cabFolha(ehSinal ? "Registrar sinal" : "Registrar pagamento", a ? `${esc(a.cliente_nome)} · ${esc(a.servico_nome)}${pago ? `<br>Já recebido: ${brl(pago)}` : ""}` : "Recebimento avulso") + `
@@ -953,12 +963,14 @@ async function registraPagamento(a, depoisDeFinalizar, ehSinal, semPix) {
       ${a ? "" : `<label class="f">Descrição</label><input class="campo" data-obs placeholder="Ex.: venda de shampoo">`}
     </div>
     <button class="btn ouro cheio" data-salvar>Salvar pagamento</button>
+    ${ehSinal ? "" : `<button class="btn claro cheio" data-fiadobtn style="margin-top:10px">🤝 Vai pagar depois (fiado)</button>`}
     ${depoisDeFinalizar ? `<button class="btn claro cheio" data-depois style="margin-top:10px">Registrar depois</button>` : ""}`, (r) => {
     const mostraTaxa = () => { const v = Number(r.querySelector("[data-valor]").value || 0), p = taxaPct(forma); r.querySelector("[data-taxa]").textContent = p && v ? `Taxa da maquininha (${String(p).replace(".", ",")}%): ${brl(v * p / 100)} · fica ${brl(v - v * p / 100)}` : ""; r.querySelector("[data-qrpix]").classList.toggle("hide", forma !== "pix" || !(v > 0)); };
     r.querySelector("[data-qrpix]").onclick = () => abrePix(Number(r.querySelector("[data-valor]").value), r.querySelector("[data-obs]")?.value.trim() || null);
     r.querySelectorAll("[data-f]").forEach((b) => (b.onclick = () => { forma = b.dataset.f; r.querySelectorAll("[data-f]").forEach((x) => x.classList.toggle("on", x === b)); mostraTaxa(); }));
     r.querySelector("[data-valor]").addEventListener("input", mostraTaxa); mostraTaxa();
     r.querySelector("[data-depois]")?.addEventListener("click", () => { detalheAg(a.id); atualizaTela(); });
+    r.querySelector("[data-fiadobtn]")?.addEventListener("click", () => novoFiado({ a, valor: Number(r.querySelector("[data-valor]").value) || undefined, descricao: r.querySelector("[data-obs]")?.value.trim() || undefined }));
     r.querySelector("[data-salvar]").onclick = async () => {
       const valor = Number(r.querySelector("[data-valor]").value);
       if (!(valor > 0)) return toast("Informe o valor.", 1);
@@ -1029,7 +1041,8 @@ function msgVolta(c) {
   return `Oi, ${n}! 💗 Faz um tempinho que você não vem${c.diasSem ? ` (${c.diasSem} dias!)` : ""}. Bora deixar o cabelo lindo de novo${fav ? ` com ${fav.toLowerCase()}` : ""}? Escolha seu horário aqui: ${SITE}`;
 }
 async function detalheCliente(id) {
-  const c = (await dadosClientes()).find((x) => x.id === id);
+  const [todasC, fiadosC] = await Promise.all([dadosClientes(), q(sb.from("ad_fiados").select("*").eq("cliente_id", id).is("pago_em", null).order("cobrar_em"))]);
+  const c = todasC.find((x) => x.id === id);
   if (!c) return toast("Cliente não encontrada.", 1);
   const hist = [...c.ags].sort((a, b) => new Date(b.inicio) - new Date(a.inicio));
   const n = primeiroNome(c.nome);
@@ -1046,6 +1059,7 @@ async function detalheCliente(id) {
     </div>
     ${c.bloqueado ? `<p class="cartao" style="background:var(--alerta-bg);color:var(--alerta);font-size:14.5px">🚫 <b>Cliente bloqueada</b> — não consegue agendar pelo site.${c.motivo_bloqueio ? "<br>Motivo: " + esc(c.motivo_bloqueio) : ""}</p>` : ""}
     ${c.cancel + c.faltas >= 2 ? `<p class="cartao" style="background:var(--alerta-bg);color:var(--alerta);font-size:14.5px">⚠️ Essa cliente já cancelou ou faltou ${c.cancel + c.faltas} vezes.</p>` : ""}
+    ${fiadosC.length ? `<div class="cartao" style="border:1px dashed var(--acc)"><b>🤝 Fiado em aberto: ${brl(fiadosC.reduce((s, f) => s + Number(f.valor), 0))}</b>${fiadosC.map((f) => `<button class="linha entre" data-fiado="${f.id}" style="width:100%;margin-top:8px;background:none;border:0;color:inherit;font:inherit;text-align:left;cursor:pointer;padding:0"><span>${esc(f.descricao || "Fiado")} · <span style="color:${quandoCobrar(f.cobrar_em).cor}">${quandoCobrar(f.cobrar_em).txt}</span></span><b>${brl(f.valor)} ›</b></button>`).join("")}</div>` : ""}
     ${htmlFidelidade(c)}
     ${c.observacao ? `<div class="cartao"><b>Anotações</b><p class="mudo" style="margin-top:4px;white-space:pre-wrap">${esc(c.observacao)}</p></div>` : ""}
     <div class="pilha">
@@ -1056,6 +1070,7 @@ async function detalheCliente(id) {
         <a class="btn claro" target="_blank" rel="noopener" href="https://wa.me/${zapNum(c.whatsapp)}?text=${encodeURIComponent(msgAniver)}">Parabéns 🎂</a>
       </div>
       <div class="grade2"><button class="btn claro" data-vip>${c.vip ? "Tirar do VIP" : "⭐ Marcar como VIP"}</button><button class="btn claro" data-editar>Editar dados</button></div>
+      <div class="grade2"><button class="btn claro" data-fiadook>${c.fiado_ok ? "✅ Pode pagar fiado" : "🤝 Liberar fiado"}</button><button class="btn claro" data-novofiado>+ Lançar fiado</button></div>
       <button class="btn ${c.bloqueado ? "claro" : "perigo"} cheio" data-bloq>${c.bloqueado ? "✅ Desbloquear cliente" : "🚫 Bloquear cliente"}</button>
     </div>
     <div class="tit-linha"><h2>Histórico</h2></div>
@@ -1063,6 +1078,9 @@ async function detalheCliente(id) {
     r.querySelector("[data-agendar]").onclick = () => novoAgendamento({ cliente: c });
     r.querySelector("[data-editar]").onclick = () => editaCliente(c);
     r.querySelector("[data-bloq]").onclick = () => bloqueiaCliente(c);
+    r.querySelector("[data-novofiado]").onclick = () => novoFiado({ cliente: c });
+    r.querySelector("[data-fiadook]").onclick = async () => { await q(sb.from("ad_clientes").update({ fiado_ok: !c.fiado_ok }).eq("id", c.id)); toast(c.fiado_ok ? "Fiado tirado dessa cliente." : "Pronto! Ela aparece primeiro na hora de lançar fiado 🤝"); detalheCliente(c.id); };
+    r.querySelectorAll("[data-fiado]").forEach((b) => (b.onclick = () => fichaFiado(fiadosC.find((f) => f.id === b.dataset.fiado))));
     r.querySelector("[data-vip]").onclick = async () => { await q(sb.from("ad_clientes").update({ vip: !c.vip }).eq("id", c.id)); toast(c.vip ? "Cliente tirada do VIP." : "Cliente marcada como VIP ⭐"); detalheCliente(c.id); };
     r.querySelector("[data-resgatar]")?.addEventListener("click", async () => { if (await resgataFid(c)) detalheCliente(c.id); });
     ligaCartoes(r);
@@ -1362,6 +1380,7 @@ function telaMais() {
     ]],
     ["Gestão", [
       ["estoque", IC.caixa, "Loja e pedidos", "Produtos que você vende no site, estoque e pedidos"],
+      ["fiado", IC.cliente, "Fiado", "Quem vai pagar depois e o dia de cobrar"],
       ["relatorios", IC.grafico, "Relatórios", "Lucro real, fluxo de caixa, meses e PDF"],
       ["pix", IC.dinheiro, "Pix do salão", temPix() ? "QR Code com o valor certo em cada pagamento" : "Cadastre a chave para gerar o QR Code"],
       ["divisao", IC.dinheiro, "Divisão do lucro", `${pctSalao()}% salão (reinvestir) · ${100 - pctSalao()}% seu`],
@@ -1385,7 +1404,7 @@ function telaMais() {
   const r = tela(grupos.map(([g, itens]) => `<div class="tit-linha"><h2>${g}</h2></div><div class="lista">${itens.map(([k, ic, t, s]) => `<button class="item" data-m="${k}"><div class="ic">${ic}</div><div class="cresce"><b>${t}</b>${s ? `<div class="pequeno">${esc(s)}</div>` : ""}</div><span class="seta">›</span></button>`).join("")}</div>`).join("") + `
     <p class="pequeno" style="text-align:center;margin-top:20px">Eduardo Hair Gestão · versão 1.0<br>Mesma agenda do site de agendamento</p>`);
   r.querySelectorAll("[data-m]").forEach((b) => (b.onclick = () => ({
-    estoque: () => vaiPara("estoque"), relatorios: telaRelatorios, divisao: ajustaDivisao, pix: () => configuraPix(), taxas: telaTaxas, fidelidade: telaFidelidade, equipe: telaEquipe, servicos: telaServicos, horarios: telaHorarios, notificacoes: telaNotificacoes, chegar: comoChegar, site: telaSite, salao: dadosSalao, instalar: instrucoesInstalar, senha: novaSenha, seguranca: telaSeguranca, aparencia: telaAparencia, automacoes: telaAutomacoes, tutorial: () => mostraTutorial(),
+    estoque: () => vaiPara("estoque"), fiado: telaFiados, relatorios: telaRelatorios, divisao: ajustaDivisao, pix: () => configuraPix(), taxas: telaTaxas, fidelidade: telaFidelidade, equipe: telaEquipe, servicos: telaServicos, horarios: telaHorarios, notificacoes: telaNotificacoes, chegar: comoChegar, site: telaSite, salao: dadosSalao, instalar: instrucoesInstalar, senha: novaSenha, seguranca: telaSeguranca, aparencia: telaAparencia, automacoes: telaAutomacoes, tutorial: () => mostraTutorial(),
     sair: async () => { if (confirm("Sair do app?")) { await sb.auth.signOut(); location.reload(); } },
   })[b.dataset.m]()));
 }
@@ -1611,9 +1630,9 @@ async function bannerNotificacao() {
 
 async function telaNotificacoes() {
   const sub = suportaPush() ? await inscricaoAtual() : null;
-  let prefs = { novo: true, pedido: true, cancelado: true, confirmado: true, breve: true, resumo: true };
+  let prefs = { novo: true, pedido: true, cancelado: true, confirmado: true, breve: true, resumo: true, fiado: true };
   if (sub) { const { data } = await sb.from("ad_push").select("prefs").eq("endpoint", sub.endpoint).maybeSingle(); if (data?.prefs) prefs = { ...prefs, ...data.prefs }; }
-  const nomes = { novo: "Novo agendamento pelo site", pedido: "Novo pedido na loja", cancelado: "Cliente cancelou", confirmado: "Cliente confirmou presença", breve: "Atendimento começa em 30 minutos", resumo: "Resumo do dia (7h30)" };
+  const nomes = { novo: "Novo agendamento pelo site", pedido: "Novo pedido na loja", cancelado: "Cliente cancelou", confirmado: "Cliente confirmou presença", breve: "Atendimento começa em 30 minutos", resumo: "Resumo do dia (7h30)", fiado: "Dia de cobrar um fiado (9h)" };
   const ativo = sub && Notification.permission === "granted";
   abreFolha(cabFolha("Notificações", ativo ? "Ativadas neste celular ✅" : "Ainda não ativadas neste celular") + `
     ${ativo ? "" : `<div class="cartao rosa"><p style="margin-bottom:12px">Ative para receber os avisos mesmo com o app fechado.</p><button class="btn ouro cheio" data-ativar>Ativar notificações</button>${ehIOS() && !instalado() ? `<p class="pequeno" style="margin-top:10px">No iPhone, primeiro instale o app na tela inicial (Mais › Instalar o app).</p>` : ""}</div>`}
@@ -1736,7 +1755,7 @@ document.addEventListener("visibilitychange", () => {
   if (st.prof && !$("folha").classList.contains("on")) { atualizaTela(); contaAvisos(); }
 });
 // toque na notificação com o app aberto
-navigator.serviceWorker?.addEventListener("message", (e) => { if (e.data?.agendamento) detalheAg(e.data.agendamento); else if (e.data?.abrir === "avisos") telaAvisos(); });
+navigator.serviceWorker?.addEventListener("message", (e) => { if (e.data?.abrir === "fiado") telaFiados(); else if (e.data?.agendamento) detalheAg(e.data.agendamento); else if (e.data?.abrir === "avisos") telaAvisos(); });
 
 
 // =====================================================================

@@ -24,7 +24,8 @@ function mostraPix(o) {
     </div>
     <div class="grade2"><button class="btn" data-copiar>${IC.link}Copiar Pix</button><button class="btn" data-zap>${IC.zap}Mandar no WhatsApp</button></div>
     <button class="btn prim cheio" data-recebi style="margin-top:10px">✓ Recebi o Pix</button>
-    ${o.aoOutraForma ? `<button class="btn claro cheio" data-outra style="margin-top:8px">Pagou de outro jeito</button>` : ""}`, (r) => {
+    ${o.aoOutraForma ? `<button class="btn claro cheio" data-outra style="margin-top:8px">Pagou de outro jeito</button>` : ""}
+    ${o.aoFiado ? `<button class="btn claro cheio" data-fiadopix style="margin-top:8px">🤝 Vai pagar depois (fiado)</button>` : ""}`, (r) => {
     const tick = () => {
       const s = Math.max(0, Math.round((fim - Date.now()) / 1000));
       if (!r.isConnected || !$("folha").classList.contains("on")) return clearInterval(pixTimer);
@@ -42,6 +43,7 @@ function mostraPix(o) {
     };
     r.querySelector("[data-recebi]").onclick = async (e) => { e.target.disabled = true; clearInterval(pixTimer); try { await o.aoReceber(); } catch { e.target.disabled = false; } };
     r.querySelector("[data-outra]")?.addEventListener("click", () => { clearInterval(pixTimer); o.aoOutraForma(); });
+    r.querySelector("[data-fiadopix]")?.addEventListener("click", () => { clearInterval(pixTimer); o.aoFiado(); });
   });
 }
 
