@@ -630,7 +630,7 @@ async function detalheAg(id) {
         <button class="btn claro" data-cli>Ver cliente</button>
       </div>
       ${ATIVOS.includes(a.status) || a.status === "concluido" ? `<div class="grade2">${!a.pago ? `<button class="btn claro" data-sinal>${a.sinal ? "Sinal: " + brl(a.sinal) : "Registrar sinal"}</button>` : ""}<button class="btn claro" data-atraso>${a.atrasou ? "Tirar atraso" : "Marcar atraso"}</button></div>` : ""}
-      ${a.status !== "cancelado" ? `<button class="btn claro cheio" data-editserv>✏️ Editar serviço e valor</button>` : ""}
+      ${a.status !== "cancelado" ? `<button class="btn claro cheio" data-editserv>✏️ Editar (dia, horário, serviço e valor)</button>` : ""}
       ${ATIVOS.includes(a.status) ? `<div class="grade2"><button class="btn claro" data-remarcar>Remarcar</button>${passado ? `<button class="btn perigo" data-st="faltou">Não compareceu</button>` : `<button class="btn perigo" data-cancelar>Cancelar</button>`}</div>` : ""}
       ${a.serie_id && ATIVOS.includes(a.status) ? `<button class="btn claro cheio" data-cancela-serie>🔁 Cancelar este e os próximos da série</button>` : ""}
       ${a.status === "concluido" || a.pago ? `<button class="btn claro cheio" data-pagar>${IC.dinheiro}${a.pago ? "Registrar outro pagamento" : "Registrar pagamento"}</button>` : ""}
@@ -738,19 +738,33 @@ async function novoAgendamento({ data, cliente, servicoId, horaIni }) {
       <datalist id="lista-clientes">${clientes.map((c) => `<option value="${esc(c.nome)}">${fmtTel(c.whatsapp)}</option>`).join("")}</datalist>
       <label class="f">WhatsApp da cliente <span class="pequeno">(opcional)</span></label>
       <input class="campo" data-zap inputmode="tel" placeholder="(31) 99999-9999" value="${cli ? fmtTel(cli.whatsapp) : ""}">
-      <label class="f">Serviço</label>
-      <select class="campo" data-serv><option value="">Escolha…</option>${servs.map((s) => `<option value="${s.id}">${esc(s.nome)} · ${brl(s.preco)} · ${dur(s.duracao_min)}</option>`).join("")}</select>
+      <label class="f">Serviços <span class="pequeno">(pode escolher mais de um)</span></label>
+      <div data-escolhidos></div>
+      <select class="campo" data-serv><option value="">+ Adicionar serviço…</option>${servs.map((s) => `<option value="${s.id}">${esc(s.nome)} · ${brl(s.preco)} · ${dur(s.duracao_min)}</option>`).join("")}</select>
       <div data-horario></div>
       ${htmlRepetir()}
       <label class="f">Observação</label><textarea class="campo" data-obs placeholder="Opcional"></textarea>
     </div>
     <button class="btn ouro cheio" data-salvar>Agendar</button>`, (r) => {
-    const serv = () => servs.find((s) => s.id === r.querySelector("[data-serv]").value);
-    let rep = null;
-    if (servicoId) r.querySelector("[data-serv]").value = servicoId;
-    const sel = seletorHorario(r, () => serv()?.duracao_min, data || isoDia(), (t) => { horario = t; rep?.atualiza(); }, horaIni);
+    const escolhidos = [];
+    if (servicoId) { const s0 = servs.find((s) => s.id === servicoId); if (s0) escolhidos.push(s0); }
+    const serv = () => escolhidos.length ? { id: escolhidos[0].id, nome: escolhidos.map((s) => s.nome).join(" + "), preco: escolhidos.reduce((t, s) => t + Number(s.preco), 0), duracao_min: escolhidos.reduce((t, s) => t + s.duracao_min, 0) } : null;
+    let rep = null, sel = null;
+    const desenhaEsc = () => {
+      const box = r.querySelector("[data-escolhidos]");
+      box.innerHTML = escolhidos.length ? escolhidos.map((s, k) => `<div class="item" style="padding:8px 0"><div class="cresce"><b>${esc(s.nome)}</b><div class="pequeno">${brl(s.preco)} · ${dur(s.duracao_min)}</div></div><button type="button" class="link" data-tira="${k}" style="color:#b04040">Remover</button></div>`).join("") +
+        (escolhidos.length > 1 ? `<p class="pequeno" style="margin:4px 0 8px"><b>Total:</b> ${brl(serv().preco)} · ${dur(serv().duracao_min)}</p>` : "") : "";
+      box.querySelectorAll("[data-tira]").forEach((b) => (b.onclick = () => { escolhidos.splice(+b.dataset.tira, 1); desenhaEsc(); sel?.recarrega(); }));
+      r.querySelector("[data-serv]").options[0].text = escolhidos.length ? "+ Adicionar mais um serviço…" : "Escolha o serviço…";
+    };
+    desenhaEsc();
+    sel = seletorHorario(r, () => serv()?.duracao_min, data || isoDia(), (t) => { horario = t; rep?.atualiza(); }, horaIni);
     rep = ligaRepetir(r, () => horario);
-    r.querySelector("[data-serv]").onchange = () => sel.recarrega();
+    r.querySelector("[data-serv]").onchange = (e) => {
+      const s = servs.find((x) => x.id === e.target.value); e.target.value = "";
+      if (!s) return;
+      escolhidos.push(s); desenhaEsc(); sel.recarrega();
+    };
     r.querySelector("[data-cli]").oninput = (e) => {
       const c = clientes.find((x) => x.nome.toLowerCase() === e.target.value.trim().toLowerCase());
       if (c) { cli = c; r.querySelector("[data-zap]").value = fmtTel(c.whatsapp); } else cli = null;

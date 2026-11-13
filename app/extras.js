@@ -528,7 +528,11 @@ function editarServicos(a) {
   const minAtual = Math.round((new Date(a.fim) - new Date(a.inicio)) / 60000);
   if (itens.length === 1 && !itens[0].min) itens[0].min = minAtual;
   let valorManual = true, valor = Number(a.preco), minManual = true, minutos = minAtual;
-  abreFolha(cabFolha("Editar serviço e valor", `${esc(a.cliente_nome)} · ${dataCurta(a.inicio)} às ${hora(a.inicio)}`) + `
+  let novoIni = null;
+  abreFolha(cabFolha("Editar agendamento", esc(a.cliente_nome)) + `
+    <div class="cartao"><label class="f" style="margin-top:0">Dia e horário</label>
+      <div class="linha" style="justify-content:space-between;gap:8px"><b data-quando>${cap(dataLonga(a.inicio))} às ${hora(a.inicio)}</b><button type="button" class="link" data-mudar>Mudar</button></div>
+      <div class="hide" data-boxhora><div data-horario></div></div></div>
     <div class="cartao"><label class="f" style="margin-top:0">Serviços</label><div data-lista></div>
       <div class="linha" style="gap:8px;margin-top:10px"><select class="campo" data-add><option value="">+ Adicionar serviço…</option>${todos.map((s) => `<option value="${s.id}">${esc(s.nome)} · ${brl(s.preco)} · ${dur(s.duracao_min)}</option>`).join("")}</select></div></div>
     <div class="cartao"><div class="grade2">
@@ -546,8 +550,8 @@ function editarServicos(a) {
       if (!minManual && somaM()) minutos = somaM();
       $("[data-valor]").value = String(valor.toFixed(2)).replace(".", ",");
       $("[data-min]").value = minutos;
-      const fim = new Date(new Date(a.inicio).getTime() + minutos * 60000);
-      $("[data-resumo]").textContent = `Horário: ${hora(a.inicio)} às ${hora(fim.toISOString())}${somaP() !== valor ? ` · Tabela: ${brl(somaP())}` : ""}`;
+      const ini0 = novoIni || a.inicio, fim = new Date(new Date(ini0).getTime() + minutos * 60000);
+      $("[data-resumo]").textContent = `Horário: ${hora(ini0)} às ${hora(fim.toISOString())}${somaP() !== valor ? ` · Tabela: ${brl(somaP())}` : ""}`;
     };
     $("[data-add]").onchange = (e) => {
       const s = st.servicos.find((x) => x.id === e.target.value); if (!s) return;
@@ -555,19 +559,32 @@ function editarServicos(a) {
       valor += Number(s.preco); minutos += s.duracao_min; e.target.value = ""; desenha();
     };
     $("[data-valor]").oninput = (e) => { valorManual = true; valor = Number(e.target.value.replace(/\./g, "").replace(",", ".")) || 0; };
-    $("[data-min]").oninput = (e) => { minManual = true; minutos = Math.max(5, Number(e.target.value) || 0); const fim = new Date(new Date(a.inicio).getTime() + minutos * 60000); $("[data-resumo]").textContent = `Horário: ${hora(a.inicio)} às ${hora(fim.toISOString())}`; };
+    $("[data-min]").oninput = (e) => { minManual = true; minutos = Math.max(5, Number(e.target.value) || 0); const ini0 = novoIni || a.inicio, fim = new Date(new Date(ini0).getTime() + minutos * 60000); $("[data-resumo]").textContent = `Horário: ${hora(ini0)} às ${hora(fim.toISOString())}`; };
+    let selH = null;
+    $("[data-mudar]").onclick = () => {
+      $("[data-boxhora]").classList.toggle("hide");
+      if (!selH) selH = seletorHorario(r, () => minutos, isoDia(a.inicio), (t) => {
+        novoIni = t;
+        $("[data-quando]").textContent = t ? `${cap(dataLonga(t))} às ${hora(t)} (novo)` : `${cap(dataLonga(a.inicio))} às ${hora(a.inicio)}`;
+        desenha();
+      });
+    };
     $("[data-soma]").onclick = () => { valorManual = false; minManual = false; desenha(); };
     $("[data-salvar]").onclick = async () => {
       if (!itens.length) return toast("Deixe pelo menos um serviço.", 1);
       if (!(valor >= 0)) return toast("Valor inválido.", 1);
-      const fim = new Date(new Date(a.inicio).getTime() + minutos * 60000).toISOString();
-      const choque = await q(sb.from("ad_agendamentos").select("cliente_nome,inicio").in("status", ATIVOS).neq("id", a.id).lt("inicio", fim).gt("fim", a.inicio));
+      const ini = novoIni || a.inicio;
+      const fim = new Date(new Date(ini).getTime() + minutos * 60000).toISOString();
+      const choque = await q(sb.from("ad_agendamentos").select("cliente_nome,inicio").in("status", ATIVOS).neq("id", a.id).lt("inicio", fim).gt("fim", ini));
       if (choque.length && !confirm(`Com essa duração, o horário encosta em ${choque.map((c) => `${c.cliente_nome} (${hora(c.inicio)})`).join(", ")}. Salvar mesmo assim?`)) return;
       const { error } = await sb.from("ad_agendamentos").update({
-        servico_id: itens[0].id, servico_nome: itens.map((i) => i.nome).join(" + ").slice(0, 200), preco: Math.round(valor * 100) / 100, fim,
+        servico_id: itens[0].id, servico_nome: itens.map((i) => i.nome).join(" + ").slice(0, 200), preco: Math.round(valor * 100) / 100, inicio: ini, fim,
+        ...(novoIni ? { aviso_breve: false } : {}),
       }).eq("id", a.id);
       if (error) return toast(erroMsg(error), 1);
-      toast("Agendamento atualizado!"); detalheAg(a.id); atualizaTela();
+      toast("Agendamento atualizado!");
+      if (novoIni && a.cliente_whatsapp && confirm("Avisar a cliente do novo dia/horário pelo WhatsApp?")) abreZap(linkZap({ ...a, inicio: ini, fim, servico_nome: itens.map((i) => i.nome).join(" + ") }, "alteracao"));
+      detalheAg(a.id); atualizaTela();
     };
     desenha();
   });
