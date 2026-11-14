@@ -144,7 +144,9 @@ sb.auth.onAuthStateChange((ev, session) => {
   if (ev === "PASSWORD_RECOVERY") setTimeout(novaSenha, 300);
   if (st._pronto && u?.id === st.user?.id) return;
   st._pronto = true; st.user = u;
-  setTimeout(iniciar, 0);
+  // espera estoque.js e extras.js carregarem antes de desenhar
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => setTimeout(iniciar, 0), { once: true });
+  else setTimeout(iniciar, 0);
 });
 
 function semAcesso() {
@@ -728,7 +730,7 @@ async function remarcar(a) {
 // NOVO AGENDAMENTO
 // =====================================================================
 async function novoAgendamento({ data, cliente, servicoId, horaIni }) {
-  const clientes = await q(sb.from("ad_clientes").select("id,nome,whatsapp").order("nome"));
+  const clientes = await q(sb.from("ad_clientes").select("id,nome,whatsapp,bloqueado,motivo_bloqueio").order("nome"));
   let horario = null, cli = cliente || null;
   const servs = st.servicos.filter((s) => s.ativo);
   abreFolha(cabFolha("Novo agendamento") + `
@@ -736,6 +738,7 @@ async function novoAgendamento({ data, cliente, servicoId, horaIni }) {
       <label class="f">Cliente</label>
       <input class="campo" data-cli list="lista-clientes" placeholder="Digite o nome" value="${cli ? esc(cli.nome) : ""}" autocomplete="off">
       <datalist id="lista-clientes">${clientes.map((c) => `<option value="${esc(c.nome)}">${fmtTel(c.whatsapp)}</option>`).join("")}</datalist>
+      <div data-aviso-bloq></div>
       <label class="f">WhatsApp da cliente <span class="pequeno">(opcional)</span></label>
       <input class="campo" data-zap inputmode="tel" placeholder="(31) 99999-9999" value="${cli ? fmtTel(cli.whatsapp) : ""}">
       <label class="f">Serviços <span class="pequeno">(pode escolher mais de um)</span></label>
@@ -768,7 +771,9 @@ async function novoAgendamento({ data, cliente, servicoId, horaIni }) {
     r.querySelector("[data-cli]").oninput = (e) => {
       const c = clientes.find((x) => x.nome.toLowerCase() === e.target.value.trim().toLowerCase());
       if (c) { cli = c; r.querySelector("[data-zap]").value = fmtTel(c.whatsapp); } else cli = null;
+      r.querySelector("[data-aviso-bloq]").innerHTML = cli?.bloqueado ? `<p class="cartao" style="background:var(--alerta-bg);color:var(--alerta);font-size:14px;margin:8px 0 0">🚫 Essa cliente está bloqueada${cli.motivo_bloqueio ? " (" + esc(cli.motivo_bloqueio) + ")" : ""}. Você ainda pode agendar por aqui, mas ela não consegue marcar pelo site.</p>` : "";
     };
+    r.querySelector("[data-cli]").oninput({ target: r.querySelector("[data-cli]") });
     r.querySelector("[data-salvar]").onclick = async () => {
       const nome = r.querySelector("[data-cli]").value.trim(), zap = r.querySelector("[data-zap]").value.replace(/\D/g, ""), s = serv();
       if (nome.length < 2) return toast("Escreva o nome da cliente.", 1);
@@ -866,7 +871,7 @@ async function telaClientes() {
   const r = tela(`
     <div class="busca">${IC.busca}<input class="campo" id="busca-cli" placeholder="Buscar por nome ou telefone" value="${esc(st.busca)}" autocomplete="off"></div>
     <div class="seg" id="filtro-cli">
-      <button data-f="todas" class="on">Todas</button><button data-f="vip">VIP</button><button data-f="frequentes">Frequentes</button><button data-f="novas">Novas</button><button data-f="sumidas">Inativas</button><button data-f="aniver">Aniver.</button>
+      <button data-f="todas" class="on">Todas</button><button data-f="vip">VIP</button><button data-f="frequentes">Frequentes</button><button data-f="novas">Novas</button><button data-f="sumidas">Inativas</button><button data-f="aniver">Aniver.</button><button data-f="bloq">Bloqueadas</button>
     </div>
     <div id="lista-cli"></div>
     <button class="btn ouro cheio" id="nova-cli">${IC.mais}Cadastrar cliente</button>`);
@@ -874,14 +879,15 @@ async function telaClientes() {
   const mesAtual = isoDia().slice(5, 7);
   const desenha = () => {
     const t = st.busca.toLowerCase().replace(/\D/g, "") || null, n = st.busca.toLowerCase().trim();
-    let l = todas.filter((c) => !n || c.nome.toLowerCase().includes(n) || (t && c.whatsapp.includes(t)));
+    let l = todas.filter((c) => !n || c.nome.toLowerCase().includes(n) || (t && (c.whatsapp || "").includes(t)));
     if (filtro === "frequentes") l = l.filter((c) => c.visitas >= 3).sort((a, b) => b.visitas - a.visitas);
     if (filtro === "sumidas") l = l.filter((c) => c.diasSem !== null && c.diasSem >= 30 && !c.proxima).sort((a, b) => b.diasSem - a.diasSem);
     if (filtro === "vip") l = l.filter((c) => c.vip);
+    if (filtro === "bloq") l = l.filter((c) => c.bloqueado);
     if (filtro === "novas") l = l.filter((c) => c.visitas <= 1 && (Date.now() - new Date(c.criado_em)) / 864e5 <= 30);
     if (filtro === "aniver") l = l.filter((c) => c.aniversario && c.aniversario.slice(5, 7) === mesAtual).sort((a, b) => a.aniversario.slice(8) - b.aniversario.slice(8));
     $("lista-cli").innerHTML = (filtro === "sumidas" && l.length ? `<p class="pequeno" style="margin:0 4px 8px">Clientes há 30 dias ou mais sem voltar e sem horário marcado. Toque em "Convidar" para mandar uma mensagem pronta.</p>` : "") + (l.length ? `<div class="lista">${l.map((c) => `<button class="item" data-c="${c.id}">${avatarCli(c)}
-      <div class="cresce"><b>${esc(c.nome)}</b>${c.vip ? ' <span class="chip vip">VIP</span>' : ""}${c.visitas >= 3 ? ' <span class="chip concluido">Frequente</span>' : ""}
+      <div class="cresce"><b>${esc(c.nome)}</b>${c.bloqueado ? ' <span class="chip cancelado">🚫 Bloqueada</span>' : ""}${c.vip ? ' <span class="chip vip">VIP</span>' : ""}${c.visitas >= 3 ? ' <span class="chip concluido">Frequente</span>' : ""}
       <div class="pequeno">${c.proxima ? "Próximo: " + dataCurta(c.proxima) + " às " + hora(c.proxima) : c.ultima ? (c.diasSem === 0 ? "Última visita hoje" : `Última visita há ${c.diasSem} dia${c.diasSem !== 1 ? "s" : ""}`) : "Ainda sem visitas"}${filtro === "aniver" && c.aniversario ? " · 🎂 " + c.aniversario.slice(8) + "/" + c.aniversario.slice(5, 7) : ""}</div></div>
       ${filtro === "sumidas" ? `<a class="btn zap mini" target="_blank" rel="noopener" data-parar href="https://wa.me/${zapNum(c.whatsapp)}?text=${encodeURIComponent(msgVolta(c))}">Convidar</a>` : '<span class="seta">›</span>'}</button>`).join("")}</div>`
       : `<div class="vazio">${IC.cliente}<div>${todas.length ? "Nenhuma cliente nesta lista." : "As clientes que agendam pelo site aparecem aqui automaticamente."}</div></div>`);
@@ -914,6 +920,7 @@ async function detalheCliente(id) {
       <div class="stat"><small>Cancelamentos</small><b>${c.cancel}</b><i>${c.faltas ? c.faltas + " falta" + (c.faltas > 1 ? "s" : "") : "sem faltas"}</i></div>
       <div class="stat"><small>Última visita</small><b style="font-size:20px">${c.ultima ? dataCurta(c.ultima) : "—"}</b><i>${c.diasSem === null ? "" : c.diasSem === 0 ? "hoje" : "há " + c.diasSem + " dia" + (c.diasSem !== 1 ? "s" : "")}</i></div>
     </div>
+    ${c.bloqueado ? `<p class="cartao" style="background:var(--alerta-bg);color:var(--alerta);font-size:14.5px">🚫 <b>Cliente bloqueada</b> — não consegue agendar pelo site.${c.motivo_bloqueio ? "<br>Motivo: " + esc(c.motivo_bloqueio) : ""}</p>` : ""}
     ${c.cancel + c.faltas >= 2 ? `<p class="cartao" style="background:var(--alerta-bg);color:var(--alerta);font-size:14.5px">⚠️ Essa cliente já cancelou ou faltou ${c.cancel + c.faltas} vezes.</p>` : ""}
     ${htmlFidelidade(c)}
     ${c.observacao ? `<div class="cartao"><b>Anotações</b><p class="mudo" style="margin-top:4px;white-space:pre-wrap">${esc(c.observacao)}</p></div>` : ""}
@@ -925,15 +932,33 @@ async function detalheCliente(id) {
         <a class="btn claro" target="_blank" rel="noopener" href="https://wa.me/${zapNum(c.whatsapp)}?text=${encodeURIComponent(msgAniver)}">Parabéns 🎂</a>
       </div>
       <div class="grade2"><button class="btn claro" data-vip>${c.vip ? "Tirar do VIP" : "⭐ Marcar como VIP"}</button><button class="btn claro" data-editar>Editar dados</button></div>
+      <button class="btn ${c.bloqueado ? "claro" : "perigo"} cheio" data-bloqcli>${c.bloqueado ? "✅ Desbloquear cliente" : "🚫 Bloquear cliente"}</button>
     </div>
     <div class="tit-linha"><h2>Histórico</h2></div>
     ${hist.length ? hist.map((a) => cartaoAg(a, true)).join("") : `<div class="vazio">Sem atendimentos ainda.</div>`}`, (r) => {
     r.querySelector("[data-agendar]").onclick = () => novoAgendamento({ cliente: c });
     r.querySelector("[data-editar]").onclick = () => editaCliente(c);
+    r.querySelector("[data-bloqcli]").onclick = () => bloqueiaCliente(c);
     r.querySelector("[data-vip]").onclick = async () => { await q(sb.from("ad_clientes").update({ vip: !c.vip }).eq("id", c.id)); toast(c.vip ? "Cliente tirada do VIP." : "Cliente marcada como VIP ⭐"); detalheCliente(c.id); };
     r.querySelector("[data-resgatar]")?.addEventListener("click", async () => { if (await resgataFid(c)) detalheCliente(c.id); });
     ligaCartoes(r);
   });
+}
+
+async function bloqueiaCliente(c) {
+  if (c.bloqueado) {
+    if (!confirm(`Desbloquear ${c.nome}? Ela volta a conseguir agendar pelo site.`)) return;
+    await q(sb.from("ad_clientes").update({ bloqueado: false, motivo_bloqueio: null }).eq("id", c.id));
+    toast("Cliente desbloqueada."); detalheCliente(c.id); if (st.aba === "clientes") telaClientes(); return;
+  }
+  const motivo = prompt(`Bloquear ${c.nome}?\n\nEla não vai conseguir agendar pelo site (aparece uma mensagem para falar com você no WhatsApp).\n\nMotivo (opcional, só você vê):`, c.faltas ? "Faltou sem avisar" : "");
+  if (motivo === null) return;
+  await q(sb.from("ad_clientes").update({ bloqueado: true, motivo_bloqueio: motivo.trim() || null }).eq("id", c.id));
+  const futuros = c.ags.filter((a) => ATIVOS.includes(a.status) && new Date(a.inicio) > new Date());
+  if (futuros.length && confirm(`Ela tem ${futuros.length} horário${futuros.length > 1 ? "s" : ""} marcado${futuros.length > 1 ? "s" : ""}. Cancelar também?`)) {
+    await q(sb.from("ad_agendamentos").update({ status: "cancelado" }).in("id", futuros.map((a) => a.id)));
+  }
+  toast("Cliente bloqueada 🚫"); detalheCliente(c.id); if (st.aba === "clientes") telaClientes();
 }
 
 function editaCliente(c) {
