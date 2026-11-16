@@ -539,7 +539,7 @@ async function telaAgenda() {
 function mensagem(a, tipo) {
   const n = primeiroNome(a.cliente_nome), d = dataLonga(a.inicio), h = hora(a.inicio);
   const end = st.prof.endereco ? `\n📍 ${st.prof.endereco}` : "";
-  const pol = `\n\n⚠️ *Política de cancelamento:* cancelamentos com menos de 24h de antecedência têm taxa de 100% do valor do serviço.`;
+  const pol = `\n\n⚠️ *Política de cancelamento:* cancelamento com menos de 2h de antecedência tem cobrança de 50% do serviço; em cima da hora ou não comparecimento, 100%.`;
   return ({
     confirmacao: `Olá, ${n}! 💇 Seu horário de *${a.servico_nome}* está confirmado para *${d}* às *${h}*.${end}${pol}\n\nAté lá! Eduardo Teccarelli Hair`,
     lembrete: `Olá, ${n}! 😊 Passando para lembrar do seu horário de *${a.servico_nome}* ${isoDia(a.inicio) === somaDias(isoDia(), 1) ? "amanhã" : "em " + d} às *${h}*.\n\nConfirme ou desmarque por aqui:\n${CONFIRMAR}${a.id}${pol}`,
