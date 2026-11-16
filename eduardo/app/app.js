@@ -167,7 +167,8 @@ async function iniciar() {
   $("v-login").classList.add("hide"); $("v-app").classList.remove("hide");
   const pedeSenha = () => { if (!travaCfg() && !localStorage.getItem("edu.trava.perguntou")) setTimeout(() => { localStorage.setItem("edu.trava.perguntou", "1"); criaSenha(true); }, 500); };
   if (travaCfg()) mostraTrava();
-  if (!localStorage.getItem("edu.tutorial")) mostraTutorial(pedeSenha); else pedeSenha();
+  const seguir = () => { if (!localStorage.getItem("edu.tutorial")) mostraTutorial(pedeSenha); else pedeSenha(); };
+  if (precisaTutTelaInicio()) setTimeout(() => tutorialTelaInicio(seguir), 600); else seguir();
   await carregaServicos();
   tempoReal(); contaAvisos(); registraSW(); vigia();
   const m = location.hash.match(/ag=([0-9a-f-]{36})/);
@@ -1404,7 +1405,7 @@ function telaMais() {
   const r = tela(grupos.map(([g, itens]) => `<div class="tit-linha"><h2>${g}</h2></div><div class="lista">${itens.map(([k, ic, t, s]) => `<button class="item" data-m="${k}"><div class="ic">${ic}</div><div class="cresce"><b>${t}</b>${s ? `<div class="pequeno">${esc(s)}</div>` : ""}</div><span class="seta">›</span></button>`).join("")}</div>`).join("") + `
     <p class="pequeno" style="text-align:center;margin-top:20px">Eduardo Hair Gestão · versão 1.0<br>Mesma agenda do site de agendamento</p>`);
   r.querySelectorAll("[data-m]").forEach((b) => (b.onclick = () => ({
-    estoque: () => vaiPara("estoque"), fiado: telaFiados, relatorios: telaRelatorios, divisao: ajustaDivisao, pix: () => configuraPix(), taxas: telaTaxas, fidelidade: telaFidelidade, equipe: telaEquipe, servicos: telaServicos, horarios: telaHorarios, notificacoes: telaNotificacoes, chegar: comoChegar, site: telaSite, salao: dadosSalao, instalar: instrucoesInstalar, senha: novaSenha, seguranca: telaSeguranca, aparencia: telaAparencia, automacoes: telaAutomacoes, tutorial: () => mostraTutorial(),
+    estoque: () => vaiPara("estoque"), fiado: telaFiados, relatorios: telaRelatorios, divisao: ajustaDivisao, pix: () => configuraPix(), taxas: telaTaxas, fidelidade: telaFidelidade, equipe: telaEquipe, servicos: telaServicos, horarios: telaHorarios, notificacoes: telaNotificacoes, chegar: comoChegar, site: telaSite, salao: dadosSalao, instalar: () => tutorialTelaInicio(), senha: novaSenha, seguranca: telaSeguranca, aparencia: telaAparencia, automacoes: telaAutomacoes, tutorial: () => mostraTutorial(),
     sair: async () => { if (confirm("Sair do app?")) { await sb.auth.signOut(); location.reload(); } },
   })[b.dataset.m]()));
 }
@@ -1733,7 +1734,69 @@ function instrucoesInstalar(paraNotificar) {
     r.querySelector("[data-inst]")?.addEventListener("click", async () => { window._promptInstalar.prompt(); window._promptInstalar = null; fechaFolha(); });
   });
 }
-window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); window._promptInstalar = e; });
+window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); window._promptInstalar = e; document.querySelectorAll("[data-inst-agora]").forEach((b) => b.classList.remove("hide")); });
+window.addEventListener("appinstalled", () => { localStorage.setItem("edu.tutTelaInicio", "feito"); });
+
+// tutorial ilustrado de pôr o app na tela de início (aparece sozinho até instalar; no máx. 3 vezes)
+function precisaTutTelaInicio() {
+  if (instalado()) { localStorage.setItem("edu.tutTelaInicio", "feito"); return false; }
+  const v = localStorage.getItem("edu.tutTelaInicio");
+  return v !== "feito" && Number(v || 0) < 3;
+}
+function tutorialTelaInicio(aoFechar) {
+  const ios = ehIOS();
+  const celular = (miolo) => `<div style="width:150px;flex:none;border:2px solid var(--line2);border-radius:22px;padding:8px;background:#0E0B14">${miolo}</div>`;
+  const barra = (destaque) => `<div style="display:flex;align-items:center;gap:6px;background:#2A2433;border-radius:10px;padding:6px 8px;font-size:10px;color:#bbb"><span style="flex:1;overflow:hidden;white-space:nowrap">🔒 agenda-deluxe…</span><span style="font-size:16px;line-height:1;${destaque ? "color:#fff;background:var(--acc);border-radius:50%;width:22px;height:22px;display:grid;place-items:center;box-shadow:0 0 0 4px rgba(155,108,230,.35)" : ""}">⋮</span></div>`;
+  const tela = `<div style="height:120px;margin-top:8px;border-radius:10px;background:linear-gradient(160deg,#2A2040,#151020);display:grid;place-items:center"><img src="icone-192.png" alt="" style="width:46px;height:46px;border-radius:12px;opacity:.9"></div>`;
+  const menu = `<div style="margin-top:8px;border-radius:10px;background:#2A2433;font-size:11px;overflow:hidden;text-align:left">${["Nova guia", "Favoritos", "Histórico"].map((t) => `<div style="padding:7px 10px;color:#aaa">${t}</div>`).join("")}<div style="padding:7px 10px;background:var(--acc);color:#fff;font-weight:700">📲 Instalar app</div><div style="padding:7px 10px;color:#aaa">Configurações</div></div>`;
+  const icones = `<div style="height:166px;border-radius:10px;background:linear-gradient(160deg,#1B3A4A,#2A1F3D);display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px;align-content:start">${["📷", "💬", "📞", "🗓️", ""].map((e) => `<div style="aspect-ratio:1;border-radius:10px;background:rgba(255,255,255,.12);display:grid;place-items:center;font-size:18px">${e}</div>`).join("")}<div style="text-align:center"><img src="icone-192.png" alt="" style="width:100%;border-radius:10px;box-shadow:0 0 0 3px var(--acc)"><div style="font-size:8px;color:#fff;margin-top:2px">Eduardo Hair</div></div></div>`;
+  const passos = ios ? [
+    ["Abra pelo Safari", "Este link precisa estar aberto no <b>Safari</b> (a bússola azul).", celular(barra(false) + tela)],
+    ["Toque em Compartilhar", "O quadrado com a <b>seta para cima</b> ⬆️, embaixo da tela.", celular(tela + `<div style="margin-top:8px;text-align:center;font-size:22px"><span style="display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--acc);color:#fff;font-size:16px">⬆️</span></div>`)],
+    ["Adicionar à Tela de Início", "Role a lista, toque em <b>Adicionar à Tela de Início</b> e depois em <b>Adicionar</b>.", celular(`<div style="border-radius:10px;background:#2A2433;font-size:11px;overflow:hidden;text-align:left">${["Copiar", "Adicionar aos Favoritos"].map((t) => `<div style="padding:7px 10px;color:#aaa">${t}</div>`).join("")}<div style="padding:7px 10px;background:var(--acc);color:#fff;font-weight:700">➕ Adicionar à Tela de Início</div></div>`)],
+    ["Pronto!", "Agora abra sempre pelo ícone <b>Eduardo Hair</b>.", celular(icones)],
+  ] : [
+    ["Abra pelo Chrome", "Este link precisa estar aberto no <b>Chrome</b> (a bolinha colorida).", celular(barra(false) + tela)],
+    ["Toque nos 3 pontinhos", "Fica no <b>canto de cima, à direita</b> da tela: <b>⋮</b>", celular(barra(true) + tela)],
+    ["Toque em “Instalar app”", "Se não aparecer, toque em <b>Adicionar à tela inicial</b>. Depois confirme em <b>Instalar</b>.", celular(barra(true) + menu)],
+    ["Pronto!", "O ícone <b>Eduardo Hair</b> aparece junto dos seus aplicativos. Abra sempre por ele.", celular(icones)],
+  ];
+  let i = 0;
+  const fecha = (feito) => { localStorage.setItem("edu.tutTelaInicio", feito ? "feito" : String(Number(localStorage.getItem("edu.tutTelaInicio") || 0) + 1)); fechaFolha(); aoFechar?.(); };
+  abreFolha(cabFolha(`📲 Coloque o app na tela de início`, ios ? "iPhone · leva 20 segundos" : "Android · leva 20 segundos") + `
+    <div class="cartao" style="text-align:center">
+      <div data-tut-fig style="display:flex;justify-content:center;min-height:200px"></div>
+      <p class="pequeno" data-tut-n style="margin-top:12px;font-weight:700;letter-spacing:.06em"></p>
+      <h3 data-tut-t style="margin:4px 0 6px"></h3>
+      <p data-tut-d style="line-height:1.5;margin:0"></p>
+      <div data-tut-pontos style="display:flex;justify-content:center;gap:6px;margin-top:14px"></div>
+    </div>
+    <button class="btn ouro cheio ${!ios && window._promptInstalar ? "" : "hide"}" data-inst-agora>📲 Instalar agora com 1 toque</button>
+    <div class="grade2" style="margin-top:10px"><button class="btn claro" data-tut-ant>‹ Voltar</button><button class="btn" data-tut-prox>Próximo ›</button></div>
+    <div class="grade2" style="margin-top:10px"><button class="btn claro" data-tut-depois>Agora não</button><button class="btn claro" data-tut-feito>✓ Já coloquei</button></div>`, (r) => {
+    const mostra = () => {
+      const [t, d, fig] = passos[i];
+      r.querySelector("[data-tut-fig]").innerHTML = fig;
+      r.querySelector("[data-tut-n]").textContent = `PASSO ${i + 1} DE ${passos.length}`;
+      r.querySelector("[data-tut-t]").textContent = t;
+      r.querySelector("[data-tut-d]").innerHTML = d;
+      r.querySelector("[data-tut-pontos]").innerHTML = passos.map((_, j) => `<i style="width:${j === i ? 18 : 7}px;height:7px;border-radius:9px;background:${j === i ? "var(--acc)" : "var(--line2)"};transition:.2s"></i>`).join("");
+      r.querySelector("[data-tut-ant]").disabled = i === 0;
+      r.querySelector("[data-tut-prox]").textContent = i === passos.length - 1 ? "Entendi ✓" : "Próximo ›";
+    };
+    r.querySelector("[data-tut-ant]").onclick = () => { if (i > 0) { i--; mostra(); } };
+    r.querySelector("[data-tut-prox]").onclick = () => { if (i < passos.length - 1) { i++; mostra(); } else fecha(false); };
+    r.querySelector("[data-tut-depois]").onclick = () => fecha(false);
+    r.querySelector("[data-tut-feito]").onclick = () => fecha(true);
+    r.querySelector("[data-inst-agora]").onclick = async () => {
+      const p = window._promptInstalar; if (!p) return;
+      p.prompt(); const { outcome } = await p.userChoice.catch(() => ({}));
+      window._promptInstalar = null;
+      if (outcome === "accepted") { toast("Instalado! Procure o ícone Eduardo Hair 💜"); fecha(true); }
+    };
+    mostra();
+  });
+}
 
 function novaSenha() {
   abreFolha(cabFolha("Nova senha") + `<div class="cartao"><label class="f">Nova senha (mínimo 8 caracteres)</label><input class="campo" type="password" data-s autocomplete="new-password"></div><button class="btn ouro cheio" data-salvar>Salvar senha</button>`, (r) => {
