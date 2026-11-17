@@ -1494,52 +1494,52 @@ const minDia = (hhmm) => { const [h, m] = String(hhmm).slice(0, 5).split(":").ma
 const minLocal = (iso) => { const d = new Date(new Date(iso).getTime() - 3 * 3600e3); return d.getUTCHours() * 60 + d.getUTCMinutes(); };
 const hhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 function gradeHoras(dias, ags, bloq, hs) {
-  const um = dias.length === 1, PX = um ? 1.3 : 0.95; // pixels por minuto
+  const um = dias.length === 1, PX = um ? 1.6 : 1; // pixels por minuto (30 min = 48px no dia)
   const hoje = isoDia();
-  const porDow = (dow) => hs.filter((h) => h.dia_semana === dow).map((h) => [minDia(h.inicio), minDia(h.fim)]);
+  const dows = dias.map((d) => meioDia(d).getUTCDay());
+  const porDow = (dow) => hs.filter((h) => h.dia_semana === dow).map((h) => [minDia(h.inicio), minDia(h.fim)]).sort((x, z) => x[0] - z[0]);
   let ini = 24 * 60, fim = 0;
-  hs.forEach((h) => { ini = Math.min(ini, minDia(h.inicio)); fim = Math.max(fim, minDia(h.fim)); });
+  hs.filter((h) => dows.includes(h.dia_semana)).forEach((h) => { ini = Math.min(ini, minDia(h.inicio)); fim = Math.max(fim, minDia(h.fim)); });
   ags.filter((a) => a.status !== "cancelado" && dias.includes(isoDia(a.inicio))).forEach((a) => { ini = Math.min(ini, minLocal(a.inicio)); fim = Math.max(fim, minLocal(a.fim) || 24 * 60); });
-  if (ini >= fim) { ini = 8 * 60; fim = 19 * 60; }
+  if (ini >= fim) { ini = 9 * 60; fim = 18 * 60; }
   ini = Math.floor(ini / 60) * 60; fim = Math.ceil(fim / 60) * 60;
   const alt = (fim - ini) * PX, y = (m) => (m - ini) * PX;
-  const horas = []; for (let m = ini; m <= fim; m += 60) horas.push(m);
-  const agora = new Date(), minAgora = minLocal(agora.toISOString());
+  const horas = []; for (let m = ini; m < fim; m += 60) horas.push(m);
+  const minAgora = minLocal(new Date().toISOString());
   const coluna = (d) => {
-    const dow = meioDia(d).getUTCDay(), abre = porDow(dow), alm = almocoNoDia(d);
-    const fechados = []; let c = ini;
-    [...abre].sort((a, b) => a[0] - b[0]).forEach(([a, b]) => { if (a > c) fechados.push([c, a]); c = Math.max(c, b); });
-    if (c < fim) fechados.push([c, fim]);
-    const folga = !abre.length;
+    const abre = porDow(meioDia(d).getUTCDay()), alm = almocoNoDia(d);
+    const almI = alm ? minDia(alm.inicio) : -1, almF = alm ? minDia(alm.fim) : -1;
+    const lista = ags.filter((a) => a.status !== "cancelado" && isoDia(a.inicio) === d).map((a) => ({ a, s: minLocal(a.inicio), e: Math.max(minLocal(a.fim), minLocal(a.inicio) + 15) })).sort((p, z) => p.s - z.s);
+    const bl = bloq.filter((b) => isoDia(b.inicio) <= d && isoDia(new Date(new Date(b.fim).getTime() - 1).toISOString()) >= d)
+      .map((b) => ({ b, s: Math.max(isoDia(b.inicio) === d ? minLocal(b.inicio) : ini, ini), e: Math.min(isoDia(b.fim) === d ? minLocal(b.fim) : fim, fim) }));
     let html = "";
-    // horas livres (toque para agendar) em blocos de 30 min
-    if (!folga) for (let m = ini; m < fim; m += 30) {
-      const aberto = abre.some(([a, b]) => m >= a && m < b) && !(alm && m < minDia(alm.fim) && m + 30 > minDia(alm.inicio));
+    if (!abre.length && !lista.length) return `<div class="g-col${d === hoje ? " hoje" : ""}" style="height:${alt}px"><div class="g-bloco folga" style="top:3px;height:${alt - 6}px"><span>${um ? "😴 Folga — salão fechado" : "Folga"}</span></div></div>`;
+    // quadradinhos de 30 min: vagos (toque para agendar)
+    for (let m = ini; m < fim; m += 30) {
+      const aberto = abre.some(([x, z]) => m >= x && m < z);
+      if (!aberto) continue;
+      if (alm && m < almF && m + 30 > almI) continue;
+      if (bl.some((o) => m < o.e && m + 30 > o.s)) continue;
+      if (lista.some((o) => m < o.e && m + 30 > o.s)) continue;
       const passado = d < hoje || (d === hoje && m + 30 <= minAgora);
-      if (aberto && !passado) html += `<button class="g-livre" data-gnovo="${d}|${hhmm(m)}" style="top:${y(m)}px;height:${30 * PX}px" aria-label="Agendar ${hhmm(m)}"></button>`;
+      html += passado ? `<div class="g-cel passado" style="top:${y(m) + 2}px;height:${30 * PX - 4}px"></div>`
+        : `<button class="g-cel livre" data-gnovo="${d}|${hhmm(m)}" style="top:${y(m) + 2}px;height:${30 * PX - 4}px" aria-label="Agendar ${hhmm(m)}">${um ? `<span>${hhmm(m)}</span><em>+ Livre</em>` : "<em>+</em>"}</button>`;
     }
-    if (folga) html += `<div class="g-fechado" style="top:0;height:${alt}px"><span>Folga</span></div>`;
-    else fechados.forEach(([a, b]) => { if (b > a) html += `<div class="g-fechado" style="top:${y(a)}px;height:${(b - a) * PX}px"></div>`; });
-    if (alm && !folga) { const a = minDia(alm.inicio), b = minDia(alm.fim); html += `<div class="g-fechado g-rot" style="top:${y(a)}px;height:${(b - a) * PX}px"><span>${um ? "🍽️ Horário de almoço" : "Almoço"}</span></div>`; }
-    bloq.filter((b) => isoDia(b.inicio) <= d && isoDia(new Date(new Date(b.fim).getTime() - 1).toISOString()) >= d).forEach((b) => {
-      const a = isoDia(b.inicio) === d ? minLocal(b.inicio) : ini, z = isoDia(b.fim) === d ? minLocal(b.fim) : fim;
-      html += `<div class="g-fechado g-rot" data-desbloq="${b.id}" style="top:${y(Math.max(a, ini))}px;height:${(Math.min(z, fim) - Math.max(a, ini)) * PX}px;cursor:pointer"><span>${esc(b.motivo || "Bloqueado")}</span></div>`;
-    });
-    // atendimentos, lado a lado quando se sobrepõem
-    const lista = ags.filter((a) => a.status !== "cancelado" && isoDia(a.inicio) === d).map((a) => ({ a, s: minLocal(a.inicio), e: Math.max(minLocal(a.fim), minLocal(a.inicio) + 15) })).sort((p, q2) => p.s - q2.s);
-    const pistas = []; lista.forEach((it) => { let k = pistas.findIndex((fimP) => fimP <= it.s); if (k < 0) { k = pistas.length; pistas.push(0); } pistas[k] = it.e; it.k = k; });
+    if (alm && abre.length) html += `<div class="g-bloco almoco" style="top:${y(almI) + 2}px;height:${(almF - almI) * PX - 4}px"><span>${um ? `🍽️ Almoço · ${alm.inicio} às ${alm.fim}` : "🍽️"}</span></div>`;
+    bl.forEach((o) => { if (o.e > o.s) html += `<button class="g-bloco bloq" data-desbloq="${o.b.id}" style="top:${y(o.s) + 2}px;height:${(o.e - o.s) * PX - 4}px"><span>${um ? `🔒 ${esc(o.b.motivo || "Bloqueado")}` : "🔒"}</span></button>`; });
+    const pistas = []; lista.forEach((it) => { let k = pistas.findIndex((fp) => fp <= it.s); if (k < 0) { k = pistas.length; pistas.push(0); } pistas[k] = it.e; it.k = k; });
     lista.forEach((it) => {
-      const viz = lista.filter((o) => o.s < it.e && it.s < o.e); const n = Math.max(...viz.map((o) => o.k)) + 1;
-      const cor = corServico(it.a), h = (it.e - it.s) * PX;
-      html += `<button class="g-ag ${it.a.status}" data-ag="${it.a.id}" style="top:${y(it.s) + 1}px;height:${h - 2}px;left:calc(${(100 / n) * it.k}% + 2px);width:calc(${100 / n}% - 4px);--cs:${cor}">
-        <b>${esc(um ? it.a.cliente_nome : primeiroNome(it.a.cliente_nome))}</b>${h > 34 ? `<small>${um ? hora(it.a.inicio) + " · " : ""}${esc(it.a.servico_nome)}</small>` : ""}${it.a.pago ? `<i class="g-pago">✓</i>` : ""}</button>`;
+      const n = Math.max(...lista.filter((o) => o.s < it.e && it.s < o.e).map((o) => o.k)) + 1;
+      const h = (it.e - it.s) * PX - 4;
+      html += `<button class="g-ag ${it.a.status}" data-ag="${it.a.id}" style="top:${y(it.s) + 2}px;height:${h}px;left:calc(${(100 / n) * it.k}% + 3px);width:calc(${100 / n}% - 6px);--cs:${corServico(it.a)}">
+        <b>${esc(um ? it.a.cliente_nome : primeiroNome(it.a.cliente_nome))}</b>${h > 30 ? `<small>${um ? `${hora(it.a.inicio)}–${hora(it.a.fim)} · ` : ""}${esc(it.a.servico_nome)}</small>` : ""}${um && n === 1 && h > 70 ? `<span class="g-tag">${STATUS[it.a.status] || ""}${it.a.pago ? " · Pago ✓" : ` · ${brl(it.a.preco)}`}</span>` : it.a.pago ? `<i class="g-pago">✓</i>` : ""}</button>`;
     });
     if (d === hoje && minAgora >= ini && minAgora <= fim) html += `<div class="g-agora" style="top:${y(minAgora)}px"></div>`;
     return `<div class="g-col${d === hoje ? " hoje" : ""}" style="height:${alt}px">${html}</div>`;
   };
   const cab = um ? "" : `<div class="g-cab"><div></div>${dias.map((d) => { const dt = meioDia(d); const n = ags.filter((a) => a.status !== "cancelado" && isoDia(a.inicio) === d).length; return `<button data-dia="${d}" class="${d === hoje ? "hoje" : ""}"><small>${SEM3[dt.getUTCDay()].slice(0, 1)}</small><b>${dt.getUTCDate()}</b><i>${n ? "•".repeat(Math.min(n, 4)) : ""}</i></button>`; }).join("")}</div>`;
-  return `<div class="grade-h${um ? " um" : ""}">${cab}<div class="g-corpo"><div class="g-horas" style="height:${alt}px">${horas.map((m) => `<span style="top:${y(m)}px">${m / 60}</span>`).join("")}</div>
-    <div class="g-dias" style="height:${alt}px;background-size:100% ${60 * PX}px;background-position:0 0">${dias.map(coluna).join("")}</div></div></div>`;
+  return `<div class="grade-h${um ? " um" : ""}">${cab}<div class="g-corpo"><div class="g-horas" style="height:${alt}px">${horas.map((m) => `<span style="top:${y(m)}px">${um ? hhmm(m) : m / 60 + "h"}</span>`).join("")}</div>
+    <div class="g-dias" style="height:${alt}px">${dias.map(coluna).join("")}</div></div></div>`;
 }
 function ligaGrade(r) {
   r.querySelectorAll("[data-gnovo]").forEach((b) => (b.onclick = () => { const [d, h] = b.dataset.gnovo.split("|"); novoAgendamento({ data: d, hora: h }); }));
