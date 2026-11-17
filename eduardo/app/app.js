@@ -1810,6 +1810,9 @@ window.addEventListener("appinstalled", () => { localStorage.setItem("edu.tutTel
 
 // tutorial ilustrado de pôr o app na tela de início (aparece sozinho até instalar; no máx. 3 vezes)
 function precisaTutTelaInicio() {
+  // o salão pode pedir para mostrar de novo (config.tut_tela_inicio muda de número)
+  const pedido = String(st.prof?.config?.tut_tela_inicio || "");
+  if (pedido && localStorage.getItem("edu.tutTelaInicioPedido") !== pedido) { localStorage.setItem("edu.tutTelaInicioPedido", pedido); localStorage.removeItem("edu.tutTelaInicio"); }
   if (instalado()) { localStorage.setItem("edu.tutTelaInicio", "feito"); return false; }
   const v = localStorage.getItem("edu.tutTelaInicio");
   return v !== "feito" && Number(v || 0) < 3;
