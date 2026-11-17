@@ -188,6 +188,7 @@ document.querySelectorAll("#abas button").forEach((b) => (b.onclick = () => vaiP
 const TITULOS = { inicio: "Início", agenda: "Agenda", clientes: "Clientes", caixa: "Financeiro", mais: "Mais", estoque: "Loja" };
 const ORDEM_ABAS = ["inicio", "agenda", "clientes", "caixa", "mais"];
 function vaiPara(aba) {
+  document.querySelectorAll(".barra-sel").forEach((x) => x.remove());
   st.direcao = ORDEM_ABAS.indexOf(aba) >= ORDEM_ABAS.indexOf(st.aba || "inicio") ? "da-direita" : "da-esquerda";
   if (aba === st.aba) st.direcao = "";
   st.aba = aba;
@@ -281,7 +282,7 @@ async function confere() {
   } catch { /* sem internet: tenta de novo em 5 s */ }
 }
 function atualizaSilencioso() {
-  const ocupada = $("folha").classList.contains("on") || ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName);
+  const ocupada = $("folha").classList.contains("on") || !!document.querySelector(".barra-sel") || ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName);
   if (ocupada) { st.pendente = true; return; }
   const y = scrollY; st.silencioso = true;
   Promise.resolve(atualizaTela()).finally(() => { st.silencioso = false; scrollTo(0, y); });
@@ -1527,7 +1528,7 @@ function gradeHoras(dias, ags, bloq, hs) {
         : `<button class="g-cel livre" data-gnovo="${d}|${hhmm(m)}" style="top:${y(m) + 2}px;height:${30 * PX - 4}px" aria-label="Agendar ${hhmm(m)}">${um ? `<span>${hhmm(m)}</span><em>+ Livre</em>` : "<em>+</em>"}</button>`;
     }
     if (alm && abre.length) html += `<button class="g-bloco almoco" data-almoco="${d}" style="top:${y(almI) + 2}px;height:${(almF - almI) * PX - 4}px"><span>${um ? `🍽️ Almoço · ${alm.inicio} às ${alm.fim}${alm.soHoje ? " (só hoje)" : ""} <u>mudar</u>` : "🍽️"}</span></button>`;
-    bl.forEach((o) => { if (o.e > o.s) html += `<button class="g-bloco bloq" data-desbloq="${o.b.id}" style="top:${y(o.s) + 2}px;height:${(o.e - o.s) * PX - 4}px"><span>${um ? `🔒 ${esc(o.b.motivo || "Bloqueado")}` : "🔒"}</span></button>`; });
+    bl.forEach((o) => { if (o.e > o.s) html += `<button class="g-bloco bloq" data-gdesbloq="${o.b.id}" style="top:${y(o.s) + 2}px;height:${(o.e - o.s) * PX - 4}px"><span>${um ? `🔒 ${esc(o.b.motivo || "Bloqueado")} <u>liberar</u>` : "🔒"}</span></button>`; });
     const pistas = []; lista.forEach((it) => { let k = pistas.findIndex((fp) => fp <= it.s); if (k < 0) { k = pistas.length; pistas.push(0); } pistas[k] = it.e; it.k = k; });
     lista.forEach((it) => {
       const n = Math.max(...lista.filter((o) => o.s < it.e && it.s < o.e).map((o) => o.k)) + 1;
@@ -1539,11 +1540,27 @@ function gradeHoras(dias, ags, bloq, hs) {
     return `<div class="g-col${d === hoje ? " hoje" : ""}" style="height:${alt}px">${html}</div>`;
   };
   const cab = um ? "" : `<div class="g-cab"><div></div>${dias.map((d) => { const dt = meioDia(d); const n = ags.filter((a) => a.status !== "cancelado" && isoDia(a.inicio) === d).length; return `<button data-dia="${d}" class="${d === hoje ? "hoje" : ""}"><small>${SEM3[dt.getUTCDay()].slice(0, 1)}</small><b>${dt.getUTCDate()}</b><i>${n ? "•".repeat(Math.min(n, 4)) : ""}</i></button>`; }).join("")}</div>`;
-  return `<div class="grade-h${um ? " um" : ""}">${cab}<div class="g-corpo"><div class="g-horas" style="height:${alt}px">${horas.map((m) => `<span style="top:${y(m)}px">${um ? hhmm(m) : m / 60 + "h"}</span>`).join("")}</div>
+  const barra = um ? (() => {
+    const d = dias[0], diaTodo = bloq.find((b) => isoDia(b.inicio) <= d && new Date(b.inicio) <= new Date(inicioDia(d)) && new Date(b.fim) >= new Date(inicioDia(somaDias(d, 1))));
+    return `<div class="g-acoes">${diaTodo ? `<button data-gliberadia="${d}" class="on">✅ Liberar o dia</button>` : `<button data-gmodo="${d}">🔒 Bloquear horários</button><button data-gbloqdia="${d}">🚫 Bloquear o dia</button>`}</div>`;
+  })() : "";
+  return `${barra}<div class="grade-h${um ? " um" : ""}" data-gdia="${dias[0]}">${cab}<div class="g-corpo"><div class="g-horas" style="height:${alt}px">${horas.map((m) => `<span style="top:${y(m)}px">${um ? hhmm(m) : m / 60 + "h"}</span>`).join("")}</div>
     <div class="g-dias" style="height:${alt}px">${dias.map(coluna).join("")}</div></div></div>`;
 }
 function ligaGrade(r, interno) {
-  r.querySelectorAll("[data-gnovo]").forEach((b) => (b.onclick = () => { const [d, h] = b.dataset.gnovo.split("|"); novoAgendamento({ data: d, hora: h }); }));
+  r.querySelectorAll("[data-gnovo]").forEach((b) => (b.onclick = () => {
+    const [d, h] = b.dataset.gnovo.split("|");
+    const g = b.closest(".grade-h");
+    if (g?.classList.contains("selecionando")) { b.classList.toggle("sel"); atualizaBarraSel(g); return; }
+    acaoHorario(d, h);
+  }));
+  r.querySelectorAll("[data-gdesbloq]").forEach((b) => (b.onclick = async () => {
+    if (!confirm("Liberar este horário para as clientes agendarem?")) return;
+    await q(sb.from("ad_bloqueios").delete().eq("id", b.dataset.gdesbloq)); toast("Horário liberado ✅"); atualizaTela();
+  }));
+  r.querySelectorAll("[data-gmodo]").forEach((b) => (b.onclick = () => modoSelecao(r.querySelector(`.grade-h[data-gdia="${b.dataset.gmodo}"]`), true)));
+  r.querySelectorAll("[data-gbloqdia]").forEach((b) => (b.onclick = () => bloqueiaDia(b.dataset.gbloqdia)));
+  r.querySelectorAll("[data-gliberadia]").forEach((b) => (b.onclick = () => liberaDia(b.dataset.gliberadia)));
   r.querySelectorAll(".g-ag[data-ag]").forEach((b) => (b.onclick = (e) => { e.stopPropagation(); detalheAg(b.dataset.ag); }));
   r.querySelectorAll("[data-almoco]").forEach((b) => (b.onclick = () => menuAlmoco(b.dataset.almoco)));
   r.querySelectorAll("[data-almvolta]").forEach((b) => (b.onclick = () => voltaAlmoco(b.dataset.almvolta)));
@@ -1554,6 +1571,92 @@ function ligaGrade(r, interno) {
   else setTimeout(() => g.scrollIntoView({ block: "center" }), 50);
 }
 
+
+
+// ---------- bloquear horários e dias direto na grade ----------
+function acaoHorario(d, h) {
+  const quando = `${d === isoDia() ? "hoje" : diaSemana(meioDia(d)).toLowerCase() + ", " + dataCurta(meioDia(d).toISOString())} às ${h}`;
+  let dur = 30;
+  abreFolha(cabFolha(`Horário livre · ${h}`, quando) + `
+    <div class="pilha">
+      <button class="btn ouro cheio" data-ag>📅 Agendar cliente às ${h}</button>
+      <div class="cartao" style="margin:0">
+        <b>🔒 Bloquear a partir das ${h}</b>
+        <div class="opcoes" data-durs style="margin-top:10px">${[[30, "30 min"], [60, "1 hora"], [120, "2 horas"], [0, "Até fechar"]].map(([m, t], i) => `<button type="button" data-m="${m}" class="${i === 0 ? "on" : ""}">${t}</button>`).join("")}</div>
+        <input class="campo" data-motivo placeholder="Motivo (opcional): médico, compromisso…" style="margin-top:10px">
+        <button class="btn cheio" data-bloq style="margin-top:10px">Bloquear</button>
+      </div>
+      <div class="grade2"><button class="btn claro" data-varios>Escolher vários</button><button class="btn claro" data-dia>🚫 Bloquear o dia</button></div>
+    </div>`, (r) => {
+    r.querySelector("[data-ag]").onclick = () => novoAgendamento({ data: d, hora: h });
+    r.querySelectorAll("[data-m]").forEach((b) => (b.onclick = () => { dur = +b.dataset.m; r.querySelectorAll("[data-m]").forEach((x) => x.classList.toggle("on", x === b)); }));
+    r.querySelector("[data-bloq]").onclick = async () => {
+      const ini = new Date(`${d}T${h}:00-03:00`);
+      let fim;
+      if (dur) fim = new Date(ini.getTime() + dur * 60000);
+      else {
+        const hs = await q(sb.from("ad_horarios").select("inicio,fim").eq("dia_semana", meioDia(d).getUTCDay()));
+        const fecha = hs.map((x) => x.fim.slice(0, 5)).sort().pop() || "20:00";
+        fim = new Date(`${d}T${fecha}:00-03:00`); if (fim <= ini) fim = new Date(ini.getTime() + 30 * 60000);
+      }
+      await salvaBloqueios([{ ini, fim }], r.querySelector("[data-motivo]").value.trim() || "Bloqueado");
+    };
+    r.querySelector("[data-varios]").onclick = () => { fechaFolha(); setTimeout(() => { const g = document.querySelector(`.grade-h[data-gdia="${d}"]`) || document.querySelector(".grade-h"); modoSelecao(g, true, `${d}|${h}`); }, 250); };
+    r.querySelector("[data-dia]").onclick = () => bloqueiaDia(d);
+  });
+}
+async function salvaBloqueios(faixas, motivo) {
+  await q(sb.from("ad_bloqueios").insert(faixas.map((f) => ({ profissional_id: st.prof.id, inicio: f.ini.toISOString(), fim: f.fim.toISOString(), motivo }))));
+  const de = faixas[0].ini, ate = faixas[faixas.length - 1].fim;
+  const conflitos = (await agsEntre(isoDia(de), somaDias(isoDia(new Date(ate - 1)), 1))).filter((a) => ATIVOS.includes(a.status) && faixas.some((f) => new Date(a.inicio) < f.fim && new Date(a.fim) > f.ini));
+  toast("Bloqueado 🔒 O site não mostra mais esse horário.");
+  if (conflitos.length) abreFolha(cabFolha("Atenção", `Já tem ${conflitos.length} cliente${conflitos.length > 1 ? "s marcadas" : " marcada"} nesse horário. Remarque ou avise:`) + conflitos.map((a) => cartaoAg(a, true)).join(""), ligaCartoes);
+  else fechaFolha();
+  atualizaTela();
+}
+async function bloqueiaDia(d) {
+  const motivo = prompt(`Bloquear ${d === isoDia() ? "hoje" : dataCurta(meioDia(d).toISOString())} inteiro?\n\nNinguém consegue agendar nesse dia pelo site.\n\nMotivo (opcional):`, "Folga");
+  if (motivo === null) return;
+  await salvaBloqueios([{ ini: new Date(inicioDia(d)), fim: new Date(inicioDia(somaDias(d, 1))) }], motivo.trim() || "Dia bloqueado");
+}
+async function liberaDia(d) {
+  if (!confirm(`Liberar ${d === isoDia() ? "hoje" : dataCurta(meioDia(d).toISOString())} para as clientes agendarem?`)) return;
+  const bl = await q(sb.from("ad_bloqueios").select("id,inicio,fim").lt("inicio", inicioDia(somaDias(d, 1))).gt("fim", inicioDia(d)));
+  const ids = bl.filter((b) => new Date(b.inicio) <= new Date(inicioDia(d)) && new Date(b.fim) >= new Date(inicioDia(somaDias(d, 1))) && isoDia(b.inicio) === d && isoDia(new Date(new Date(b.fim) - 1)) === d).map((b) => b.id);
+  if (!ids.length) return toast("Esse bloqueio pega vários dias. Libere em Ajustes → Horários e folgas.", 1);
+  await q(sb.from("ad_bloqueios").delete().in("id", ids)); toast("Dia liberado ✅"); atualizaTela();
+}
+function modoSelecao(g, liga, pre) {
+  if (!g) return;
+  document.querySelectorAll(".barra-sel").forEach((x) => x.remove());
+  g.classList.toggle("selecionando", liga);
+  g.querySelectorAll(".g-cel.sel").forEach((x) => x.classList.remove("sel"));
+  if (!liga) return;
+  if (pre) g.querySelector(`[data-gnovo="${pre}"]`)?.classList.add("sel");
+  const b = document.createElement("div");
+  b.className = "barra-sel";
+  b.innerHTML = `<span data-n>Toque nos horários que quer bloquear</span><div class="linha" style="gap:8px"><button class="btn claro mini" data-cancel>Cancelar</button><button class="btn ouro mini" data-ok disabled>🔒 Bloquear</button></div>`;
+  document.body.append(b);
+  b.querySelector("[data-cancel]").onclick = () => modoSelecao(g, false);
+  b.querySelector("[data-ok]").onclick = async () => {
+    const sel = [...g.querySelectorAll(".g-cel.sel")].map((x) => x.dataset.gnovo.split("|")).sort();
+    if (!sel.length) return;
+    const faixas = [];
+    sel.forEach(([d, h]) => { const ini = new Date(`${d}T${h}:00-03:00`), fim = new Date(ini.getTime() + 30 * 60000); const u = faixas[faixas.length - 1]; if (u && u.fim.getTime() === ini.getTime()) u.fim = fim; else faixas.push({ ini, fim }); });
+    const motivo = prompt(`Bloquear ${sel.length} horário${sel.length > 1 ? "s" : ""}?\n\nMotivo (opcional):`, "");
+    if (motivo === null) return;
+    modoSelecao(g, false);
+    await salvaBloqueios(faixas, motivo.trim() || "Bloqueado");
+  };
+  atualizaBarraSel(g);
+  g.scrollIntoView({ block: "start", behavior: "smooth" });
+}
+function atualizaBarraSel(g) {
+  const b = document.querySelector(".barra-sel"); if (!b) return;
+  const n = g.querySelectorAll(".g-cel.sel").length;
+  b.querySelector("[data-n]").textContent = n ? `${n} horário${n > 1 ? "s" : ""} · ${dur(n * 30)}` : "Toque nos horários que quer bloquear";
+  b.querySelector("[data-ok]").disabled = !n;
+}
 
 // ---------- almoço de um dia: mudar, liberar ou voltar ao normal ----------
 const almocoNormal = (d) => { const a = almoco(); if (!a) return null; const dow = new Date(d + "T12:00:00Z").getUTCDay(); return Array.isArray(a.dias) && !a.dias.includes(dow) ? null : a; };
