@@ -323,7 +323,7 @@ function ligaCartoes(raiz) { raiz.querySelectorAll("[data-ag]").forEach((el) => 
 async function telaInicio() {
   const hoje = isoDia(), amanha = somaDias(hoje, 1);
   const iniMes = hoje.slice(0, 8) + "01";
-  const [ags, agsAmanha, pags, avisos, livresHoje, devendo0, pagsMes, despMes, prods, novos, contas, fiados] = await Promise.all([
+  const [ags, agsAmanha, pags, avisos, livresHoje, devendo0, pagsMes, despMes, prods, novos, contas, fiados, bloqHoje, hsHoje] = await Promise.all([
     agsEntre(hoje, amanha), agsEntre(amanha, somaDias(hoje, 2)), pagsEntre(hoje, amanha),
     q(sb.from("ad_avisos").select("*").eq("lido", false).order("criado_em", { ascending: false }).limit(3)),
     livres(hoje, 30),
@@ -334,6 +334,8 @@ async function telaInicio() {
     q(sb.from("ad_agendamentos").select("id").gte("criado_em", new Date(Date.now() - 864e5).toISOString()).neq("status", "cancelado")),
     q(sb.from("ad_lancamentos").select("id,valor,vencimento").eq("tipo", "saida").eq("pago", false).lte("vencimento", somaDias(hoje, 7))),
     fiadosAbertos(),
+    q(sb.from("ad_bloqueios").select("*").lt("inicio", inicioDia(amanha)).gt("fim", inicioDia(hoje))),
+    q(sb.from("ad_horarios").select("dia_semana,inicio,fim")),
   ]);
   const comFiado = new Set(fiados.map((f) => f.agendamento_id).filter(Boolean));
   const devendo = devendo0.filter((a) => !comFiado.has(a.id));
@@ -390,14 +392,10 @@ async function telaInicio() {
         <button data-ir="agenda"><b>${livresHoje.length}</b><small>horários livres</small></button>
       </div>
     </div>
-    ${proximos.length ? `<div class="tit-linha"><h2>Próximas clientes</h2><button data-ir="agenda">Agenda</button></div>
-      <div class="proximas">${proximos.map((a, k) => { const agoraAt = new Date(a.inicio).getTime() <= agora; const dia = isoDia(new Date(a.inicio));
-        return `<div class="prox-item ${k === 0 ? "primeira" : ""}" data-ag="${a.id}" style="--cs:${corServico(a)}">
-          <div class="prox-hora">${hora(a.inicio)}<small>${agoraAt ? "agora" : dia === hoje ? "hoje" : dia === amanha ? "amanhã" : dataCurta(a.inicio)}</small></div>
-          <div class="cresce"><b>${esc(a.cliente_nome)}</b><div class="pequeno">${esc(a.servico_nome)} · ${brl(a.preco)}</div></div>
-          ${k === 0 ? `<a class="btn zap mini" target="_blank" rel="noopener" href="https://wa.me/${zapNum(a.cliente_whatsapp)}" data-parar>${IC.zap}</a>` : `<span class="chip ${a.status}">${STATUS[a.status]}</span>`}
-        </div>`; }).join("")}</div>`
-      : `<div class="cartao calmo"><b>Nenhuma cliente marcada por agora</b><p class="mudo" style="margin-top:2px">${livresHoje.length ? `Ainda há ${livresHoje.length} horários livres hoje. Divulgue seu link.` : "Aproveite para descansar ou organizar o salão."}</p></div>`}
+    <div class="tit-linha"><h2>Agenda de hoje</h2><button data-ir="agenda">Abrir agenda</button></div>
+    ${notaAlmoco(hoje)}
+    ${gradeHoras([hoje], ags, bloqHoje, hsHoje).replace('class="grade-h um"', 'class="grade-h um inicio"')}
+    ${agsAmanha.filter((a) => a.status !== "cancelado").length ? `<button class="cartao calmo" data-amanha style="display:flex;width:100%;align-items:center;gap:10px;margin-top:10px;color:inherit;font:inherit;text-align:left;border:1px solid var(--line);cursor:pointer"><span class="cresce"><b>Amanhã: ${agsAmanha.filter((a) => a.status !== "cancelado").length} atendimento${agsAmanha.filter((a) => a.status !== "cancelado").length > 1 ? "s" : ""}</b><br><span class="pequeno">${agsAmanha.filter((a) => a.status !== "cancelado").slice(0, 3).map((a) => `${hora(a.inicio)} ${esc(primeiroNome(a.cliente_nome))}`).join(" · ")}</span></span><span class="seta">›</span></button>` : ""}
     <div class="cartao mes-resumo" data-ir="caixa">
       <div class="linha entre"><h2 style="margin:0">Este mês</h2><span class="seta">›</span></div>
       <div class="mes-nums">
@@ -444,6 +442,8 @@ async function telaInicio() {
   r.querySelectorAll("[data-atalho]").forEach((b) => (b.onclick = () => ATALHOS[b.dataset.atalho][2]()));
   $("ed-atalhos").onclick = editaAtalhos;
   r.querySelectorAll("[data-parar]").forEach((x) => x.addEventListener("click", (e) => e.stopPropagation()));
+  ligaGrade(r, true);
+  r.querySelector("[data-amanha]")?.addEventListener("click", () => { st.dia = somaDias(isoDia(), 1); st.agendaModo = "dia"; vaiPara("agenda"); });
   bannerNotificacao();
 }
 
@@ -491,6 +491,7 @@ async function telaAgenda() {
       <div class="linha entre" style="margin:0 4px 10px"><span class="mudo">${ativos.length} atendimento${ativos.length !== 1 ? "s" : ""}</span>
       ${st.dia !== hoje ? `<button class="link" data-hoje>Ir para hoje</button>` : ""}</div>
       ${st.vistaDia !== "lista" ? "" : (bloq || []).map((b) => `<div class="ag cancelado" style="opacity:.8;cursor:default"><div class="h">${hora(b.inicio)}<small>até ${hora(b.fim)}</small></div><div><div class="n">Horário bloqueado</div><div class="s">${esc(b.motivo || "")}</div></div><div class="d"><button class="link" data-desbloq="${b.id}">Liberar</button></div></div>`).join("")}
+      ${notaAlmoco(st.dia)}
       <div class="seg mini" style="margin:0 0 10px"><button data-vista="grade" class="${st.vistaDia !== "lista" ? "on" : ""}">▦ Grade</button><button data-vista="lista" class="${st.vistaDia === "lista" ? "on" : ""}">☰ Lista</button></div>
       ${st.vistaDia === "lista" ? (listaComAlmoco(ags, st.dia) || `<div class="vazio">${IC.calendario}<div>Nenhum agendamento neste dia.</div></div>`) : gradeHoras([st.dia], ags, bloq || [], await q(sb.from("ad_horarios").select("dia_semana,inicio,fim")))}
       <button class="btn ouro cheio" data-novo style="margin-top:10px">${IC.mais}Novo agendamento</button>`;
@@ -1525,7 +1526,7 @@ function gradeHoras(dias, ags, bloq, hs) {
       html += passado ? `<div class="g-cel passado" style="top:${y(m) + 2}px;height:${30 * PX - 4}px"></div>`
         : `<button class="g-cel livre" data-gnovo="${d}|${hhmm(m)}" style="top:${y(m) + 2}px;height:${30 * PX - 4}px" aria-label="Agendar ${hhmm(m)}">${um ? `<span>${hhmm(m)}</span><em>+ Livre</em>` : "<em>+</em>"}</button>`;
     }
-    if (alm && abre.length) html += `<div class="g-bloco almoco" style="top:${y(almI) + 2}px;height:${(almF - almI) * PX - 4}px"><span>${um ? `🍽️ Almoço · ${alm.inicio} às ${alm.fim}` : "🍽️"}</span></div>`;
+    if (alm && abre.length) html += `<button class="g-bloco almoco" data-almoco="${d}" style="top:${y(almI) + 2}px;height:${(almF - almI) * PX - 4}px"><span>${um ? `🍽️ Almoço · ${alm.inicio} às ${alm.fim}${alm.soHoje ? " (só hoje)" : ""} <u>mudar</u>` : "🍽️"}</span></button>`;
     bl.forEach((o) => { if (o.e > o.s) html += `<button class="g-bloco bloq" data-desbloq="${o.b.id}" style="top:${y(o.s) + 2}px;height:${(o.e - o.s) * PX - 4}px"><span>${um ? `🔒 ${esc(o.b.motivo || "Bloqueado")}` : "🔒"}</span></button>`; });
     const pistas = []; lista.forEach((it) => { let k = pistas.findIndex((fp) => fp <= it.s); if (k < 0) { k = pistas.length; pistas.push(0); } pistas[k] = it.e; it.k = k; });
     lista.forEach((it) => {
@@ -1541,17 +1542,69 @@ function gradeHoras(dias, ags, bloq, hs) {
   return `<div class="grade-h${um ? " um" : ""}">${cab}<div class="g-corpo"><div class="g-horas" style="height:${alt}px">${horas.map((m) => `<span style="top:${y(m)}px">${um ? hhmm(m) : m / 60 + "h"}</span>`).join("")}</div>
     <div class="g-dias" style="height:${alt}px">${dias.map(coluna).join("")}</div></div></div>`;
 }
-function ligaGrade(r) {
+function ligaGrade(r, interno) {
   r.querySelectorAll("[data-gnovo]").forEach((b) => (b.onclick = () => { const [d, h] = b.dataset.gnovo.split("|"); novoAgendamento({ data: d, hora: h }); }));
   r.querySelectorAll(".g-ag[data-ag]").forEach((b) => (b.onclick = (e) => { e.stopPropagation(); detalheAg(b.dataset.ag); }));
+  r.querySelectorAll("[data-almoco]").forEach((b) => (b.onclick = () => menuAlmoco(b.dataset.almoco)));
+  r.querySelectorAll("[data-almvolta]").forEach((b) => (b.onclick = () => voltaAlmoco(b.dataset.almvolta)));
   // rola até a hora atual (ou o primeiro atendimento)
   const g = r.querySelector(".g-agora") || r.querySelector(".g-ag");
-  if (g) setTimeout(() => g.scrollIntoView({ block: "center" }), 50);
+  if (!g) return;
+  if (interno) { const c = r.querySelector(".grade-h.inicio .g-corpo"); if (c) setTimeout(() => (c.scrollTop = Math.max(0, g.offsetTop - 90)), 50); }
+  else setTimeout(() => g.scrollIntoView({ block: "center" }), 50);
+}
+
+
+// ---------- almoço de um dia: mudar, liberar ou voltar ao normal ----------
+const almocoNormal = (d) => { const a = almoco(); if (!a) return null; const dow = new Date(d + "T12:00:00Z").getUTCDay(); return Array.isArray(a.dias) && !a.dias.includes(dow) ? null : a; };
+function notaAlmoco(d) {
+  const ex = st.prof?.config?.almoco_dia?.[d];
+  if (!ex || ex.ativo !== false) return "";
+  return `<button class="cartao" data-almvolta="${d}" style="display:flex;width:100%;align-items:center;gap:10px;margin:0 0 10px;padding:12px 14px;border:1px dashed var(--line2);color:inherit;font:inherit;text-align:left;cursor:pointer"><span style="font-size:20px">🍽️</span><span class="cresce"><b>Almoço liberado ${d === isoDia() ? "hoje" : "neste dia"}</b><br><span class="pequeno">Os horários do almoço estão livres para agendar.</span></span><span class="link">Desfazer</span></button>`;
+}
+async function salvaAlmocoDia(d, valor) {
+  const hoje = isoDia(), atual = { ...(st.prof.config?.almoco_dia || {}) };
+  Object.keys(atual).forEach((k) => { if (k < hoje) delete atual[k]; }); // limpa dias que já passaram
+  if (valor === undefined) delete atual[d]; else atual[d] = valor;
+  await salvaCfg({ almoco_dia: atual });
+}
+async function voltaAlmoco(d) {
+  const n = almocoNormal(d);
+  await salvaAlmocoDia(d, undefined);
+  toast(n ? `Almoço de volta: ${n.inicio} às ${n.fim}.` : "Pronto."); atualizaTela();
+}
+function menuAlmoco(d) {
+  const a = almocoNoDia(d) || almocoNormal(d) || { inicio: "12:00", fim: "13:00" };
+  const n = almocoNormal(d);
+  const quando = d === isoDia() ? "hoje" : `do dia ${dataCurta(meioDia(d).toISOString())}`;
+  abreFolha(cabFolha(`🍽️ Almoço ${quando}`, `Agora: ${a.inicio} às ${a.fim}${a.soHoje ? " (horário só deste dia)" : ""}`) + `
+    <div class="pilha">
+      <button class="btn ouro cheio" data-livre style="flex-direction:column;gap:2px;padding-top:12px;padding-bottom:12px">✅ Não vou almoçar nesse horário<small style="font-weight:500;opacity:.85">Libera ${a.inicio}–${a.fim} para agendar ${quando}</small></button>
+      <div class="cartao" style="margin:0">
+        <b>Mudar o horário do almoço</b>
+        <div class="linha" style="margin-top:10px"><input class="campo" type="time" data-ini value="${a.inicio}"><span>às</span><input class="campo" type="time" data-fim value="${a.fim}"></div>
+        <div class="grade2" style="margin-top:10px"><button class="btn" data-sohoje>Só ${d === isoDia() ? "hoje" : "nesse dia"}</button><button class="btn claro" data-sempre>Todos os dias</button></div>
+      </div>
+      ${a.soHoje && n ? `<button class="btn claro cheio" data-normal>↩️ Voltar ao horário normal (${n.inicio} às ${n.fim})</button>` : ""}
+    </div>`, (r) => {
+    const horas = () => { const i = r.querySelector("[data-ini]").value, f = r.querySelector("[data-fim]").value; if (!i || !f || f <= i) { toast("O fim precisa ser depois do início.", 1); return null; } return [i, f]; };
+    r.querySelector("[data-livre]").onclick = async () => { await salvaAlmocoDia(d, { ativo: false }); fechaFolha(); toast(`Almoço liberado ${quando}. Os horários já aparecem livres no site.`); atualizaTela(); };
+    r.querySelector("[data-sohoje]").onclick = async () => { const h = horas(); if (!h) return; await salvaAlmocoDia(d, { ativo: true, inicio: h[0], fim: h[1] }); fechaFolha(); toast(`Almoço ${quando}: ${h[0]} às ${h[1]}.`); atualizaTela(); };
+    r.querySelector("[data-sempre]").onclick = async () => {
+      const h = horas(); if (!h) return;
+      const atual = { ...(st.prof.config?.almoco_dia || {}) }; delete atual[d];
+      await salvaCfg({ almoco: { ...(st.prof.config?.almoco || {}), ativo: true, inicio: h[0], fim: h[1] }, almoco_dia: atual });
+      fechaFolha(); toast(`Almoço de todos os dias: ${h[0]} às ${h[1]}.`); atualizaTela();
+    };
+    r.querySelector("[data-normal]")?.addEventListener("click", async () => { fechaFolha(); await voltaAlmoco(d); });
+  });
 }
 
 // ---------- horário de almoço ----------
 const almoco = () => { const a = st.prof?.config?.almoco; return a?.ativo && a.inicio && a.fim ? a : null; };
 function almocoNoDia(diaIso) {
+  const ex = st.prof?.config?.almoco_dia?.[diaIso];
+  if (ex !== undefined && ex !== null) return ex.ativo === false ? null : { ativo: true, inicio: ex.inicio, fim: ex.fim, soHoje: true };
   const a = almoco(); if (!a) return null;
   const dow = new Date(diaIso + "T12:00:00Z").getUTCDay();
   if (Array.isArray(a.dias) && !a.dias.includes(dow)) return null;

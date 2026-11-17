@@ -566,3 +566,8 @@ nav.abas button.on { color: var(--acc); }
 .g-agora::before { content: ""; position: absolute; left: -3px; top: -4px; width: 10px; height: 10px; border-radius: 50%; background: #FF5A6E; }
 .seg.mini button { padding: 7px 10px; font-size: 13px; }
 .g-tag { white-space: nowrap; }
+
+.grade-h.inicio .g-corpo { max-height: 470px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.g-bloco.almoco { cursor: pointer; }
+.g-bloco.almoco u { text-decoration: none; color: var(--acc); margin-left: 6px; font-size: 13px; }
+.g-bloco.almoco:hover { background: rgba(255,255,255,.07); }
