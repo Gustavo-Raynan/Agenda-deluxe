@@ -99,7 +99,7 @@ $("fundo").onclick = fechaFolha;
 const cabFolha = (titulo, sub) => `<div class="cab"><div class="cresce"><h2>${titulo}</h2>${sub ? `<p class="mudo" style="margin-top:4px">${sub}</p>` : ""}</div><button class="fechar" data-fechar aria-label="Fechar">✕</button></div>`;
 
 // ---------- estado ----------
-const st = { user: null, prof: null, aba: "inicio", servicos: [], agendaModo: "dia", dia: isoDia(), mes: isoDia().slice(0, 7), caixaPer: "hoje", busca: "", naoLidos: 0 };
+const st = { user: null, prof: null, aba: "inicio", servicos: [], agendaModo: (() => { try { return localStorage.getItem("nay.agendaModo") || "semana"; } catch { return "semana"; } })(), dia: isoDia(), mes: isoDia().slice(0, 7), caixaPer: "hoje", busca: "", naoLidos: 0 };
 
 // ---------- entrar ----------
 $("l-entrar").onclick = async () => {
@@ -495,12 +495,10 @@ async function telaAgenda() {
       })()}
       <div class="grade2" style="margin-top:6px"><button class="btn ouro" data-novo>${IC.mais}Agendar</button><button class="btn claro" data-bloq-dia>${IC.bloqueio}Bloquear</button></div>`;
   } else if (st.agendaModo === "semana") {
-    const ini = st.dia, fim = somaDias(st.dia, 7);
-    const ags = await agsEntre(ini, fim);
-    const dias = Array.from({ length: 7 }, (_, i) => somaDias(ini, i));
-    corpo = `<div class="navdia"><button class="redondo" data-d="-7">‹</button><div class="cresce">${dataCurta(meioDia(ini))} a ${dataCurta(meioDia(somaDias(ini, 6)))}<small>${ags.filter((a) => a.status !== "cancelado").length} atendimentos</small></div><button class="redondo" data-d="7">›</button></div>
-      ${await resumoValores(ags)}
-      <div class="semana">${dias.map((d) => { const l = ags.filter((a) => isoDia(a.inicio) === d); return `<div class="dia-sem"><h3>${d === hoje ? "Hoje" : SEM[meioDia(d).getUTCDay()]}, ${meioDia(d).getUTCDate()}<span>${l.length ? l.length + " · " + brl(l.filter((a) => a.status !== "cancelado").reduce((s, a) => s + Number(a.preco), 0)) : "livre"}</span></h3>${l.map((a) => cartaoAg(a)).join("")}</div>`; }).join("")}</div>`;
+    const dom = somaDias(st.dia, -meioDia(st.dia).getUTCDay());
+    var grade = await gradeSemana(dom);
+    corpo = `<div class="navdia"><button class="redondo" data-d="-7">‹</button><div class="cresce">${dataCurta(meioDia(dom))} a ${dataCurta(meioDia(somaDias(dom, 6)))}<small>${grade.vis.length} atendimento${grade.vis.length !== 1 ? "s" : ""} · ${brl(grade.receita)}</small></div><button class="redondo" data-d="7">›</button></div>
+      ${grade.html}`;
   } else if (st.agendaModo === "mes") {
     const [a, m] = st.mes.split("-").map(Number);
     const primeiro = `${st.mes}-01`, prox = new Date(Date.UTC(a, m, 1)).toISOString().slice(0, 10);
@@ -523,7 +521,8 @@ async function telaAgenda() {
 
   const r = tela(topo + corpo);
   ligaCartoes(r);
-  r.querySelectorAll("[data-modo]").forEach((b) => (b.onclick = () => { st.agendaModo = b.dataset.modo; telaAgenda(); }));
+  if (st.agendaModo === "semana" && grade) grade.liga(r);
+  r.querySelectorAll("[data-modo]").forEach((b) => (b.onclick = () => { st.agendaModo = b.dataset.modo; try { localStorage.setItem("nay.agendaModo", st.agendaModo); } catch {} telaAgenda(); }));
   r.querySelectorAll("[data-d]").forEach((b) => (b.onclick = () => { st.dia = somaDias(st.dia, Number(b.dataset.d)); telaAgenda(); }));
   r.querySelectorAll("[data-m]").forEach((b) => (b.onclick = () => { const [a, m] = st.mes.split("-").map(Number); st.mes = new Date(Date.UTC(a, m - 1 + Number(b.dataset.m), 1)).toISOString().slice(0, 7); telaAgenda(); }));
   r.querySelectorAll("[data-dia]").forEach((b) => (b.onclick = () => { st.dia = b.dataset.dia; st.agendaModo = "dia"; telaAgenda(); }));

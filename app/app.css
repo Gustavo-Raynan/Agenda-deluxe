@@ -471,3 +471,32 @@ nav.abas button.on svg { color: var(--ouro); }
   body.imprimindo .nao-imprime, body.imprimindo #folha .fechar, body.imprimindo #folha .alca { display: none !important; }
   body.imprimindo .cartao, body.imprimindo .resumo-val > div { break-inside: avoid; border-color: #ddd !important; box-shadow: none !important; }
 }
+
+/* semana em grade */
+.gs { background: var(--card); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+.gs-cab { display: grid; grid-template-columns: 30px repeat(7, 1fr); border-bottom: 1px solid var(--line); background: var(--card); }
+.gs-cab button { all: unset; cursor: pointer; text-align: center; padding: 8px 0 6px; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.gs-cab small { font-size: 11px; color: var(--mute); font-weight: 600; }
+.gs-cab b { font-size: 17px; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; }
+.gs-cab .hoje b { color: #fff; background: var(--ink); }
+.gs-cab i { font-style: normal; font-size: 10px; color: var(--mute); height: 12px; }
+.gs-corpo { display: grid; grid-template-columns: 30px 1fr; max-height: 62vh; overflow-y: auto; position: relative; }
+.gs-horas { position: relative; }
+.gs-horas span { position: absolute; right: 4px; transform: translateY(-50%); font-size: 10.5px; color: var(--mute); }
+.gs-horas span:first-child { transform: none; }
+.gs-grade { position: relative; display: grid; grid-template-columns: repeat(7, 1fr); }
+.gs-l { position: absolute; left: 0; right: 0; border-top: 1px solid var(--line); pointer-events: none; z-index: 0; }
+.gs-l.meia { border-top-style: dotted; opacity: .6; }
+.gs-col { position: relative; border-left: 1px solid var(--line); cursor: pointer; }
+.gs-f { position: absolute; left: 0; right: 0; z-index: 1; overflow: hidden; cursor: default; }
+.gs-f span { display: block; font-size: 10.5px; font-weight: 700; color: var(--mute); padding: 3px 3px; line-height: 1.15; }
+.gs-b { background: repeating-linear-gradient(135deg, rgba(176,64,64,.14) 0 6px, transparent 6px 12px); }
+.gs-b span { color: #a04040; }
+.gs-a { position: absolute; left: 2px; right: 2px; z-index: 2; border-radius: 7px; padding: 3px 4px; overflow: hidden; cursor: pointer;
+  background: color-mix(in srgb, var(--cs) 22%, var(--card)); border: 1.5px solid var(--cs); line-height: 1.15; }
+.gs-a b { display: block; font-size: 11.5px; font-weight: 700; color: var(--ink); overflow-wrap: anywhere; hyphens: auto; }
+.gs-a i { display: block; font-style: normal; font-size: 10px; color: var(--mute); overflow: hidden; }
+.gs-a.concluido { opacity: .7; }
+.gs-a.faltou { border-style: dashed; opacity: .6; }
+.gs-agora { position: absolute; left: -3px; right: 0; border-top: 2px solid #e04848; z-index: 3; pointer-events: none; }
+.gs-agora::before { content: ""; position: absolute; left: -1px; top: -5px; width: 8px; height: 8px; border-radius: 50%; background: #e04848; }

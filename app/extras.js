@@ -589,3 +589,77 @@ function editarServicos(a) {
     desenha();
   });
 }
+
+// =====================================================================
+// SEMANA EM GRADE (quadrados: quem está agendado, almoço, folga, bloqueio, vagas)
+// =====================================================================
+const PX_H = 64; // altura de 1 hora
+async function gradeSemana(domingo) {
+  const dias = Array.from({ length: 7 }, (_, i) => somaDias(domingo, i));
+  const [ags, hs, bloq] = await Promise.all([
+    agsEntre(domingo, somaDias(domingo, 7)),
+    q(sb.from("ad_horarios").select("dia_semana,inicio,fim")),
+    q(sb.from("ad_bloqueios").select("*").lt("inicio", inicioDia(somaDias(domingo, 7))).gt("fim", inicioDia(domingo))),
+  ]);
+  const vis = ags.filter((a) => a.status !== "cancelado");
+  const minLoc = (iso) => { const d = new Date(iso); return ((d.getUTCHours() + 21) % 24) * 60 + d.getUTCMinutes(); }; // hora de Brasília
+  let h0 = Math.min(8 * 60, ...hs.map((h) => minDe(h.inicio)), ...vis.map((a) => minLoc(a.inicio)));
+  let h1 = Math.max(19 * 60, ...hs.map((h) => minDe(h.fim)), ...vis.map((a) => minLoc(a.fim) || 24 * 60));
+  h0 = Math.floor(h0 / 60) * 60; h1 = Math.min(24 * 60, Math.ceil(h1 / 60) * 60);
+  const y = (m) => ((m - h0) / 60) * PX_H, alt = (h1 - h0) / 60 * PX_H;
+  const alm = almoco(), hoje = isoDia(), agoraMin = minLoc(new Date().toISOString());
+  const hach = "repeating-linear-gradient(135deg,rgba(0,0,0,.07) 0 6px,transparent 6px 12px)";
+  const col = (d) => {
+    const dow = new Date(d + "T12:00:00Z").getUTCDay();
+    const iv = hs.filter((h) => h.dia_semana === dow).map((h) => [minDe(h.inicio), minDe(h.fim)]).sort((a, b) => a[0] - b[0]);
+    let html = "";
+    // fechado: tudo que não está dentro dos intervalos de trabalho
+    if (!iv.length) html += `<div class="gs-f" style="top:0;height:${alt}px;background:${hach}">${Array.from({ length: Math.ceil((h1 - h0) / 180) }, (_, k) => `<span style="position:absolute;top:${k * 3 * PX_H + 4}px">Folga</span>`).join("")}</div>`;
+    else {
+      let cur = h0;
+      iv.forEach(([a, b], k) => {
+        if (a > cur) { const ehAlm = k > 0 && alm.ativo && cur === minDe(alm.ini) && a === minDe(alm.fim); html += `<div class="gs-f" style="top:${y(cur)}px;height:${y(a) - y(cur)}px;background:${hach}">${ehAlm ? "<span>🍽️ Almoço</span>" : ""}</div>`; }
+        cur = Math.max(cur, b);
+      });
+      if (cur < h1) html += `<div class="gs-f" style="top:${y(cur)}px;height:${y(h1) - y(cur)}px;background:${hach}"></div>`;
+    }
+    // bloqueios
+    bloq.forEach((b) => {
+      const ini = new Date(Math.max(new Date(b.inicio), new Date(inicioDia(d)))), fim = new Date(Math.min(new Date(b.fim), new Date(inicioDia(somaDias(d, 1)))));
+      if (fim <= ini) return;
+      const a = Math.max(h0, minLoc(ini.toISOString())), z = fim >= new Date(inicioDia(somaDias(d, 1))) ? h1 : Math.min(h1, minLoc(fim.toISOString()));
+      if (z <= a) return;
+      html += `<div class="gs-f gs-b" style="top:${y(a)}px;height:${y(z) - y(a)}px"><span>🚫 ${esc(b.motivo || "Bloqueado")}</span></div>`;
+    });
+    // agendamentos
+    vis.filter((a) => isoDia(a.inicio) === d).forEach((a) => {
+      const ini = minLoc(a.inicio), fim = Math.max(ini + 15, minLoc(a.fim) || ini + 30);
+      html += `<div class="gs-a ${a.status}" data-ag="${a.id}" style="top:${y(ini) + 1}px;height:${y(fim) - y(ini) - 2}px;--cs:${corServico(a) === "var(--acc)" ? "#D46A92" : corServico(a)}"><b>${esc(primeiroNome(a.cliente_nome))}</b><i>${hora(a.inicio)} ${esc(a.servico_nome)}</i></div>`;
+    });
+    if (d === hoje && agoraMin >= h0 && agoraMin <= h1) html += `<div class="gs-agora" style="top:${y(agoraMin)}px"></div>`;
+    return `<div class="gs-col" data-gsd="${d}" style="height:${alt}px">${html}</div>`;
+  };
+  const horas = []; for (let m = h0; m < h1; m += 60) horas.push(m);
+  const linhas = horas.map((m) => `<div class="gs-l" style="top:${y(m)}px"></div><div class="gs-l meia" style="top:${y(m + 30)}px"></div>`).join("");
+  const receita = vis.reduce((s, a) => s + Number(a.preco || 0), 0);
+  return {
+    vis, receita,
+    html: `<div class="gs">
+      <div class="gs-cab"><div></div>${dias.map((d) => { const x = new Date(d + "T12:00:00Z"); return `<button data-dia="${d}" class="${d === hoje ? "hoje" : ""} ${d === st.dia ? "sel" : ""}"><small>${"DSTQQSS"[x.getUTCDay()]}</small><b>${x.getUTCDate()}</b><i>${vis.filter((a) => isoDia(a.inicio) === d).length || ""}</i></button>`; }).join("")}</div>
+      <div class="gs-corpo">
+        <div class="gs-horas" style="height:${alt}px">${horas.map((m) => `<span style="top:${y(m)}px">${String(m / 60).padStart(2, "0")}</span>`).join("")}</div>
+        <div class="gs-grade" style="height:${alt}px">${linhas}${dias.map(col).join("")}</div>
+      </div></div>
+      <p class="pequeno" style="text-align:center;margin-top:8px">Branco = horário vago (toque para agendar) · listrado = fechado, almoço, folga ou bloqueio</p>`,
+    liga(r) {
+      r.querySelectorAll(".gs-col").forEach((c) => (c.onclick = (e) => {
+        if (e.target.closest(".gs-a,.gs-f")) return;
+        const rect = c.getBoundingClientRect(), m = h0 + Math.floor(((e.clientY - rect.top) / PX_H) * 2) * 30;
+        const d = c.dataset.gsd, iso = new Date(`${d}T${hDe(m)}:00-03:00`).toISOString();
+        if (new Date(iso) < new Date()) return toast("Esse horário já passou.", 1);
+        novoAgendamento({ data: d, horaIni: iso });
+      }));
+      r.querySelector(".gs-corpo")?.scrollTo?.({ top: Math.max(0, y(Math.max(h0, (hs.length ? Math.min(...hs.map((h) => minDe(h.inicio))) : 8 * 60) - 30))) });
+    },
+  };
+}
