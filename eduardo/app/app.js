@@ -490,16 +490,18 @@ async function telaAgenda() {
       ${await resumoValores(ags)}
       <div class="linha entre" style="margin:0 4px 10px"><span class="mudo">${ativos.length} atendimento${ativos.length !== 1 ? "s" : ""}</span>
       ${st.dia !== hoje ? `<button class="link" data-hoje>Ir para hoje</button>` : ""}</div>
-      ${(bloq || []).map((b) => `<div class="ag cancelado" style="opacity:.8;cursor:default"><div class="h">${hora(b.inicio)}<small>até ${hora(b.fim)}</small></div><div><div class="n">Horário bloqueado</div><div class="s">${esc(b.motivo || "")}</div></div><div class="d"><button class="link" data-desbloq="${b.id}">Liberar</button></div></div>`).join("")}
-      ${listaComAlmoco(ags, st.dia) || `<div class="vazio">${IC.calendario}<div>Nenhum agendamento neste dia.</div></div>`}
-      <button class="btn ouro cheio" data-novo style="margin-top:6px">${IC.mais}Novo agendamento</button>`;
+      ${st.vistaDia !== "lista" ? "" : (bloq || []).map((b) => `<div class="ag cancelado" style="opacity:.8;cursor:default"><div class="h">${hora(b.inicio)}<small>até ${hora(b.fim)}</small></div><div><div class="n">Horário bloqueado</div><div class="s">${esc(b.motivo || "")}</div></div><div class="d"><button class="link" data-desbloq="${b.id}">Liberar</button></div></div>`).join("")}
+      <div class="seg mini" style="margin:0 0 10px"><button data-vista="grade" class="${st.vistaDia !== "lista" ? "on" : ""}">▦ Grade</button><button data-vista="lista" class="${st.vistaDia === "lista" ? "on" : ""}">☰ Lista</button></div>
+      ${st.vistaDia === "lista" ? (listaComAlmoco(ags, st.dia) || `<div class="vazio">${IC.calendario}<div>Nenhum agendamento neste dia.</div></div>`) : gradeHoras([st.dia], ags, bloq || [], await q(sb.from("ad_horarios").select("dia_semana,inicio,fim")))}
+      <button class="btn ouro cheio" data-novo style="margin-top:10px">${IC.mais}Novo agendamento</button>`;
   } else if (st.agendaModo === "semana") {
-    const ini = st.dia, fim = somaDias(st.dia, 7);
-    const ags = await agsEntre(ini, fim);
+    const ini = somaDias(st.dia, -meioDia(st.dia).getUTCDay()), fim = somaDias(ini, 7);
+    const [ags, bloq, hs] = await Promise.all([agsEntre(ini, fim), q(sb.from("ad_bloqueios").select("*").lt("inicio", inicioDia(fim)).gt("fim", inicioDia(ini))), q(sb.from("ad_horarios").select("dia_semana,inicio,fim"))]);
     const dias = Array.from({ length: 7 }, (_, i) => somaDias(ini, i));
-    corpo = `<div class="navdia"><button class="redondo" data-d="-7">‹</button><div class="cresce">${dataCurta(meioDia(ini))} a ${dataCurta(meioDia(somaDias(ini, 6)))}<small>${ags.filter((a) => a.status !== "cancelado").length} atendimentos</small></div><button class="redondo" data-d="7">›</button></div>
-      ${await resumoValores(ags)}
-      <div class="semana">${dias.map((d) => { const l = ags.filter((a) => isoDia(a.inicio) === d); return `<div class="dia-sem"><h3>${d === hoje ? "Hoje" : SEM[meioDia(d).getUTCDay()]}, ${meioDia(d).getUTCDate()}<span>${l.length ? l.length + " · " + brl(l.filter((a) => a.status !== "cancelado").reduce((s, a) => s + Number(a.preco), 0)) : "livre"}</span></h3>${l.map((a) => cartaoAg(a)).join("")}</div>`; }).join("")}</div>`;
+    const vivos = ags.filter((a) => a.status !== "cancelado");
+    corpo = `<div class="navdia"><button class="redondo" data-d="-7">‹</button><div class="cresce">${dataCurta(meioDia(ini))} a ${dataCurta(meioDia(somaDias(ini, 6)))}<small>${vivos.length} atendimentos · ${brl(vivos.reduce((s, a) => s + Number(a.preco), 0))}</small></div><button class="redondo" data-d="7">›</button></div>
+      ${gradeHoras(dias, ags, bloq, hs)}
+      <p class="pequeno" style="text-align:center;margin-top:8px">Toque num espaço branco para agendar · toque no nome para abrir</p>`;
   } else if (st.agendaModo === "mes") {
     const [a, m] = st.mes.split("-").map(Number);
     const primeiro = `${st.mes}-01`, prox = new Date(Date.UTC(a, m, 1)).toISOString().slice(0, 10);
@@ -527,6 +529,8 @@ async function telaAgenda() {
   r.querySelectorAll("[data-m]").forEach((b) => (b.onclick = () => { const [a, m] = st.mes.split("-").map(Number); st.mes = new Date(Date.UTC(a, m - 1 + Number(b.dataset.m), 1)).toISOString().slice(0, 7); telaAgenda(); }));
   r.querySelectorAll("[data-dia]").forEach((b) => (b.onclick = () => { st.dia = b.dataset.dia; st.agendaModo = "dia"; telaAgenda(); }));
   r.querySelector("[data-hoje]")?.addEventListener("click", () => { st.dia = hoje; telaAgenda(); });
+  r.querySelectorAll("[data-vista]").forEach((b) => (b.onclick = () => { st.vistaDia = b.dataset.vista; telaAgenda(); }));
+  ligaGrade(r);
   r.querySelector("[data-novo]")?.addEventListener("click", () => novoAgendamento({ data: st.dia }));
   r.querySelectorAll("[data-desbloq]").forEach((b) => (b.onclick = async () => {
     if (!confirm("Liberar este horário para as clientes agendarem?")) return;
@@ -637,9 +641,9 @@ function mensagensProntas(a) {
 }
 
 // ---------- escolher dia e horário (usado em novo agendamento e remarcar) ----------
-function seletorHorario(r, minutos, dataInicial, aoMudar) {
+function seletorHorario(r, minutos, dataInicial, aoMudar, horaInicial) {
   const caixa = r.querySelector("[data-horario]");
-  let escolhido = null;
+  let escolhido = null, horaPre = horaInicial || null;
   caixa.innerHTML = `<label class="f">Dia</label><input class="campo" type="date" data-data value="${dataInicial}" min="${isoDia()}">
     <label class="f">Horário livre</label><div class="slots" data-slots><p class="pequeno" style="grid-column:1/-1">Carregando…</p></div>
     <button class="link" data-outro style="margin-top:10px">Usar outro horário</button>
@@ -653,6 +657,12 @@ function seletorHorario(r, minutos, dataInicial, aoMudar) {
     const lv = await livres(d, mins);
     sl.innerHTML = lv.length ? lv.map((t) => `<button type="button" data-t="${t}">${hora(t)}</button>`).join("") : `<p class="pequeno" style="grid-column:1/-1">Sem horários livres neste dia. Use "outro horário" se quiser encaixar.</p>`;
     sl.querySelectorAll("button").forEach((b) => (b.onclick = () => { sl.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); escolhido = b.dataset.t; caixa.querySelector("[data-hora]").value = ""; aoMudar(escolhido); }));
+    if (horaPre) {
+      const b = [...sl.querySelectorAll("button")].find((x) => hora(x.dataset.t) === horaPre);
+      if (b) b.click();
+      else { caixa.querySelector("[data-manual]").classList.remove("hide"); const h = caixa.querySelector("[data-hora]"); h.value = horaPre; h.onchange({ target: h }); }
+      horaPre = null;
+    }
   };
   caixa.querySelector("[data-data]").onchange = carrega;
   caixa.querySelector("[data-outro]").onclick = () => caixa.querySelector("[data-manual]").classList.toggle("hide");
@@ -688,7 +698,7 @@ async function remarcar(a) {
 // =====================================================================
 // NOVO AGENDAMENTO
 // =====================================================================
-async function novoAgendamento({ data, cliente }) {
+async function novoAgendamento({ data, cliente, hora: horaIni }) {
   const clientes = await q(sb.from("ad_clientes").select("id,nome,whatsapp,bloqueado").order("nome"));
   let horario = null, cli = cliente || null;
   const servs = st.servicos.filter((s) => s.ativo);
@@ -716,7 +726,7 @@ async function novoAgendamento({ data, cliente }) {
     let sel = null;
     const pac = ligaServicos(r, servs, () => sel?.recarrega());
     const serv = () => pac.pacote();
-    sel = seletorHorario(r, () => pac.pacote()?.duracao_min, data || isoDia(), (t) => (horario = t));
+    sel = seletorHorario(r, () => pac.pacote()?.duracao_min, data || isoDia(), (t) => (horario = t), horaIni);
     r.querySelector("[data-cli]").oninput = (e) => {
       const c = clientes.find((x) => x.nome.toLowerCase() === e.target.value.trim().toLowerCase());
       if (c) { cli = c; r.querySelector("[data-zap]").value = fmtTel(c.whatsapp); } else cli = null;
@@ -1477,6 +1487,67 @@ function editaServico(s) {
   });
 }
 
+
+
+// ---------- grade de horários (quadradinhos por hora, igual agenda de salão) ----------
+const minDia = (hhmm) => { const [h, m] = String(hhmm).slice(0, 5).split(":").map(Number); return h * 60 + m; };
+const minLocal = (iso) => { const d = new Date(new Date(iso).getTime() - 3 * 3600e3); return d.getUTCHours() * 60 + d.getUTCMinutes(); };
+const hhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+function gradeHoras(dias, ags, bloq, hs) {
+  const um = dias.length === 1, PX = um ? 1.3 : 0.95; // pixels por minuto
+  const hoje = isoDia();
+  const porDow = (dow) => hs.filter((h) => h.dia_semana === dow).map((h) => [minDia(h.inicio), minDia(h.fim)]);
+  let ini = 24 * 60, fim = 0;
+  hs.forEach((h) => { ini = Math.min(ini, minDia(h.inicio)); fim = Math.max(fim, minDia(h.fim)); });
+  ags.filter((a) => a.status !== "cancelado" && dias.includes(isoDia(a.inicio))).forEach((a) => { ini = Math.min(ini, minLocal(a.inicio)); fim = Math.max(fim, minLocal(a.fim) || 24 * 60); });
+  if (ini >= fim) { ini = 8 * 60; fim = 19 * 60; }
+  ini = Math.floor(ini / 60) * 60; fim = Math.ceil(fim / 60) * 60;
+  const alt = (fim - ini) * PX, y = (m) => (m - ini) * PX;
+  const horas = []; for (let m = ini; m <= fim; m += 60) horas.push(m);
+  const agora = new Date(), minAgora = minLocal(agora.toISOString());
+  const coluna = (d) => {
+    const dow = meioDia(d).getUTCDay(), abre = porDow(dow), alm = almocoNoDia(d);
+    const fechados = []; let c = ini;
+    [...abre].sort((a, b) => a[0] - b[0]).forEach(([a, b]) => { if (a > c) fechados.push([c, a]); c = Math.max(c, b); });
+    if (c < fim) fechados.push([c, fim]);
+    const folga = !abre.length;
+    let html = "";
+    // horas livres (toque para agendar) em blocos de 30 min
+    if (!folga) for (let m = ini; m < fim; m += 30) {
+      const aberto = abre.some(([a, b]) => m >= a && m < b) && !(alm && m < minDia(alm.fim) && m + 30 > minDia(alm.inicio));
+      const passado = d < hoje || (d === hoje && m + 30 <= minAgora);
+      if (aberto && !passado) html += `<button class="g-livre" data-gnovo="${d}|${hhmm(m)}" style="top:${y(m)}px;height:${30 * PX}px" aria-label="Agendar ${hhmm(m)}"></button>`;
+    }
+    if (folga) html += `<div class="g-fechado" style="top:0;height:${alt}px"><span>Folga</span></div>`;
+    else fechados.forEach(([a, b]) => { if (b > a) html += `<div class="g-fechado" style="top:${y(a)}px;height:${(b - a) * PX}px"></div>`; });
+    if (alm && !folga) { const a = minDia(alm.inicio), b = minDia(alm.fim); html += `<div class="g-fechado g-rot" style="top:${y(a)}px;height:${(b - a) * PX}px"><span>${um ? "🍽️ Horário de almoço" : "Almoço"}</span></div>`; }
+    bloq.filter((b) => isoDia(b.inicio) <= d && isoDia(new Date(new Date(b.fim).getTime() - 1).toISOString()) >= d).forEach((b) => {
+      const a = isoDia(b.inicio) === d ? minLocal(b.inicio) : ini, z = isoDia(b.fim) === d ? minLocal(b.fim) : fim;
+      html += `<div class="g-fechado g-rot" data-desbloq="${b.id}" style="top:${y(Math.max(a, ini))}px;height:${(Math.min(z, fim) - Math.max(a, ini)) * PX}px;cursor:pointer"><span>${esc(b.motivo || "Bloqueado")}</span></div>`;
+    });
+    // atendimentos, lado a lado quando se sobrepõem
+    const lista = ags.filter((a) => a.status !== "cancelado" && isoDia(a.inicio) === d).map((a) => ({ a, s: minLocal(a.inicio), e: Math.max(minLocal(a.fim), minLocal(a.inicio) + 15) })).sort((p, q2) => p.s - q2.s);
+    const pistas = []; lista.forEach((it) => { let k = pistas.findIndex((fimP) => fimP <= it.s); if (k < 0) { k = pistas.length; pistas.push(0); } pistas[k] = it.e; it.k = k; });
+    lista.forEach((it) => {
+      const viz = lista.filter((o) => o.s < it.e && it.s < o.e); const n = Math.max(...viz.map((o) => o.k)) + 1;
+      const cor = corServico(it.a), h = (it.e - it.s) * PX;
+      html += `<button class="g-ag ${it.a.status}" data-ag="${it.a.id}" style="top:${y(it.s) + 1}px;height:${h - 2}px;left:calc(${(100 / n) * it.k}% + 2px);width:calc(${100 / n}% - 4px);--cs:${cor}">
+        <b>${esc(um ? it.a.cliente_nome : primeiroNome(it.a.cliente_nome))}</b>${h > 34 ? `<small>${um ? hora(it.a.inicio) + " · " : ""}${esc(it.a.servico_nome)}</small>` : ""}${it.a.pago ? `<i class="g-pago">✓</i>` : ""}</button>`;
+    });
+    if (d === hoje && minAgora >= ini && minAgora <= fim) html += `<div class="g-agora" style="top:${y(minAgora)}px"></div>`;
+    return `<div class="g-col${d === hoje ? " hoje" : ""}" style="height:${alt}px">${html}</div>`;
+  };
+  const cab = um ? "" : `<div class="g-cab"><div></div>${dias.map((d) => { const dt = meioDia(d); const n = ags.filter((a) => a.status !== "cancelado" && isoDia(a.inicio) === d).length; return `<button data-dia="${d}" class="${d === hoje ? "hoje" : ""}"><small>${SEM3[dt.getUTCDay()].slice(0, 1)}</small><b>${dt.getUTCDate()}</b><i>${n ? "•".repeat(Math.min(n, 4)) : ""}</i></button>`; }).join("")}</div>`;
+  return `<div class="grade-h${um ? " um" : ""}">${cab}<div class="g-corpo"><div class="g-horas" style="height:${alt}px">${horas.map((m) => `<span style="top:${y(m)}px">${m / 60}</span>`).join("")}</div>
+    <div class="g-dias" style="height:${alt}px;background-size:100% ${60 * PX}px;background-position:0 0">${dias.map(coluna).join("")}</div></div></div>`;
+}
+function ligaGrade(r) {
+  r.querySelectorAll("[data-gnovo]").forEach((b) => (b.onclick = () => { const [d, h] = b.dataset.gnovo.split("|"); novoAgendamento({ data: d, hora: h }); }));
+  r.querySelectorAll(".g-ag[data-ag]").forEach((b) => (b.onclick = (e) => { e.stopPropagation(); detalheAg(b.dataset.ag); }));
+  // rola até a hora atual (ou o primeiro atendimento)
+  const g = r.querySelector(".g-agora") || r.querySelector(".g-ag");
+  if (g) setTimeout(() => g.scrollIntoView({ block: "center" }), 50);
+}
 
 // ---------- horário de almoço ----------
 const almoco = () => { const a = st.prof?.config?.almoco; return a?.ativo && a.inicio && a.fim ? a : null; };

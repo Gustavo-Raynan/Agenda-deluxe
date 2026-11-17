@@ -516,3 +516,41 @@ nav.abas button.on { color: var(--acc); }
 
 [data-alm-dias] button, [data-rep-dsem] button { padding: 8px 12px; }
 [data-alm-dias] button.on, [data-rep-dsem] button.on { background: var(--acc); color: #fff; box-shadow: none; }
+
+/* ---------- grade de horários ---------- */
+.grade-h { border: 1px solid var(--line); border-radius: 18px; background: var(--card); overflow: hidden; }
+.g-cab { position: sticky; top: 0; z-index: 4; display: grid; grid-template-columns: 30px repeat(7, 1fr); background: var(--card); border-bottom: 1px solid var(--line); }
+.g-cab button { background: none; border: 0; color: inherit; font: inherit; padding: 8px 0 4px; display: grid; justify-items: center; gap: 1px; cursor: pointer; }
+.g-cab small { font-size: 11px; color: var(--mute); }
+.g-cab b { font-size: 16px; font-weight: 650; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; }
+.g-cab .hoje b { background: var(--acc); color: #fff; }
+.g-cab i { font-style: normal; font-size: 9px; letter-spacing: 1px; color: var(--acc); height: 10px; line-height: 10px; }
+.g-corpo { display: grid; grid-template-columns: 30px 1fr; padding: 8px 0 10px; }
+.grade-h.um .g-corpo { grid-template-columns: 40px 1fr; }
+.g-horas { position: relative; }
+.g-horas span { position: absolute; right: 6px; transform: translateY(-50%); font-size: 11px; color: var(--mute); }
+.g-dias { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background-image: linear-gradient(to bottom, var(--line) 1px, transparent 1px); }
+.g-col { position: relative; border-left: 1px solid var(--line); }
+.g-col.hoje { background: color-mix(in srgb, var(--acc) 5%, transparent); }
+.g-livre { position: absolute; left: 0; right: 0; background: none; border: 0; padding: 0; cursor: pointer; }
+.g-livre:active, .g-livre:hover { background: color-mix(in srgb, var(--acc) 22%, transparent); }
+.g-fechado { position: absolute; left: 0; right: 0; background: repeating-linear-gradient(135deg, rgba(255,255,255,.07) 0 6px, rgba(255,255,255,.02) 6px 12px); border-top: 1px solid var(--line); overflow: hidden; }
+.g-fechado span { display: block; padding: 4px 4px 0; font-size: 11px; font-weight: 650; color: var(--mute); line-height: 1.15; word-break: break-word; }
+.grade-h.um .g-fechado span { font-size: 12.5px; padding: 6px 8px; }
+.g-ag { position: absolute; z-index: 2; text-align: left; border: 1px solid color-mix(in srgb, var(--cs) 70%, #fff 0%); border-left: 3px solid var(--cs); border-radius: 7px; padding: 3px 4px; background: color-mix(in srgb, var(--cs) 30%, var(--card)); color: var(--text); font: inherit; overflow: hidden; cursor: pointer; display: flex; flex-direction: column; gap: 1px; }
+.g-ag b { font-size: 11.5px; font-weight: 700; line-height: 1.15; overflow-wrap: anywhere; }
+.g-ag small { font-size: 10px; line-height: 1.15; color: var(--mute); overflow: hidden; }
+.grade-h.um .g-ag { padding: 5px 8px; }
+.grade-h.um .g-ag b { font-size: 14px; }
+.grade-h.um .g-ag small { font-size: 12px; }
+.g-ag.concluido { opacity: .75; }
+.g-ag.faltou { opacity: .55; text-decoration: line-through; }
+.g-ag.pendente { border-style: dashed; }
+.g-pago { position: absolute; right: 3px; top: 2px; font-style: normal; font-size: 10px; color: var(--ok); font-weight: 800; }
+.g-agora { position: absolute; left: 0; right: 0; height: 2px; background: #FF5A6E; z-index: 3; pointer-events: none; }
+.g-agora::before { content: ""; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: #FF5A6E; }
+.seg.mini button { padding: 7px 10px; font-size: 13px; }
+.g-ag b, .g-ag small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; display: block; }
+.g-fechado span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; word-break: normal; }
+.grade-h:not(.um) .g-ag { padding: 3px 3px 3px 4px; }
+.grade-h:not(.um) .g-fechado span { font-size: 10px; padding: 3px 2px 0; letter-spacing: -.01em; }
