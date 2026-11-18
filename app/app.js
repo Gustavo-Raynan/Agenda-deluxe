@@ -593,7 +593,7 @@ function enviarConfirmacao(a) {
 function mensagem(a, tipo) {
   const n = primeiroNome(a.cliente_nome), d = dataLonga(a.inicio), h = hora(a.inicio);
   const end = st.prof.endereco ? `\n📍 ${st.prof.endereco}` : "";
-  const pol = `\n\n⚠️ *Política de cancelamento:* cancelamentos com menos de 24h de antecedência têm taxa de 100% do valor do serviço.`;
+  const pol = `\n\n⚠️ *Política de cancelamento e alteração:*\n• Cancelamentos com menos de 3 horas de antecedência: cobrança de 100% do valor do serviço.\n• Cancelamento de última hora ou não comparecimento: cobrança de 100% do valor agendado.\n• Trocar de serviço na hora do atendimento: será cobrado o valor do serviço originalmente agendado.`;
   return ({
     confirmacao: msgConfirmacao(a),
     lembrete: `Olá, ${n}! 😊 Passando para lembrar do seu horário de *${a.servico_nome}* ${isoDia(a.inicio) === somaDias(isoDia(), 1) ? "amanhã" : "em " + d} às *${h}*.\n\nConfirme ou desmarque por aqui:\n${CONFIRMAR}${a.id}${pol}`,

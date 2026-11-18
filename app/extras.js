@@ -319,7 +319,7 @@ async function salvaSerie(linhaBase, inicios, minutos, regra) {
 function msgSerie(a, linhas) {
   const n = primeiroNome(a.cliente_nome);
   const datas = linhas.map((l) => `• ${diaSemana(l.inicio).slice(0, 3)} ${dataCurta(l.inicio)} às ${hora(l.inicio)}`).join("\n");
-  return `Olá, ${n}! 💅 Seus horários fixos de *${a.servico_nome}* estão confirmados (${linhas[0].serie_regra.toLowerCase()}):\n\n${datas}\n\n⚠️ *Política de cancelamento:* cancelamentos com menos de 24h de antecedência têm taxa de 100% do valor do serviço.\n\nAté lá! Nayara Fernandes · Nails e cuidados`;
+  return `Olá, ${n}! 💅 Seus horários fixos de *${a.servico_nome}* estão confirmados (${linhas[0].serie_regra.toLowerCase()}):\n\n${datas}\n\n⚠️ *Política de cancelamento e alteração:*\n• Cancelamentos com menos de 3 horas de antecedência: cobrança de 100% do valor do serviço.\n• Cancelamento de última hora ou não comparecimento: cobrança de 100% do valor agendado.\n• Trocar de serviço na hora do atendimento: será cobrado o valor do serviço originalmente agendado.\n\nAté lá! Nayara Fernandes · Nails e cuidados`;
 }
 
 // cancela este e os próximos da série
