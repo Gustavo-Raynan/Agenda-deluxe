@@ -540,23 +540,30 @@ async function telaAgenda() {
 // =====================================================================
 // mensagem completa de confirmação: serviço e o que inclui, dia, horário, valor, endereço, cores, política e link
 function msgConfirmacao(a) {
-  const n = primeiroNome(a.cliente_nome);
+  const nome = String(a.cliente_nome || "").trim();
   const ini = a.inicio, fim = a.fim || null;
-  const minutos = fim ? Math.round((new Date(fim) - new Date(ini)) / 60000) : null;
-  const nomes = String(a.servico_nome || "").split(/\s*\+\s*/);
+  const nomes = String(a.servico_nome || "").split(/\s*\+\s*/).filter(Boolean);
   const servs = nomes.map((nm) => (st.servicos || []).find((x) => x.nome.toLowerCase() === nm.toLowerCase()) || (a.servico_id && nomes.length === 1 ? (st.servicos || []).find((x) => x.id === a.servico_id) : null));
-  const linhasServ = nomes.map((nm, i) => `• *${nm}*${servs[i]?.descricao ? `\n   _${servs[i].descricao}_` : ""}`).join("\n");
-  const end = st.prof.endereco ? `\n📍 *Endereço:* ${st.prof.endereco}\n🗺️ Como chegar: https://maps.google.com/?q=${encodeURIComponent(st.prof.endereco)}` : "";
-  const cores = a.cores?.length ? `\n💅 *Cores escolhidas:* ${a.cores.map((c) => [c.marca, c.nome].filter(Boolean).join(" ")).join(", ")}` : "";
-  const obs = a.observacao ? `\n📝 *Observação:* ${a.observacao}` : "";
-  const link = a.id ? `\n\n✅ Confirme sua presença ou desmarque por aqui:\n${CONFIRMAR}${a.id}` : "";
-  return `Olá, ${n}! 💗\nSeu horário está *confirmado* com a Nayara Fernandes · Nails e cuidados. Veja os detalhes:\n\n` +
-    `💅 *Serviço:*\n${linhasServ}\n\n` +
-    `📅 *Dia:* ${cap(dataLonga(ini))}\n` +
-    `⏰ *Horário:* ${hora(ini)}${fim ? ` às ${hora(fim)}` : ""}${minutos ? ` (${dur(minutos)})` : ""}\n` +
-    `💰 *Valor:* ${brl(a.preco || 0)}` + cores + obs + end +
-    `\n\n⚠️ *Política de cancelamento:* cancelamentos ou remarcações com menos de 24h de antecedência têm taxa de 100% do valor do serviço.` +
-    link + `\n\nQualquer dúvida é só me chamar por aqui. Até lá! 😘\n_Nayara Fernandes · Nails e cuidados_`;
+  const linhasServ = nomes.map((nm, i) => `• ${nm}${servs[i]?.descricao ? ` (${servs[i].descricao})` : ""}`).join("\n");
+  const cores = a.cores?.length ? `\n💅 CORES: ${a.cores.map((c) => [c.marca, c.nome].filter(Boolean).join(" ")).join(", ")}` : "";
+  const obs = a.observacao ? `\n📝 OBSERVAÇÃO: ${a.observacao}` : "";
+  const link = a.id ? `\n\n✅ CONFIRME SUA PRESENÇA OU DESMARQUE POR AQUI:\n\n${CONFIRMAR}${a.id}` : "";
+  return `Olá!🧡\n${nome}\n\n` +
+    `Confira os detalhes do seu agendamento:\n\n` +
+    `💅 SERVIÇO:\n${linhasServ}\n\n` +
+    `📅 DATA: ${cap(dataLonga(ini))}\n` +
+    `⏰ HORÁRIO: ${hora(ini)}${fim ? ` às ${hora(fim)}` : ""}\n` +
+    `💰 VALOR: ${brl(a.preco || 0)}` + cores + obs + `\n` +
+    `📍 ENDEREÇO: Rua Governador Mário Covas, 105 – Promissão, Lagoa Santa – MG.\n\n` +
+    `🍀 CONFIRMAÇÃO:\nPor favor, responda a esta mensagem com SIM, NÃO ou um emoji (🧡☹️).\n\n` +
+    `❎ ACOMPANHANTES:\nPeço, por gentileza, que não traga acompanhantes, pois meu espaço é pequeno.\n\n` +
+    `🦠 CUIDADOS COM A SAÚDE:\nCaso apresente sintomas de COVID-19 ou outros sintomas gripais, por favor, reagende seu horário.\n\n` +
+    `⚠️ POLÍTICA DE CANCELAMENTO E ALTERAÇÃO:\n\n` +
+    `• Cancelamentos com menos de 3 horas de antecedência estarão sujeitos à cobrança de 100% do valor do serviço.\n\n` +
+    `• Em caso de cancelamento de última hora ou não comparecimento, será cobrado 100% do valor agendado.\n\n` +
+    `• Caso o serviço seja confirmado e, no momento do atendimento, você decida trocar por outro, será cobrado o valor do serviço originalmente agendado.` +
+    link +
+    `\n\nQualquer dúvida, estou à disposição por aqui!\n\nSerá um prazer receber você! 😘\n\nNayara Fernandes · Nails e Cuidados`;
 }
 
 // depois de agendar: mostra a mensagem pronta (dá para editar) e manda no WhatsApp da cliente
