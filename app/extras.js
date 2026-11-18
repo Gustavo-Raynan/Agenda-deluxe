@@ -576,9 +576,9 @@ function editarServicos(a) {
       const ini = novoIni || a.inicio;
       const fim = new Date(new Date(ini).getTime() + minutos * 60000).toISOString();
       const choque = await q(sb.from("ad_agendamentos").select("cliente_nome,inicio").in("status", ATIVOS).neq("id", a.id).lt("inicio", fim).gt("fim", ini));
-      if (choque.length && !confirm(`Com essa duração, o horário encosta em ${choque.map((c) => `${c.cliente_nome} (${hora(c.inicio)})`).join(", ")}. Salvar mesmo assim?`)) return;
+      if (choque.length && !confirm(`Esse horário encosta em ${choque.map((c) => `${c.cliente_nome} (${hora(c.inicio)})`).join(", ")}. Encaixar mesmo assim?`)) return;
       const { error } = await sb.from("ad_agendamentos").update({
-        servico_id: itens[0].id, servico_nome: itens.map((i) => i.nome).join(" + ").slice(0, 200), preco: Math.round(valor * 100) / 100, inicio: ini, fim,
+        servico_id: itens[0].id, servico_nome: itens.map((i) => i.nome).join(" + ").slice(0, 200), preco: Math.round(valor * 100) / 100, inicio: ini, fim, encaixe: choque.length > 0,
         ...(novoIni ? { aviso_breve: false } : {}),
       }).eq("id", a.id);
       if (error) return toast(erroMsg(error), 1);

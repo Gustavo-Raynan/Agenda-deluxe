@@ -690,8 +690,8 @@ function seletorHorario(r, minutos, dataInicial, aoMudar, pre) {
   let escolhido = null;
   caixa.innerHTML = `<label class="f">Dia</label><input class="campo" type="date" data-data value="${dataInicial}" min="${isoDia()}">
     <label class="f">Horário livre</label><div class="slots" data-slots><p class="pequeno" style="grid-column:1/-1">Carregando…</p></div>
-    <button class="link" data-outro style="margin-top:10px">Usar outro horário</button>
-    <div class="hide" data-manual><label class="f">Horário (fora da lista)</label><input class="campo" type="time" step="300" data-hora></div>`;
+    <button class="link" data-outro style="margin-top:10px">⏱️ Encaixar em outro horário</button>
+    <div class="hide" data-manual><label class="f">Horário do encaixe (pode encostar em outra cliente)</label><input class="campo" type="time" step="300" data-hora></div>`;
   const carrega = async () => {
     escolhido = null; aoMudar(null);
     const d = caixa.querySelector("[data-data]").value; const mins = minutos();
@@ -699,7 +699,7 @@ function seletorHorario(r, minutos, dataInicial, aoMudar, pre) {
     if (!d || !mins) { sl.innerHTML = `<p class="pequeno" style="grid-column:1/-1">Escolha o serviço e o dia.</p>`; return; }
     sl.innerHTML = `<p class="pequeno" style="grid-column:1/-1">Carregando…</p>`;
     const lv = await livres(d, mins);
-    sl.innerHTML = lv.length ? lv.map((t) => `<button type="button" data-t="${t}">${hora(t)}</button>`).join("") : `<p class="pequeno" style="grid-column:1/-1">Sem horários livres neste dia. Use "outro horário" se quiser encaixar.</p>`;
+    sl.innerHTML = lv.length ? lv.map((t) => `<button type="button" data-t="${t}">${hora(t)}</button>`).join("") : `<p class="pequeno" style="grid-column:1/-1">Sem horários livres neste dia. Use "Encaixar em outro horário" abaixo.</p>`;
     sl.querySelectorAll("button").forEach((b) => (b.onclick = () => { sl.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); escolhido = b.dataset.t; caixa.querySelector("[data-hora]").value = ""; aoMudar(escolhido); }));
     if (pre) { const alvo = [...sl.querySelectorAll("button")].find((b) => new Date(b.dataset.t).getTime() === new Date(pre).getTime()); pre = null; alvo?.click(); alvo?.scrollIntoView({ block: "center" }); }
   };
@@ -714,6 +714,16 @@ function seletorHorario(r, minutos, dataInicial, aoMudar, pre) {
   return { recarrega: carrega };
 }
 
+// se o horário encosta em outra cliente, pergunta se quer encaixar mesmo assim
+// devolve false (não encosta), true (encaixar) ou null (desistiu)
+async function confirmaEncaixe(ini, fim, ignorarId) {
+  let qy = sb.from("ad_agendamentos").select("cliente_nome,inicio,fim").in("status", ATIVOS).lt("inicio", fim).gt("fim", ini);
+  if (ignorarId) qy = qy.neq("id", ignorarId);
+  const choque = await q(qy);
+  if (!choque.length) return false;
+  return confirm(`Esse horário encosta em:\n${choque.map((c) => `• ${c.cliente_nome} (${hora(c.inicio)} às ${hora(c.fim)})`).join("\n")}\n\nEncaixar mesmo assim?`) ? true : null;
+}
+
 async function remarcar(a) {
   const mins = Math.round((new Date(a.fim) - new Date(a.inicio)) / 60000);
   let novo = null;
@@ -724,7 +734,9 @@ async function remarcar(a) {
     r.querySelector("[data-voltar]").onclick = () => detalheAg(a.id);
     r.querySelector("[data-salvar]").onclick = async () => {
       const ini = new Date(novo), fim = new Date(ini.getTime() + mins * 60000);
-      const { error } = await sb.from("ad_agendamentos").update({ inicio: ini.toISOString(), fim: fim.toISOString(), aviso_breve: false }).eq("id", a.id);
+      const enc = await confirmaEncaixe(ini.toISOString(), fim.toISOString(), a.id);
+      if (enc === null) return;
+      const { error } = await sb.from("ad_agendamentos").update({ inicio: ini.toISOString(), fim: fim.toISOString(), aviso_breve: false, encaixe: enc }).eq("id", a.id);
       if (error) return toast(erroMsg(error), 1);
       toast("Horário remarcado.");
       const atualizado = { ...a, inicio: ini.toISOString(), fim: fim.toISOString() };
@@ -803,8 +815,11 @@ async function novoAgendamento({ data, cliente, servicoId, horaIni }) {
         if (zap && confirm("Enviar a lista de horários para a cliente no WhatsApp?")) abreZap(`https://wa.me/${zapNum(zap)}?text=${encodeURIComponent(msgSerie(base, linhas))}`);
         fechaFolha(); st.dia = isoDia(ini); atualizaTela(); return;
       }
+      const fimNovo = new Date(ini.getTime() + s.duracao_min * 60000).toISOString();
+      const enc = await confirmaEncaixe(ini.toISOString(), fimNovo);
+      if (enc === null) return;
       const { data: novo, error } = await sb.from("ad_agendamentos").insert({
-        ...base, inicio: ini.toISOString(), fim: new Date(ini.getTime() + s.duracao_min * 60000).toISOString(),
+        ...base, inicio: ini.toISOString(), fim: fimNovo, encaixe: enc,
       }).select().single();
       if (error) return toast(erroMsg(error), 1);
       toast("Agendado!");
