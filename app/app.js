@@ -638,6 +638,7 @@ async function detalheAg(id) {
         <button class="btn claro" data-cli>Ver cliente</button>
       </div>
       ${ATIVOS.includes(a.status) || a.status === "concluido" ? `<div class="grade2">${!a.pago ? `<button class="btn claro" data-sinal>${a.sinal ? "Sinal: " + brl(a.sinal) : "Registrar sinal"}</button>` : ""}<button class="btn claro" data-atraso>${a.atrasou ? "Tirar atraso" : "Marcar atraso"}</button></div>` : ""}
+      ${ATIVOS.includes(a.status) ? `<button class="btn zap cheio" data-envconf>${IC.zap}Enviar confirmação para a cliente</button>` : ""}
       ${a.status !== "cancelado" ? `<button class="btn claro cheio" data-editserv>✏️ Editar (dia, horário, serviço e valor)</button>` : ""}
       ${ATIVOS.includes(a.status) ? `<div class="grade2"><button class="btn claro" data-remarcar>Remarcar</button>${passado ? `<button class="btn perigo" data-st="faltou">Não compareceu</button>` : `<button class="btn perigo" data-cancelar>Cancelar</button>`}</div>` : ""}
       ${a.serie_id && ATIVOS.includes(a.status) ? `<button class="btn claro cheio" data-cancela-serie>🔁 Cancelar este e os próximos da série</button>` : ""}
@@ -669,6 +670,7 @@ async function detalheAg(id) {
     r.querySelector("[data-atraso]")?.addEventListener("click", async () => { await q(sb.from("ad_agendamentos").update({ atrasou: !a.atrasou }).eq("id", a.id)); toast(a.atrasou ? "Atraso removido." : "Atraso registrado."); detalheAg(a.id); atualizaTela(); });
     r.querySelector("[data-remarcar]")?.addEventListener("click", () => remarcar(a));
     r.querySelector("[data-editserv]")?.addEventListener("click", () => editarServicos(a));
+    r.querySelector("[data-envconf]")?.addEventListener("click", () => enviarConfirmacao(a));
     r.querySelector("[data-cancela-serie]")?.addEventListener("click", () => cancelaSerie(a));
     r.querySelector("[data-cli]").onclick = () => a.cliente_id ? detalheCliente(a.cliente_id) : toast("Cliente sem cadastro.", 1);
     r.querySelector("[data-msgs]").onclick = () => mensagensProntas(a);
