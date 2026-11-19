@@ -552,7 +552,7 @@ function msgConfirmacao(a) {
     `Confira os detalhes do seu agendamento:\n\n` +
     `💅 SERVIÇO:\n${linhasServ}\n\n` +
     `📅 DATA: ${cap(dataLonga(ini))}\n` +
-    `⏰ HORÁRIO: ${hora(ini)}${fim ? ` às ${hora(fim)}` : ""}\n` +
+    `⏰ HORÁRIO: ${hora(ini)}\n` +
     `💰 VALOR: ${brl(a.preco || 0)}` + cores + obs + `\n` +
     `📍 ENDEREÇO: Rua Governador Mário Covas, 105 – Promissão, Lagoa Santa – MG.\n\n` +
     `🍀 CONFIRMAÇÃO:\nPor favor, responda a esta mensagem com SIM, NÃO ou um emoji (🧡☹️).\n\n` +
